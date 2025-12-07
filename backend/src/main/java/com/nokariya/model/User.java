@@ -1,5 +1,6 @@
 package com.nokariya.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +28,7 @@ public class User {
     private String phone;
 
     @Column(nullable = false)
+    @JsonIgnore
     private String password;
 
     @Enumerated(EnumType.STRING)
@@ -45,7 +47,7 @@ public class User {
     }
 
     public enum UserRole {
-        CUSTOMER, WORKER
+        CUSTOMER, WORKER, ADMIN
     }
 }
 

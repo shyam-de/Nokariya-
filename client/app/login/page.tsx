@@ -47,6 +47,8 @@ export default function Login() {
       const userRole = response.data.user.role?.toLowerCase() || response.data.user.role
       if (userRole === 'customer' || userRole === 'CUSTOMER') {
         router.push('/customer/dashboard')
+      } else if (userRole === 'admin' || userRole === 'ADMIN') {
+        router.push('/admin/dashboard')
       } else {
         router.push('/worker/dashboard')
       }
@@ -156,7 +158,7 @@ export default function Login() {
               <label className="block text-sm font-medium text-gray-700">
                 I am a
               </label>
-              <div className="flex gap-4">
+              <div className="flex gap-4 flex-wrap">
                 <label className="flex items-center cursor-pointer group">
                   <input
                     type="radio"
@@ -176,6 +178,16 @@ export default function Login() {
                     className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="group-hover:text-primary-600 transition-colors">Worker</span>
+                </label>
+                <label className="flex items-center cursor-pointer group">
+                  <input
+                    type="radio"
+                    value="admin"
+                    checked={formData.role === 'admin'}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, laborTypes: [] })}
+                    className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="group-hover:text-primary-600 transition-colors">Admin</span>
                 </label>
               </div>
             </div>

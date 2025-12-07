@@ -1,5 +1,6 @@
 package com.nokariya.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -19,6 +20,7 @@ public class DeployedWorker {
 
     @ManyToOne
     @JoinColumn(name = "request_id", nullable = false)
+    @JsonIgnore
     private Request request;
 
     @ManyToOne

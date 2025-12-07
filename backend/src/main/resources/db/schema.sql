@@ -11,7 +11,7 @@ CREATE TABLE IF NOT EXISTS users (
     email VARCHAR(255) NOT NULL UNIQUE,
     phone VARCHAR(20) NOT NULL,
     password VARCHAR(255) NOT NULL,
-    role ENUM('CUSTOMER', 'WORKER') NOT NULL,
+    role ENUM('CUSTOMER', 'WORKER', 'ADMIN') NOT NULL,
     latitude DOUBLE,
     longitude DOUBLE,
     address VARCHAR(500),
@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS requests (
     latitude DOUBLE,
     longitude DOUBLE,
     address VARCHAR(500),
-    status ENUM('PENDING', 'NOTIFIED', 'CONFIRMED', 'DEPLOYED', 'COMPLETED', 'CANCELLED') DEFAULT 'PENDING',
+    status ENUM('PENDING', 'PENDING_ADMIN_APPROVAL', 'ADMIN_APPROVED', 'NOTIFIED', 'CONFIRMED', 'DEPLOYED', 'COMPLETED', 'CANCELLED', 'REJECTED') DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     completed_at TIMESTAMP NULL,
     FOREIGN KEY (customer_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -89,5 +89,22 @@ CREATE TABLE IF NOT EXISTS deployed_workers (
     deployed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE,
     FOREIGN KEY (worker_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Ratings table
+CREATE TABLE IF NOT EXISTS ratings (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    request_id BIGINT NOT NULL,
+    rater_id BIGINT NOT NULL,
+    rated_id BIGINT NOT NULL,
+    rating INT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+    comment VARCHAR(500),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE,
+    FOREIGN KEY (rater_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (rated_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_request_rater (request_id, rater_id),
+    INDEX idx_rated (rated_id),
+    INDEX idx_rater (rater_id)
 );
 

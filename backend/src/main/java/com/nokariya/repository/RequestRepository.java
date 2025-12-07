@@ -11,5 +11,6 @@ import java.util.List;
 public interface RequestRepository extends JpaRepository<Request, Long> {
     List<Request> findByCustomerOrderByCreatedAtDesc(User customer);
     List<Request> findByStatusIn(List<Request.RequestStatus> statuses);
+    List<Request> findByStatusOrderByCreatedAtDesc(Request.RequestStatus status);
 }
 

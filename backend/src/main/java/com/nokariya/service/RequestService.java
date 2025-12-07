@@ -46,47 +46,8 @@ public class RequestService {
         location.setAddress(dto.getLocation().getAddress());
         request.setLocation(location);
 
-        request = requestRepository.save(request);
-
-        // Find nearest available workers
-        List<Worker> availableWorkers = workerRepository.findAvailableWorkersByLaborType(
-                convertToWorkerLaborType(dto.getLaborType())
-        );
-
-        // Calculate distances and sort
-        List<WorkerDistance> workersWithDistance = availableWorkers.stream()
-                .filter(worker -> worker.getCurrentLocation() != null &&
-                        worker.getCurrentLocation().getLatitude() != null)
-                .map(worker -> {
-                    double distance = calculateDistance(
-                            dto.getLocation().getLatitude(),
-                            dto.getLocation().getLongitude(),
-                            worker.getCurrentLocation().getLatitude(),
-                            worker.getCurrentLocation().getLongitude()
-                    );
-                    return new WorkerDistance(worker, distance);
-                })
-                .sorted(Comparator.comparing(WorkerDistance::getDistance))
-                .limit(dto.getNumberOfWorkers() * 3) // Notify 3x the required workers
-                .collect(Collectors.toList());
-
-        // Send notifications via WebSocket
-        Map<String, Object> notificationData = new HashMap<>();
-        notificationData.put("requestId", request.getId());
-        notificationData.put("laborType", dto.getLaborType().name());
-        notificationData.put("workType", dto.getWorkType());
-        notificationData.put("numberOfWorkers", dto.getNumberOfWorkers());
-        notificationData.put("location", dto.getLocation());
-        notificationData.put("customerId", customerId);
-
-        workersWithDistance.forEach(wd -> {
-            messagingTemplate.convertAndSend(
-                    "/topic/worker/" + wd.getWorker().getUser().getId(),
-                    notificationData
-            );
-        });
-
-        request.setStatus(Request.RequestStatus.NOTIFIED);
+        // Set status to pending admin approval instead of notifying workers directly
+        request.setStatus(Request.RequestStatus.PENDING_ADMIN_APPROVAL);
         return requestRepository.save(request);
     }
 
