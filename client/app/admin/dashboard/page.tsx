@@ -10,7 +10,9 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
 interface Request {
   id: string
-  laborType: string
+  laborTypes: string[]
+  startDate?: string
+  endDate?: string
   workType: string
   numberOfWorkers: number
   location: {
@@ -33,11 +35,25 @@ interface Request {
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'pending' | 'history'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers'>('pending')
   const [requests, setRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
+  const [concerns, setConcerns] = useState<any[]>([])
+  const [workers, setWorkers] = useState<any[]>([])
+  const [customers, setCustomers] = useState<any[]>([])
+  const [systemUsers, setSystemUsers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
+  const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
+  const [isLoadingWorkers, setIsLoadingWorkers] = useState(false)
+  const [isLoadingCustomers, setIsLoadingCustomers] = useState(false)
+  const [isLoadingSystemUsers, setIsLoadingSystemUsers] = useState(false)
+  const [selectedConcern, setSelectedConcern] = useState<any | null>(null)
+  const [adminResponse, setAdminResponse] = useState('')
+  const [isUpdatingConcern, setIsUpdatingConcern] = useState(false)
+  const [concernMessages, setConcernMessages] = useState<{[key: string]: any[]}>({})
+  const [isLoadingMessages, setIsLoadingMessages] = useState<{[key: string]: boolean}>({})
+  const [newMessage, setNewMessage] = useState('')
   const [user, setUser] = useState<any>(null)
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [isCreatingUser, setIsCreatingUser] = useState(false)
@@ -49,9 +65,11 @@ export default function AdminDashboard() {
     name: '',
     email: '',
     phone: '',
+    secondaryPhone: '',
     password: '',
     role: 'customer' as 'customer' | 'worker' | 'admin',
-    laborTypes: [] as string[]
+    laborType: '' as string, // Single labor type for worker
+    isSuperAdmin: false
   })
 
   useEffect(() => {
@@ -72,12 +90,24 @@ export default function AdminDashboard() {
       return
     }
 
+    // Debug: Log user object to check superAdmin field
+    console.log('Admin user object:', userObj)
+    console.log('SuperAdmin flag:', userObj.superAdmin)
+
     fetchPendingRequests()
   }, [])
 
   useEffect(() => {
     if (activeTab === 'history') {
       fetchAllRequests()
+    } else if (activeTab === 'concerns') {
+      fetchConcerns()
+    } else if (activeTab === 'workers') {
+      fetchWorkers()
+    } else if (activeTab === 'customers') {
+      fetchCustomers()
+    } else if (activeTab === 'systemUsers') {
+      fetchSystemUsers()
     }
   }, [activeTab, searchQuery, sortBy, sortOrder, statusFilter])
 
@@ -162,6 +192,187 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchConcerns = async () => {
+    setIsLoadingConcerns(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/concerns`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      // Filter out RESOLVED concerns - admin only sees active concerns
+      const activeConcerns = response.data.filter((concern: any) => concern.status !== 'RESOLVED')
+      setConcerns(activeConcerns)
+      
+      // Fetch messages for all concerns
+      activeConcerns.forEach((concern: any) => {
+        fetchConcernMessages(concern.id)
+      })
+      
+      // If a concern modal is open, update the selected concern with latest data
+      if (selectedConcern) {
+        const updatedSelected = activeConcerns.find((c: any) => c.id === selectedConcern.id)
+        if (updatedSelected) {
+          setSelectedConcern(updatedSelected)
+          fetchConcernMessages(updatedSelected.id)
+        }
+      }
+    } catch (error: any) {
+      console.error('Error fetching concerns:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch concerns')
+    } finally {
+      setIsLoadingConcerns(false)
+    }
+  }
+
+  const fetchWorkers = async () => {
+    setIsLoadingWorkers(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/workers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setWorkers(response.data)
+    } catch (error: any) {
+      console.error('Error fetching workers:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch workers')
+    } finally {
+      setIsLoadingWorkers(false)
+    }
+  }
+
+  const fetchCustomers = async () => {
+    setIsLoadingCustomers(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/customers`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setCustomers(response.data)
+    } catch (error: any) {
+      console.error('Error fetching customers:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch customers')
+    } finally {
+      setIsLoadingCustomers(false)
+    }
+  }
+
+  const fetchSystemUsers = async () => {
+    setIsLoadingSystemUsers(true)
+    try {
+      const token = localStorage.getItem('token')
+      console.log('Fetching system users with token:', token ? 'present' : 'missing')
+      const response = await axios.get(`${API_URL}/admin/system-users`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      console.log('System users response:', response.data)
+      setSystemUsers(response.data)
+    } catch (error: any) {
+      console.error('Error fetching system users:', error)
+      console.error('Error response:', error.response)
+      console.error('Error response data:', error.response?.data)
+      toast.error(error.response?.data?.message || 'Failed to fetch system users')
+    } finally {
+      setIsLoadingSystemUsers(false)
+    }
+  }
+
+  const handleToggleVerification = async (workerId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/admin/workers/${workerId}/toggle-verification`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Worker verification status updated')
+      fetchWorkers()
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update verification status')
+    }
+  }
+
+  const handleToggleBlock = async (userId: string) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.post(`${API_URL}/admin/users/${userId}/toggle-block`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success(response.data.blocked ? 'User blocked successfully' : 'User unblocked successfully')
+      if (activeTab === 'workers') {
+        fetchWorkers()
+      } else if (activeTab === 'customers') {
+        fetchCustomers()
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update block status')
+    }
+  }
+
+  const fetchConcernMessages = async (concernId: string) => {
+    setIsLoadingMessages({ ...isLoadingMessages, [concernId]: true })
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/concerns/${concernId}/messages`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setConcernMessages({ ...concernMessages, [concernId]: response.data })
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+    } finally {
+      setIsLoadingMessages({ ...isLoadingMessages, [concernId]: false })
+    }
+  }
+
+  const handleUpdateConcernStatus = async (concernId: string, status: string) => {
+    setIsUpdatingConcern(true)
+    try {
+      const token = localStorage.getItem('token')
+      const payload: any = {
+        status: status
+      }
+      // Only include adminResponse if it's not empty - this will be added as a message
+      if (adminResponse && adminResponse.trim()) {
+        payload.adminResponse = adminResponse.trim()
+      }
+      
+      await axios.post(`${API_URL}/admin/concerns/${concernId}/update-status`, payload, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Concern status updated successfully!')
+      setSelectedConcern(null)
+      setAdminResponse('')
+      setNewMessage('')
+      fetchConcerns()
+      // Refresh messages for this concern
+      fetchConcernMessages(concernId)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update concern status')
+    } finally {
+      setIsUpdatingConcern(false)
+    }
+  }
+
+  const handleAddMessage = async (concernId: string) => {
+    if (!newMessage || !newMessage.trim()) {
+      toast.error('Please enter a message')
+      return
+    }
+    setIsUpdatingConcern(true)
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/admin/concerns/${concernId}/message`, {
+        message: newMessage.trim()
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Message added successfully!')
+      setNewMessage('')
+      fetchConcernMessages(concernId)
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to add message')
+    } finally {
+      setIsUpdatingConcern(false)
+    }
+  }
+
   const getStatusBadge = (status: string) => {
     const statusConfig: { [key: string]: { bg: string; text: string; icon: string } } = {
       'PENDING': { bg: 'bg-gray-100', text: 'text-gray-800', icon: '⏳' },
@@ -192,10 +403,20 @@ export default function AdminDashboard() {
     setIsCreatingUser(true)
     try {
       const token = localStorage.getItem('token')
+      
+      // Validate worker has a labor type selected
+      if (userFormData.role === 'worker' && !userFormData.laborType) {
+        toast.error('Please select a labor type for the worker')
+        setIsCreatingUser(false)
+        return
+      }
+      
       const data = {
         ...userFormData,
         role: userFormData.role.toUpperCase(),
-        laborTypes: userFormData.laborTypes.map(type => type.toUpperCase())
+        laborTypes: userFormData.role === 'worker' && userFormData.laborType 
+          ? [userFormData.laborType.toUpperCase()] 
+          : []
       }
       
       await axios.post(`${API_URL}/admin/users/create`, data, {
@@ -208,9 +429,11 @@ export default function AdminDashboard() {
         name: '',
         email: '',
         phone: '',
+        secondaryPhone: '',
         password: '',
         role: 'customer',
-        laborTypes: []
+        laborType: '',
+        isSuperAdmin: false
       })
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create user')
@@ -219,22 +442,8 @@ export default function AdminDashboard() {
     }
   }
 
-  const toggleLaborType = (type: string) => {
-    if (userFormData.laborTypes.includes(type)) {
-      setUserFormData({
-        ...userFormData,
-        laborTypes: userFormData.laborTypes.filter(t => t !== type)
-      })
-    } else {
-      setUserFormData({
-        ...userFormData,
-        laborTypes: [...userFormData.laborTypes, type]
-      })
-    }
-  }
-
   const displayedRequests = activeTab === 'pending' ? requests : allRequests
-  const isCurrentlyLoading = activeTab === 'pending' ? isLoading : isLoadingHistory
+  const isCurrentlyLoading = activeTab === 'pending' ? isLoading : activeTab === 'history' ? isLoadingHistory : isLoadingConcerns
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-orange-50">
@@ -338,29 +547,48 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={userFormData.role}
-                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any, laborTypes: [] })}
+                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any, laborType: '', isSuperAdmin: false })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                   >
                     <option value="customer">Customer</option>
                     <option value="worker">Worker</option>
-                    <option value="admin">Admin</option>
+                    {(user?.superAdmin === true || user?.superAdmin === 'true') && <option value="admin">Admin</option>}
                   </select>
+                  {!(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                    <p className="text-xs text-gray-500 mt-1">
+                      Only super admin can create admin users. 
+                      {user?.email === 'admin@nokariya.com' && ' Please log out and log back in to refresh your permissions.'}
+                    </p>
+                  )}
                 </div>
               </div>
 
               {userFormData.role === 'worker' && (
                 <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Labor Types (Select all that apply)</label>
-                  <div className="flex gap-4 flex-wrap">
-                    {['ELECTRICIAN', 'SKILLED', 'UNSKILLED'].map((type) => (
-                      <label key={type} className="flex items-center cursor-pointer px-4 py-2 bg-white rounded-full shadow-sm hover:shadow-md transition-all">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Labor Type (Select one)</label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { value: 'electrician', label: '⚡ Electrician' },
+                      { value: 'driver', label: '🚗 Driver' },
+                      { value: 'rigger', label: '🔩 Rigger' },
+                      { value: 'fitter', label: '🔧 Fitter' },
+                      { value: 'cook', label: '👨‍🍳 Cook' },
+                      { value: 'plumber', label: '🔧 Plumber' },
+                      { value: 'carpenter', label: '🪚 Carpenter' },
+                      { value: 'painter', label: '🎨 Painter' },
+                      { value: 'labour', label: '👷 Labour' },
+                      { value: 'raj_mistri', label: '👷‍♂️ Raj Mistri' }
+                    ].map((type) => (
+                      <label key={type.value} className="flex items-center cursor-pointer px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all border border-gray-200 hover:border-green-300">
                         <input
-                          type="checkbox"
-                          checked={userFormData.laborTypes.includes(type.toLowerCase())}
-                          onChange={() => toggleLaborType(type.toLowerCase())}
+                          type="radio"
+                          name="laborType"
+                          value={type.value}
+                          checked={userFormData.laborType === type.value}
+                          onChange={(e) => setUserFormData({ ...userFormData, laborType: e.target.value })}
                           className="mr-2 w-4 h-4 text-green-600 focus:ring-green-500"
                         />
-                        <span className="capitalize">{type.toLowerCase()}</span>
+                        <span className="text-sm">{type.label}</span>
                       </label>
                     ))}
                   </div>
@@ -383,9 +611,11 @@ export default function AdminDashboard() {
                       name: '',
                       email: '',
                       phone: '',
+                      secondaryPhone: '',
                       password: '',
                       role: 'customer',
-                      laborTypes: []
+                      laborType: '',
+                      isSuperAdmin: false
                     })
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
@@ -419,6 +649,48 @@ export default function AdminDashboard() {
           >
             📜 All History ({allRequests.length})
           </button>
+          <button
+            onClick={() => setActiveTab('concerns')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+              activeTab === 'concerns'
+                ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            📢 Concerns ({concerns.filter((c: any) => c.status === 'PENDING').length})
+          </button>
+          <button
+            onClick={() => setActiveTab('workers')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+              activeTab === 'workers'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            👷 Workers ({workers.length})
+          </button>
+          <button
+            onClick={() => setActiveTab('customers')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+              activeTab === 'customers'
+                ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            👥 Customers ({customers.length})
+          </button>
+          {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+            <button
+              onClick={() => setActiveTab('systemUsers')}
+              className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+                activeTab === 'systemUsers'
+                  ? 'bg-gradient-to-r from-indigo-500 to-blue-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              👨‍💼 System Users ({systemUsers.length})
+            </button>
+          )}
         </div>
 
         {/* Search and Filter Bar (for History tab) */}
@@ -491,114 +763,776 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* Requests List */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            {activeTab === 'pending' ? 'Pending Approval Requests' : 'All Requests History'}
-          </h2>
-          
-          {isCurrentlyLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+        {/* Requests List or Concerns List */}
+        {activeTab === 'concerns' ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Concerns</h2>
+              <button
+                onClick={fetchConcerns}
+                disabled={isLoadingConcerns}
+                className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+              >
+                {isLoadingConcerns ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Refreshing...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </button>
             </div>
-          ) : displayedRequests.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">📭</div>
-              <p className="text-xl text-gray-500 mb-2">
-                {activeTab === 'pending' ? 'No pending requests' : 'No requests found'}
-              </p>
-              <p className="text-gray-400">
-                {activeTab === 'pending' ? 'All clear!' : 'Try adjusting your search or filters'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {displayedRequests.map((request) => (
-                <div
-                  key={request.id}
-                  className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500"
-                >
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">{request.workType}</h3>
-                      {getStatusBadge(request.status)}
+            {isCurrentlyLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+              </div>
+            ) : concerns.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📢</div>
+                <p className="text-xl text-gray-500 mb-2">No concerns raised yet</p>
+                <p className="text-gray-400">All clear, admin!</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {concerns.map((concern: any) => (
+                  <div key={concern.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-2">
+                          <h3 className="text-xl font-bold text-gray-900">Concern #{concern.id}</h3>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            concern.type === 'WORK_QUALITY' ? 'bg-blue-100 text-blue-800' :
+                            concern.type === 'PAYMENT_ISSUE' ? 'bg-yellow-100 text-yellow-800' :
+                            concern.type === 'BEHAVIOR' ? 'bg-red-100 text-red-800' :
+                            concern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {concern.type.replace(/_/g, ' ')}
+                          </span>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            concern.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            concern.status === 'IN_REVIEW' ? 'bg-blue-100 text-blue-800' :
+                            concern.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {concern.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+                        <div className="space-y-2 text-sm text-gray-600 mb-4">
+                          <p>
+                            <span className="font-semibold">Raised by:</span> {concern.raisedBy?.name || 'Unknown'} ({concern.raisedBy?.email || 'N/A'}) 
+                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                              concern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                              concern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {concern.raisedBy?.role === 'CUSTOMER' ? 'Customer' : 
+                               concern.raisedBy?.role === 'WORKER' ? 'Worker' : 
+                               'Unknown'}
+                            </span>
+                          </p>
+                          {concern.request && (
+                            <p><span className="font-semibold">Related Request:</span> {concern.request.workType} (ID: {concern.request.id})</p>
+                          )}
+                          {concern.relatedTo && (
+                            <p><span className="font-semibold">Related to:</span> {concern.relatedTo.name} ({concern.relatedTo.email})</p>
+                          )}
+                          <p><span className="font-semibold">Created:</span> {new Date(concern.createdAt).toLocaleString()}</p>
+                          {concern.resolvedAt && (
+                            <p><span className="font-semibold">Resolved:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
+                          )}
+                        </div>
+                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                          <p className="font-semibold text-gray-900 mb-2">Description:</p>
+                          <p className="text-gray-700">{concern.description}</p>
+                        </div>
+                        
+                        {/* Conversation Thread */}
+                        <div className="mb-4">
+                          <p className="font-semibold text-gray-900 mb-3">Conversation:</p>
+                          {isLoadingMessages[concern.id] ? (
+                            <div className="flex justify-center py-4">
+                              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                            </div>
+                          ) : concernMessages[concern.id] && concernMessages[concern.id].length > 0 ? (
+                            <div className="space-y-3 max-h-96 overflow-y-auto">
+                              {concernMessages[concern.id].map((msg: any) => {
+                                const isAdmin = msg.sentBy?.role === 'ADMIN'
+                                const isRaisedBy = msg.sentBy?.id === concern.raisedBy?.id
+                                return (
+                                  <div
+                                    key={msg.id}
+                                    className={`p-3 rounded-lg ${
+                                      isAdmin
+                                        ? 'bg-blue-50 border-l-4 border-blue-500'
+                                        : isRaisedBy
+                                        ? 'bg-green-50 border-l-4 border-green-500'
+                                        : 'bg-gray-50 border-l-4 border-gray-400'
+                                    }`}
+                                  >
+                                    <div className="flex justify-between items-start mb-1">
+                                      <p className={`font-semibold text-sm ${
+                                        isAdmin ? 'text-blue-900' : isRaisedBy ? 'text-green-900' : 'text-gray-900'
+                                      }`}>
+                                        {msg.sentBy?.name || 'Unknown'}
+                                        {isAdmin && <span className="ml-2 text-xs">(Admin)</span>}
+                                        {!isAdmin && isRaisedBy && (
+                                          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                                            concern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                                            concern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
+                                            'bg-gray-100 text-gray-800'
+                                          }`}>
+                                            {concern.raisedBy?.role === 'CUSTOMER' ? 'Customer' : 
+                                             concern.raisedBy?.role === 'WORKER' ? 'Worker' : ''}
+                                          </span>
+                                        )}
+                                      </p>
+                                      <p className="text-xs text-gray-500">
+                                        {new Date(msg.createdAt).toLocaleString()}
+                                      </p>
+                                    </div>
+                                    <p className={`text-sm ${
+                                      isAdmin ? 'text-blue-700' : isRaisedBy ? 'text-green-700' : 'text-gray-700'
+                                    }`}>
+                                      {msg.message}
+                                    </p>
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          ) : (
+                            <p className="text-gray-500 text-sm italic">No messages yet.</p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-3 mt-4">
+                      <button
+                        onClick={async () => {
+                          // Refresh concerns to get latest user messages before opening modal
+                          try {
+                            const token = localStorage.getItem('token')
+                            const response = await axios.get(`${API_URL}/admin/concerns`, {
+                              headers: { Authorization: `Bearer ${token}` }
+                            })
+                            // Find the updated concern from the fresh response
+                            const updatedConcern = response.data.find((c: any) => c.id === concern.id) || concern
+                            setSelectedConcern(updatedConcern)
+                            setAdminResponse(updatedConcern.adminResponse || '')
+                            // Also update the concerns list
+                            const activeConcerns = response.data.filter((c: any) => c.status !== 'RESOLVED')
+                            setConcerns(activeConcerns)
+                          } catch (error: any) {
+                            console.error('Error refreshing concern:', error)
+                            // Fallback to current concern if refresh fails
+                            setSelectedConcern(concern)
+                            setAdminResponse(concern.adminResponse || '')
+                          }
+                        }}
+                        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                      >
+                        {concern.status === 'PENDING' ? 'Review & Respond' : 'Update Status'}
+                      </button>
+                      {concern.status === 'PENDING' && (
+                        <button
+                          onClick={() => handleUpdateConcernStatus(concern.id, 'DISMISSED')}
+                          className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                        >
+                          Dismiss
+                        </button>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="space-y-2 text-sm mb-4">
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>⚡</span>
-                      <span className="capitalize">{request.laborType.toLowerCase()}</span>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'workers' ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Workers</h2>
+              <button
+                onClick={fetchWorkers}
+                disabled={isLoadingWorkers}
+                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+              >
+                {isLoadingWorkers ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {isLoadingWorkers ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+              </div>
+            ) : workers.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">👷</div>
+                <p className="text-xl text-gray-500 mb-2">No workers found</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {workers.map((worker: any) => (
+                  <div
+                    key={worker.id}
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                      worker.blocked ? 'border-red-500' : worker.verified ? 'border-green-500' : 'border-yellow-500'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{worker.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1">📧 {worker.email}</p>
+                        <p className="text-sm text-gray-600 mb-1">📞 {worker.phone}</p>
+                        {worker.secondaryPhone && (
+                          <p className="text-sm text-gray-600 mb-1">📱 {worker.secondaryPhone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>👥</span>
-                      <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''}</span>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Labor Types:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {worker.laborTypes?.map((type: string) => (
+                            <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                              {type}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Rating:</span>
+                        <span className="text-sm text-gray-600">⭐ {worker.rating || 0.0}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Total Jobs:</span>
+                        <span className="text-sm text-gray-600">{worker.totalJobs || 0}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Available:</span>
+                        <span className={`text-sm ${worker.available ? 'text-green-600' : 'text-red-600'}`}>
+                          {worker.available ? '✓ Yes' : '✗ No'}
+                        </span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>📍</span>
-                      <span className="truncate">{request.location?.address || 'N/A'}</span>
+                    
+                    <div className="flex gap-2 mb-4">
+                        <button
+                          onClick={() => handleToggleVerification(worker.id)}
+                          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                            worker.verified
+                              ? 'bg-green-500 text-white hover:bg-green-600'
+                              : 'bg-yellow-500 text-white hover:bg-yellow-600'
+                          }`}
+                        >
+                          {worker.verified ? '✓ Verified' : '⚠ Not Verified'}
+                        </button>
+                        <button
+                          onClick={() => handleToggleBlock(worker.userId)}
+                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          worker.blocked
+                            ? 'bg-green-500 text-white hover:bg-green-600'
+                            : 'bg-red-500 text-white hover:bg-red-600'
+                        }`}
+                      >
+                        {worker.blocked ? '🔓 Unblock' : '🚫 Block'}
+                      </button>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>👤</span>
-                      <span>{request.customer?.name}</span>
+                    
+                    {worker.currentLocation && (
+                      <p className="text-xs text-gray-500 mt-2">
+                        📍 {worker.currentLocation.address || 'Location not set'}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'customers' ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">All Customers</h2>
+              <button
+                onClick={fetchCustomers}
+                disabled={isLoadingCustomers}
+                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+              >
+                {isLoadingCustomers ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {isLoadingCustomers ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">👥</div>
+                <p className="text-xl text-gray-500 mb-2">No customers found</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {customers.map((customer: any) => (
+                  <div
+                    key={customer.id}
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                      customer.blocked ? 'border-red-500' : 'border-purple-500'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{customer.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1">📧 {customer.email}</p>
+                        <p className="text-sm text-gray-600 mb-1">📞 {customer.phone}</p>
+                        {customer.secondaryPhone && (
+                          <p className="text-sm text-gray-600 mb-1">📱 {customer.secondaryPhone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>📧</span>
-                      <span className="truncate">{request.customer?.email}</span>
+                    
+                    {customer.location && (
+                      <p className="text-xs text-gray-500 mb-4">
+                        📍 {customer.location.address || 'Location not set'}
+                      </p>
+                    )}
+                    
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleToggleBlock(customer.id)}
+                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          customer.blocked
+                            ? 'bg-green-500 text-white hover:bg-green-600'
+                            : 'bg-red-500 text-white hover:bg-red-600'
+                        }`}
+                      >
+                        {customer.blocked ? '🔓 Unblock' : '🚫 Block'}
+                      </button>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>📞</span>
-                      <span>{request.customer?.phone}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : activeTab === 'systemUsers' ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">System Users (Admins)</h2>
+              <button
+                onClick={fetchSystemUsers}
+                disabled={isLoadingSystemUsers}
+                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+              >
+                {isLoadingSystemUsers ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Loading...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>🔄</span>
+                    <span>Refresh</span>
+                  </>
+                )}
+              </button>
+            </div>
+            
+            {isLoadingSystemUsers ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+              </div>
+            ) : systemUsers.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">👨‍💼</div>
+                <p className="text-xl text-gray-500 mb-2">No system users found</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {systemUsers.map((systemUser: any) => (
+                  <div
+                    key={systemUser.id}
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                      systemUser.blocked ? 'border-red-500' : systemUser.superAdmin ? 'border-purple-500' : 'border-blue-500'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{systemUser.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1">📧 {systemUser.email}</p>
+                        <p className="text-sm text-gray-600 mb-1">📞 {systemUser.phone}</p>
+                        {systemUser.secondaryPhone && (
+                          <p className="text-sm text-gray-600 mb-1">📱 {systemUser.secondaryPhone}</p>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <span>🕒</span>
-                      <span>{formatDate(request.createdAt)}</span>
+                    
+                    <div className="space-y-2 mb-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Type:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          systemUser.superAdmin 
+                            ? 'bg-purple-100 text-purple-800' 
+                            : 'bg-blue-100 text-blue-800'
+                        }`}>
+                          {systemUser.superAdmin ? '⭐ Super Admin' : '👨‍💼 Admin'}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium text-gray-700">Status:</span>
+                        <span className={`text-sm ${systemUser.blocked ? 'text-red-600' : 'text-green-600'}`}>
+                          {systemUser.blocked ? '🚫 Blocked' : '✓ Active'}
+                        </span>
+                      </div>
                     </div>
-                    {request.completedAt && (
-                      <div className="flex items-center gap-2 text-purple-600">
-                        <span>✅</span>
-                        <span>Completed: {formatDate(request.completedAt)}</span>
+                    
+                    {systemUser.location && (
+                      <p className="text-xs text-gray-500 mb-4">
+                        📍 {systemUser.location.address || 'Location not set'}
+                      </p>
+                    )}
+                    
+                    <p className="text-xs text-gray-400 mt-2">
+                      Created: {new Date(systemUser.createdAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (activeTab === 'pending' || activeTab === 'history') ? (
+          <div className="bg-white rounded-xl shadow-lg p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              {activeTab === 'pending' ? 'Pending Approval Requests' : 'All Requests History'}
+            </h2>
+            
+            {isCurrentlyLoading ? (
+              <div className="flex justify-center items-center py-20">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
+              </div>
+            ) : displayedRequests.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📭</div>
+                <p className="text-xl text-gray-500 mb-2">
+                  {activeTab === 'pending' ? 'No pending requests' : 'No requests found'}
+                </p>
+                <p className="text-gray-400">
+                  {activeTab === 'pending' ? 'All clear!' : 'Try adjusting your search or filters'}
+                </p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {displayedRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500"
+                  >
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-2">{request.workType}</h3>
+                        {getStatusBadge(request.status)}
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2 text-sm mb-4">
+                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                        <span>⚡</span>
+                        <div className="flex flex-wrap gap-1">
+                          {request.laborTypes && request.laborTypes.length > 0 ? (
+                            request.laborTypes.map((type: string, idx: number) => (
+                              <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+                                {type.toLowerCase()}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="capitalize text-gray-500">N/A</span>
+                          )}
+                        </div>
+                      </div>
+                      {request.startDate && request.endDate && (
+                        <div className="flex items-center gap-2 text-gray-600">
+                          <span>📅</span>
+                          <span>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
+                          <span className="text-xs">
+                            ({Math.ceil((new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
+                          </span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>👥</span>
+                        <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>📍</span>
+                        <span className="truncate">{request.location?.address || 'N/A'}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>👤</span>
+                        <span>{request.customer?.name}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>📧</span>
+                        <span className="truncate">{request.customer?.email}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>📞</span>
+                        <span>{request.customer?.phone}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-gray-600">
+                        <span>🕒</span>
+                        <span>{formatDate(request.createdAt)}</span>
+                      </div>
+                      {request.completedAt && (
+                        <div className="flex items-center gap-2 text-purple-600">
+                          <span>✅</span>
+                          <span>Completed: {formatDate(request.completedAt)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {request.deployedWorkers && request.deployedWorkers.length > 0 && (
+                      <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                        <p className="text-sm font-semibold text-green-700 mb-2">
+                          🚀 Deployed Workers ({request.deployedWorkers.length})
+                        </p>
+                        <div className="space-y-1">
+                          {request.deployedWorkers.map((dw: any, idx: number) => (
+                            <p key={idx} className="text-xs text-green-600">
+                              • {dw.worker?.name || 'Worker'}
+                            </p>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTab === 'pending' && (
+                      <div className="flex gap-3 mt-4">
+                        <button
+                          onClick={() => handleApprove(request.id)}
+                          className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                        >
+                          ✓ Approve
+                        </button>
+                        <button
+                          onClick={() => handleReject(request.id)}
+                          className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                        >
+                          ✗ Reject
+                        </button>
                       </div>
                     )}
                   </div>
-
-                  {request.deployedWorkers && request.deployedWorkers.length > 0 && (
-                    <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-sm font-semibold text-green-700 mb-2">
-                        🚀 Deployed Workers ({request.deployedWorkers.length})
-                      </p>
-                      <div className="space-y-1">
-                        {request.deployedWorkers.map((dw: any, idx: number) => (
-                          <p key={idx} className="text-xs text-green-600">
-                            • {dw.worker?.name || 'Worker'}
-                          </p>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'pending' && (
-                    <div className="flex gap-3 mt-4">
-                      <button
-                        onClick={() => handleApprove(request.id)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                      >
-                        ✓ Approve
-                      </button>
-                      <button
-                        onClick={() => handleReject(request.id)}
-                        className="flex-1 px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
-                      >
-                        ✗ Reject
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
+
+      {/* Concern Review Modal */}
+      {selectedConcern && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Concern #{selectedConcern.id}</h3>
+            <button
+              onClick={() => {
+                setSelectedConcern(null)
+                setAdminResponse('')
+              }}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
+            >
+              &times;
+            </button>
+            <div className="space-y-4 mb-6">
+              <div>
+                <p className="font-semibold text-gray-900 mb-1">Type:</p>
+                <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  selectedConcern.type === 'WORK_QUALITY' ? 'bg-blue-100 text-blue-800' :
+                  selectedConcern.type === 'PAYMENT_ISSUE' ? 'bg-yellow-100 text-yellow-800' :
+                  selectedConcern.type === 'BEHAVIOR' ? 'bg-red-100 text-red-800' :
+                  selectedConcern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
+                  'bg-gray-100 text-gray-800'
+                }`}>
+                  {selectedConcern.type.replace(/_/g, ' ')}
+                </span>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 mb-1">Raised by:</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-gray-700">{selectedConcern.raisedBy?.name} ({selectedConcern.raisedBy?.email})</p>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    selectedConcern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                    selectedConcern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedConcern.raisedBy?.role === 'CUSTOMER' ? 'Customer' : 
+                     selectedConcern.raisedBy?.role === 'WORKER' ? 'Worker' : 
+                     'Unknown'}
+                  </span>
+                </div>
+              </div>
+              <div>
+                <p className="font-semibold text-gray-900 mb-1">Description:</p>
+                <p className="text-gray-700 bg-gray-50 p-3 rounded-lg">{selectedConcern.description}</p>
+              </div>
+              
+              {/* Conversation Thread */}
+              <div className="mb-4">
+                <p className="font-semibold text-gray-900 mb-3">Conversation:</p>
+                {isLoadingMessages[selectedConcern.id] ? (
+                  <div className="flex justify-center py-4">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
+                  </div>
+                ) : concernMessages[selectedConcern.id] && concernMessages[selectedConcern.id].length > 0 ? (
+                  <div className="space-y-3 max-h-96 overflow-y-auto mb-4">
+                    {concernMessages[selectedConcern.id].map((msg: any) => {
+                      const isAdmin = msg.sentBy?.role === 'ADMIN'
+                      const isRaisedBy = msg.sentBy?.id === selectedConcern.raisedBy?.id
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`p-3 rounded-lg ${
+                            isAdmin
+                              ? 'bg-blue-50 border-l-4 border-blue-500'
+                              : isRaisedBy
+                              ? 'bg-green-50 border-l-4 border-green-500'
+                              : 'bg-gray-50 border-l-4 border-gray-400'
+                          }`}
+                        >
+                          <div className="flex justify-between items-start mb-1">
+                            <p className={`font-semibold text-sm ${
+                              isAdmin ? 'text-blue-900' : isRaisedBy ? 'text-green-900' : 'text-gray-900'
+                            }`}>
+                              {msg.sentBy?.name || 'Unknown'}
+                              {isAdmin && <span className="ml-2 text-xs">(Admin)</span>}
+                              {!isAdmin && isRaisedBy && (
+                                <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                                  selectedConcern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
+                                  selectedConcern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {selectedConcern.raisedBy?.role === 'CUSTOMER' ? 'Customer' : 
+                                   selectedConcern.raisedBy?.role === 'WORKER' ? 'Worker' : ''}
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {new Date(msg.createdAt).toLocaleString()}
+                            </p>
+                          </div>
+                          <p className={`text-sm ${
+                            isAdmin ? 'text-blue-700' : isRaisedBy ? 'text-green-700' : 'text-gray-700'
+                          }`}>
+                            {msg.message}
+                          </p>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-sm italic mb-4">No messages yet.</p>
+                )}
+                
+                {/* Add Message Section */}
+                <div className="border-t border-gray-200 pt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
+                    rows={3}
+                    placeholder="Type your message here..."
+                  />
+                  <button
+                    onClick={() => handleAddMessage(selectedConcern.id)}
+                    disabled={isUpdatingConcern || !newMessage.trim()}
+                    className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  >
+                    {isUpdatingConcern ? 'Adding...' : 'Add Message'}
+                  </button>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Admin Response (Optional - will be added as message):</label>
+                <textarea
+                  value={adminResponse}
+                  onChange={(e) => setAdminResponse(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  rows={3}
+                  placeholder="Enter your response to this concern... (This will be added as a message when updating status)"
+                />
+                <p className="text-xs text-gray-500 mt-1">This will be added as a message when you update the status</p>
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Update Status:</label>
+                <select
+                  value={selectedConcern.status}
+                  onChange={(e) => {
+                    const newStatus = e.target.value
+                    handleUpdateConcernStatus(selectedConcern.id, newStatus)
+                  }}
+                  disabled={isUpdatingConcern}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:opacity-50"
+                >
+                  <option value="PENDING">Pending</option>
+                  <option value="IN_REVIEW">In Review</option>
+                  <option value="RESOLVED">Resolved</option>
+                  <option value="DISMISSED">Dismissed</option>
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleUpdateConcernStatus(selectedConcern.id, 'RESOLVED')}
+                  disabled={isUpdatingConcern || selectedConcern.status === 'RESOLVED'}
+                  className="flex-1 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✓ Mark as Resolved
+                </button>
+                <button
+                  onClick={() => handleUpdateConcernStatus(selectedConcern.id, 'IN_REVIEW')}
+                  disabled={isUpdatingConcern || selectedConcern.status === 'IN_REVIEW'}
+                  className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  🔍 Mark as In Review
+                </button>
+                <button
+                  onClick={() => handleUpdateConcernStatus(selectedConcern.id, 'DISMISSED')}
+                  disabled={isUpdatingConcern || selectedConcern.status === 'DISMISSED'}
+                  className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  ✗ Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

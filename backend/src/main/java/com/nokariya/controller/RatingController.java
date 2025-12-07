@@ -61,5 +61,18 @@ public class RatingController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @GetMapping("/check/{requestId}")
+    public ResponseEntity<?> checkIfRated(
+            Authentication authentication,
+            @PathVariable Long requestId) {
+        try {
+            Long userId = getUserIdFromAuthentication(authentication);
+            boolean hasRated = ratingService.hasRatedForRequest(userId, requestId);
+            return ResponseEntity.ok(Map.of("hasRated", hasRated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }
 

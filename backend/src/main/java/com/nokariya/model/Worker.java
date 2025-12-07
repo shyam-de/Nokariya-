@@ -43,11 +43,15 @@ public class Worker {
 
     private Boolean available = true;
 
+    @Column(name = "verified", nullable = false)
+    private Boolean verified = false;
+
     @Embedded
     @AttributeOverrides({
         @AttributeOverride(name = "latitude", column = @Column(name = "current_latitude")),
         @AttributeOverride(name = "longitude", column = @Column(name = "current_longitude")),
-        @AttributeOverride(name = "address", column = @Column(name = "current_address"))
+        @AttributeOverride(name = "address", column = @Column(name = "current_address")),
+        @AttributeOverride(name = "landmark", column = @Column(name = "current_landmark"))
     })
     private Location currentLocation;
 
@@ -60,7 +64,16 @@ public class Worker {
     }
 
     public enum LaborType {
-        ELECTRICIAN, SKILLED, UNSKILLED
+        ELECTRICIAN,
+        DRIVER,
+        RIGGER,
+        FITTER,
+        COOK,
+        PLUMBER,
+        CARPENTER,
+        PAINTER,
+        LABOUR,
+        RAJ_MISTRI
     }
 }
 

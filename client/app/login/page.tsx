@@ -16,6 +16,7 @@ export default function Login() {
     name: '',
     email: '',
     phone: '',
+    secondaryPhone: '',
     password: '',
     role: 'customer',
     laborTypes: [] as string[]
@@ -28,17 +29,39 @@ export default function Login() {
       const endpoint = isLogin ? '/auth/login' : '/auth/register'
       let data: any
       if (isLogin) {
-        data = { email: formData.email, password: formData.password }
+        if (!formData.email || !formData.password) {
+          toast.error('Email and password are required')
+          return
+        }
+        data = { 
+          email: formData.email.trim().toLowerCase(), 
+          password: formData.password 
+        }
+        console.log('Login attempt:', { email: data.email })
       } else {
         // Convert to uppercase for backend enum
         data = {
           ...formData,
+          email: formData.email.trim().toLowerCase(),
           role: formData.role.toUpperCase(),
           laborTypes: formData.laborTypes.map(type => type.toUpperCase())
         }
       }
 
-      const response = await axios.post(`${API_URL}${endpoint}`, data)
+      console.log('Sending request to:', `${API_URL}${endpoint}`)
+      const response = await axios.post(`${API_URL}${endpoint}`, data, {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      
+      console.log('Response received:', response.data)
+      
+      if (!response.data.token) {
+        toast.error('No token received from server')
+        return
+      }
+      
       localStorage.setItem('token', response.data.token)
       localStorage.setItem('user', JSON.stringify(response.data.user))
       
@@ -47,29 +70,43 @@ export default function Login() {
       const userRole = response.data.user.role?.toLowerCase() || response.data.user.role
       if (userRole === 'customer' || userRole === 'CUSTOMER') {
         router.push('/customer/dashboard')
-      } else if (userRole === 'admin' || userRole === 'ADMIN') {
+      } else if (userRole === 'admin' || userRole === 'ADMIN' || userRole === 'system_admin') {
         router.push('/admin/dashboard')
       } else {
         router.push('/worker/dashboard')
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'An error occurred')
+      console.error('Login/Register error:', error)
+      console.error('Error response:', error.response)
+      const errorMessage = error.response?.data?.message || 
+                          error.message || 
+                          'An error occurred'
+      toast.error(errorMessage)
     } finally {
       setIsLoading(false)
     }
   }
 
   const toggleLaborType = (type: string) => {
-    if (formData.laborTypes.includes(type)) {
+    // For workers, only allow one labor type (radio button behavior)
+    if (formData.role === 'worker') {
       setFormData({
         ...formData,
-        laborTypes: formData.laborTypes.filter(t => t !== type)
+        laborTypes: [type] // Only one selection
       })
     } else {
-      setFormData({
-        ...formData,
-        laborTypes: [...formData.laborTypes, type]
-      })
+      // For other cases (if any), keep checkbox behavior
+      if (formData.laborTypes.includes(type)) {
+        setFormData({
+          ...formData,
+          laborTypes: formData.laborTypes.filter(t => t !== type)
+        })
+      } else {
+        setFormData({
+          ...formData,
+          laborTypes: [...formData.laborTypes, type]
+        })
+      }
     }
   }
 
@@ -120,6 +157,18 @@ export default function Login() {
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                   placeholder="Enter your phone number"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  Secondary Phone (Optional)
+                </label>
+                <input
+                  type="tel"
+                  value={formData.secondaryPhone}
+                  onChange={(e) => setFormData({ ...formData, secondaryPhone: e.target.value })}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  placeholder="Enter secondary phone number (optional)"
                 />
               </div>
             </>
@@ -179,35 +228,38 @@ export default function Login() {
                   />
                   <span className="group-hover:text-primary-600 transition-colors">Worker</span>
                 </label>
-                <label className="flex items-center cursor-pointer group">
-                  <input
-                    type="radio"
-                    value="admin"
-                    checked={formData.role === 'admin'}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value, laborTypes: [] })}
-                    className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
-                  />
-                  <span className="group-hover:text-primary-600 transition-colors">Admin</span>
-                </label>
               </div>
             </div>
           )}
 
           {!isLogin && formData.role === 'worker' && (
             <div className="space-y-2 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-              <label className="block text-sm font-medium text-gray-700">
-                Labor Types (Select all that apply)
-              </label>
-              <div className="space-y-2">
-                {['electrician', 'skilled', 'unskilled'].map((type) => (
-                  <label key={type} className="flex items-center cursor-pointer group hover:bg-white p-2 rounded transition-colors">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Labor Type <span className="text-red-500">*</span> (Select one)
+                </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { value: 'electrician', label: '⚡ Electrician' },
+                  { value: 'driver', label: '🚗 Driver' },
+                  { value: 'rigger', label: '🔩 Rigger' },
+                  { value: 'fitter', label: '🔧 Fitter' },
+                  { value: 'cook', label: '👨‍🍳 Cook' },
+                  { value: 'plumber', label: '🔧 Plumber' },
+                  { value: 'carpenter', label: '🪚 Carpenter' },
+                  { value: 'painter', label: '🎨 Painter' },
+                  { value: 'labour', label: '👷 Labour' },
+                  { value: 'raj_mistri', label: '👷‍♂️ Raj Mistri' }
+                ].map((type) => (
+                  <label key={type.value} className="flex items-center cursor-pointer group hover:bg-white p-2 rounded transition-colors border border-gray-200 hover:border-primary-300">
                     <input
-                      type="checkbox"
-                      checked={formData.laborTypes.includes(type)}
-                      onChange={() => toggleLaborType(type)}
-                      className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500 rounded"
+                      type="radio"
+                      name="laborType"
+                      checked={formData.laborTypes.includes(type.value)}
+                      onChange={() => toggleLaborType(type.value)}
+                      className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                      required={formData.role === 'worker'}
                     />
-                    <span className="capitalize group-hover:text-primary-600 transition-colors font-medium">{type}</span>
+                    <span className="text-sm group-hover:text-primary-600 transition-colors font-medium">{type.label}</span>
                   </label>
                 ))}
               </div>

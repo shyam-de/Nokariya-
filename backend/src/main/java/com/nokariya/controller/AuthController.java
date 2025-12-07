@@ -35,10 +35,15 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
         try {
+            System.out.println("Login attempt for email: " + request.getEmail());
             Map<String, Object> response = authService.login(request);
+            System.out.println("Login successful for: " + request.getEmail());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("message", e.getMessage()));
+            System.err.println("Login error: " + e.getMessage());
+            e.printStackTrace();
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Login failed";
+            return ResponseEntity.status(401).body(Map.of("message", errorMessage));
         }
     }
 }

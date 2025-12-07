@@ -19,7 +19,9 @@ public class RegisterRequest {
     private String email;
 
     @NotBlank(message = "Phone is required")
-    private String phone;
+    private String phone; // Primary contact
+
+    private String secondaryPhone; // Secondary contact (optional)
 
     @NotBlank(message = "Password is required")
     @Size(min = 6, message = "Password must be at least 6 characters")

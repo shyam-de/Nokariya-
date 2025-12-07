@@ -4,9 +4,11 @@ import com.nokariya.dto.CreateRatingDto;
 import com.nokariya.model.Rating;
 import com.nokariya.model.Request;
 import com.nokariya.model.User;
+import com.nokariya.model.Worker;
 import com.nokariya.repository.RatingRepository;
 import com.nokariya.repository.RequestRepository;
 import com.nokariya.repository.UserRepository;
+import com.nokariya.repository.WorkerRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +27,9 @@ public class RatingService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private WorkerRepository workerRepository;
 
     @Transactional
     public Rating createRating(Long raterId, CreateRatingDto dto) {
@@ -57,23 +62,54 @@ public class RatingService {
 
         // Check if rating already exists for this request and rater
         Optional<Rating> existingRating = ratingRepository.findByRequestAndRater(request, rater);
+        Rating savedRating;
         if (existingRating.isPresent()) {
             // Update existing rating
             Rating rating = existingRating.get();
             rating.setRating(dto.getRating());
             rating.setComment(dto.getComment());
-            return ratingRepository.save(rating);
+            savedRating = ratingRepository.save(rating);
+        } else {
+            // Create new rating
+            Rating rating = new Rating();
+            rating.setRequest(request);
+            rating.setRater(rater);
+            rating.setRated(rated);
+            rating.setRating(dto.getRating());
+            rating.setComment(dto.getComment());
+            savedRating = ratingRepository.save(rating);
         }
 
-        // Create new rating
-        Rating rating = new Rating();
-        rating.setRequest(request);
-        rating.setRater(rater);
-        rating.setRated(rated);
-        rating.setRating(dto.getRating());
-        rating.setComment(dto.getComment());
+        // Update worker's average rating if the rated user is a worker
+        if (rated.getRole() == User.UserRole.WORKER) {
+            updateWorkerRating(rated.getId());
+        }
+        // Note: Customer ratings are calculated dynamically from ratings table
+        // No need to update a separate field for customers
 
-        return ratingRepository.save(rating);
+        return savedRating;
+    }
+
+    @Transactional
+    private void updateWorkerRating(Long workerUserId) {
+        Optional<Worker> workerOpt = workerRepository.findByUserId(workerUserId);
+        if (workerOpt.isPresent()) {
+            Worker worker = workerOpt.get();
+            List<Rating> ratings = ratingRepository.findByRated(worker.getUser());
+            
+            if (ratings.isEmpty()) {
+                worker.setRating(0.0);
+            } else {
+                double averageRating = ratings.stream()
+                        .mapToInt(Rating::getRating)
+                        .average()
+                        .orElse(0.0);
+                // Round to 1 decimal place
+                worker.setRating(Math.round(averageRating * 10.0) / 10.0);
+            }
+            
+            workerRepository.save(worker);
+        }
     }
 
     public List<Rating> getRatingsForUser(Long userId) {
@@ -104,6 +140,16 @@ public class RatingService {
                 "averageRating", Math.round(averageRating * 10.0) / 10.0,
                 "totalRatings", ratings.size()
         );
+    }
+
+    public boolean hasRatedForRequest(Long userId, Long requestId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        Request request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        
+        Optional<Rating> rating = ratingRepository.findByRequestAndRater(request, user);
+        return rating.isPresent();
     }
 }
 

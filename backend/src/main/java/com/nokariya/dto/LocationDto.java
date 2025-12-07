@@ -11,5 +11,6 @@ public class LocationDto {
     private Double latitude;
     private Double longitude;
     private String address;
+    private String landmark;
 }
 

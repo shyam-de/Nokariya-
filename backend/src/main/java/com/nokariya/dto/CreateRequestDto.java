@@ -1,22 +1,25 @@
 package com.nokariya.dto;
 
-import com.nokariya.model.Request;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
+import java.util.List;
+
 @Data
 public class CreateRequestDto {
-    @NotNull(message = "Labor type is required")
-    private Request.LaborType laborType;
+    @NotNull(message = "Labor type requirements are required")
+    private List<LaborTypeRequirementDto> laborTypeRequirements;
 
     @NotBlank(message = "Work type is required")
     private String workType;
 
-    @NotNull(message = "Number of workers is required")
-    @Min(value = 1, message = "Number of workers must be at least 1")
-    private Integer numberOfWorkers;
+    @NotNull(message = "Start date is required")
+    private LocalDate startDate;
+
+    @NotNull(message = "End date is required")
+    private LocalDate endDate;
 
     @NotNull(message = "Location is required")
     private LocationDto location;

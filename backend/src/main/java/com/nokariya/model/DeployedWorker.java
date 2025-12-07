@@ -1,6 +1,7 @@
 package com.nokariya.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -25,7 +26,11 @@ public class DeployedWorker {
 
     @ManyToOne
     @JoinColumn(name = "worker_id", nullable = false)
+    @JsonIgnoreProperties({"password", "location"})
     private User worker;
+
+    @Transient
+    private Double workerRating = 0.0;
 
     @Column(name = "deployed_at")
     private LocalDateTime deployedAt;

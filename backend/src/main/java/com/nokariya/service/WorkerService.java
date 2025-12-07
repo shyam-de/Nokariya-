@@ -5,6 +5,7 @@ import com.nokariya.dto.UpdateProfileDto;
 import com.nokariya.model.*;
 import com.nokariya.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.lang.NonNull;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -70,46 +71,61 @@ public class WorkerService {
         return workerRepository.save(worker);
     }
 
-    public List<Map<String, Object>> getWorkHistory(Long userId) {
+    public List<Map<String, Object>> getWorkHistory(@NonNull Long userId) {
         User worker = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
 
         List<Map<String, Object>> history = new ArrayList<>();
+        Set<Long> deployedRequestIds = new HashSet<>();
 
-        // Get confirmed work
-        List<ConfirmedWorker> confirmedWork = confirmedWorkerRepository.findByWorkerOrderByConfirmedAtDesc(worker);
-        for (ConfirmedWorker cw : confirmedWork) {
-            Map<String, Object> entry = new HashMap<>();
-            entry.put("type", "confirmed");
-            entry.put("requestId", cw.getRequest().getId());
-            entry.put("laborType", cw.getRequest().getLaborType());
-            entry.put("workType", cw.getRequest().getWorkType());
-            entry.put("location", cw.getRequest().getLocation());
-            entry.put("status", cw.getRequest().getStatus());
-            entry.put("date", cw.getConfirmedAt());
-            entry.put("customer", Map.of(
-                    "name", cw.getRequest().getCustomer().getName(),
-                    "phone", cw.getRequest().getCustomer().getPhone()
-            ));
-            history.add(entry);
-        }
-
-        // Get deployed work
+        // First, get all deployed work and track their request IDs
         List<DeployedWorker> deployedWork = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(worker);
         for (DeployedWorker dw : deployedWork) {
+            deployedRequestIds.add(dw.getRequest().getId());
             Map<String, Object> entry = new HashMap<>();
             entry.put("type", "deployed");
             entry.put("requestId", dw.getRequest().getId());
-            entry.put("laborType", dw.getRequest().getLaborType());
+            entry.put("laborTypes", dw.getRequest().getLaborTypes() != null ? 
+                dw.getRequest().getLaborTypes().stream()
+                    .map(Enum::name)
+                    .collect(java.util.stream.Collectors.toList()) : new ArrayList<>());
             entry.put("workType", dw.getRequest().getWorkType());
             entry.put("location", dw.getRequest().getLocation());
             entry.put("status", dw.getRequest().getStatus());
             entry.put("date", dw.getDeployedAt());
             entry.put("customer", Map.of(
+                    "id", dw.getRequest().getCustomer().getId(),
                     "name", dw.getRequest().getCustomer().getName(),
                     "phone", dw.getRequest().getCustomer().getPhone()
             ));
             history.add(entry);
+        }
+
+        // Get confirmed work, but exclude requests that are already in deployed work
+        List<ConfirmedWorker> confirmedWork = confirmedWorkerRepository.findByWorkerOrderByConfirmedAtDesc(worker);
+        for (ConfirmedWorker cw : confirmedWork) {
+            // Only add if this request is not already in deployed work
+            if (!deployedRequestIds.contains(cw.getRequest().getId())) {
+                Map<String, Object> entry = new HashMap<>();
+                entry.put("type", "confirmed");
+                entry.put("requestId", cw.getRequest().getId());
+                entry.put("laborTypes", cw.getRequest().getLaborTypes() != null ? 
+                    cw.getRequest().getLaborTypes().stream()
+                        .map(Enum::name)
+                        .collect(java.util.stream.Collectors.toList()) : new ArrayList<>());
+                entry.put("workType", cw.getRequest().getWorkType());
+                entry.put("startDate", cw.getRequest().getStartDate());
+                entry.put("endDate", cw.getRequest().getEndDate());
+                entry.put("location", cw.getRequest().getLocation());
+                entry.put("status", cw.getRequest().getStatus());
+                entry.put("date", cw.getConfirmedAt());
+                entry.put("customer", Map.of(
+                        "id", cw.getRequest().getCustomer().getId(),
+                        "name", cw.getRequest().getCustomer().getName(),
+                        "phone", cw.getRequest().getCustomer().getPhone()
+                ));
+                history.add(entry);
+            }
         }
 
         // Sort by date (most recent first)
@@ -123,7 +139,7 @@ public class WorkerService {
     }
 
     @Transactional
-    public User updateWorkerProfile(Long userId, UpdateProfileDto dto) {
+    public User updateWorkerProfile(@NonNull Long userId, UpdateProfileDto dto) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -135,6 +151,7 @@ public class WorkerService {
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
+        user.setSecondaryPhone(dto.getSecondaryPhone());
 
         if (dto.getLocation() != null) {
             Location location = new Location();

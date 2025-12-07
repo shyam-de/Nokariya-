@@ -31,11 +31,19 @@ public class RequestController {
             Authentication authentication,
             @Valid @RequestBody CreateRequestDto dto) {
         try {
+            // Log the incoming request for debugging
+            System.out.println("Received request creation: " + dto);
+            System.out.println("Labor type requirements: " + (dto.getLaborTypeRequirements() != null ? dto.getLaborTypeRequirements().size() : "null"));
+            
             Long userId = getUserIdFromAuthentication(authentication);
             Request request = requestService.createRequest(userId, dto);
-            return ResponseEntity.ok(Map.of("message", "Request created and workers notified", "request", request));
+            return ResponseEntity.ok(Map.of("message", "Request created successfully", "request", request));
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            // Log the error for debugging
+            System.err.println("Error in createRequest controller: " + e.getMessage());
+            e.printStackTrace();
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Failed to create request";
+            return ResponseEntity.badRequest().body(Map.of("message", errorMessage, "error", e.getClass().getSimpleName()));
         }
     }
 
@@ -49,7 +57,9 @@ public class RequestController {
             List<Request> requests = requestService.getMyRequests(userId);
             return ResponseEntity.ok(requests);
         } catch (Exception e) {
-            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            System.err.println("Error fetching my requests: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage() != null ? e.getMessage() : "Failed to fetch requests"));
         }
     }
 

@@ -34,6 +34,7 @@ public class ProfileService {
         user.setName(dto.getName());
         user.setEmail(dto.getEmail());
         user.setPhone(dto.getPhone());
+        user.setSecondaryPhone(dto.getSecondaryPhone());
 
         if (dto.getLocation() != null) {
             Location location = new Location();
@@ -52,6 +53,7 @@ public class ProfileService {
         profile.put("name", user.getName());
         profile.put("email", user.getEmail());
         profile.put("phone", user.getPhone());
+        profile.put("secondaryPhone", user.getSecondaryPhone());
         profile.put("role", user.getRole().name());
         profile.put("location", user.getLocation());
         return profile;

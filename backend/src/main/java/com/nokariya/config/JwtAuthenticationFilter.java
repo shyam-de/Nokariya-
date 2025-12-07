@@ -1,5 +1,6 @@
 package com.nokariya.config;
 
+import com.nokariya.repository.SystemUserRepository;
 import com.nokariya.repository.UserRepository;
 import com.nokariya.util.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -21,16 +22,25 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
+    private final SystemUserRepository systemUserRepository;
 
-    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserRepository userRepository) {
+    public JwtAuthenticationFilter(JwtUtil jwtUtil, UserRepository userRepository, SystemUserRepository systemUserRepository) {
         this.jwtUtil = jwtUtil;
         this.userRepository = userRepository;
+        this.systemUserRepository = systemUserRepository;
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String authHeader = request.getHeader("Authorization");
         String requestPath = request.getRequestURI();
+        
+        // Skip JWT filter for auth endpoints (login, register, health)
+        if (requestPath.startsWith("/api/auth/")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
+        String authHeader = request.getHeader("Authorization");
 
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
@@ -39,9 +49,21 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String role = jwtUtil.getRoleFromToken(token);
 
                 if (userId != null && role != null) {
-                    // Verify user exists (optional, but safer)
-                    if (userRepository.findById(userId).isPresent()) {
-                        List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+                    // Check if it's a system user (negative ID) or regular user
+                    boolean userExists = false;
+                    if (userId < 0) {
+                        // System user - use positive ID to lookup
+                        Long systemUserId = Math.abs(userId);
+                        userExists = systemUserRepository.findById(systemUserId).isPresent();
+                    } else {
+                        // Regular user
+                        userExists = userRepository.findById(userId).isPresent();
+                    }
+                    
+                    if (userExists) {
+                        // Normalize role (remove SYSTEM_ prefix if present)
+                        String normalizedRole = role.startsWith("SYSTEM_") ? role.substring(7) : role;
+                        List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + normalizedRole));
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(userId, null, authorities);
                         SecurityContextHolder.getContext().setAuthentication(authentication);

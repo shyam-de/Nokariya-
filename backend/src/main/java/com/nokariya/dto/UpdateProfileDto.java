@@ -14,7 +14,9 @@ public class UpdateProfileDto {
     private String email;
 
     @NotBlank(message = "Phone is required")
-    private String phone;
+    private String phone; // Primary contact
+
+    private String secondaryPhone; // Secondary contact (optional)
 
     private LocationDto location;
 }

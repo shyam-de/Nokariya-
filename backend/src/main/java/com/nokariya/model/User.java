@@ -25,7 +25,10 @@ public class User {
     private String email;
 
     @Column(nullable = false)
-    private String phone;
+    private String phone; // Primary contact
+
+    @Column(name = "secondary_phone")
+    private String secondaryPhone; // Secondary contact (optional)
 
     @Column(nullable = false)
     @JsonIgnore
@@ -37,6 +40,12 @@ public class User {
 
     @Embedded
     private Location location;
+
+    @Column(name = "blocked", nullable = false)
+    private Boolean blocked = false;
+
+    @Column(name = "super_admin", nullable = false)
+    private Boolean superAdmin = false;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
