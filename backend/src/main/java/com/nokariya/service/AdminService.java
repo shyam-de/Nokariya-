@@ -3,6 +3,7 @@ package com.nokariya.service;
 import com.nokariya.dto.LocationDto;
 import com.nokariya.model.*;
 import com.nokariya.model.SystemUser;
+import com.nokariya.repository.ConfirmedWorkerRepository;
 import com.nokariya.repository.RequestRepository;
 import com.nokariya.repository.SystemUserRepository;
 import com.nokariya.repository.UserRepository;
@@ -29,6 +30,9 @@ public class AdminService {
     private WorkerRepository workerRepository;
 
     @Autowired
+    private ConfirmedWorkerRepository confirmedWorkerRepository;
+
+    @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
     @Autowired
@@ -47,6 +51,22 @@ public class AdminService {
             return filterByAdminRadius(requests, adminId);
         }
         return requests;
+    }
+
+    public List<Request> getActiveRequests(Long adminId) {
+        List<Request.RequestStatus> activeStatuses = Arrays.asList(
+                Request.RequestStatus.NOTIFIED,
+                Request.RequestStatus.CONFIRMED
+        );
+        List<Request> requests = requestRepository.findByStatusIn(activeStatuses);
+        // Only filter by radius if admin is not a super admin
+        if (adminId != null && !isSuperAdmin(adminId)) {
+            return filterByAdminRadius(requests, adminId);
+        }
+        // Sort by created date descending
+        return requests.stream()
+                .sorted(Comparator.comparing(Request::getCreatedAt).reversed())
+                .collect(Collectors.toList());
     }
 
     public List<Request> getAllRequests(String search, String sortBy, String sortOrder, Long adminId) {
@@ -587,6 +607,204 @@ public class AdminService {
             userData.put("createdAt", systemUser.getCreatedAt());
             return userData;
         }).collect(Collectors.toList());
+    }
+
+    /**
+     * Get confirmation status for a request, grouped by labor type
+     * Returns a map with labor type as key and confirmation details as value
+     */
+    public Map<String, Object> getRequestConfirmationStatus(Long requestId) {
+        Request request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        // Eagerly load confirmed workers and their worker profiles
+        if (request.getConfirmedWorkers() != null) {
+            request.getConfirmedWorkers().size(); // Trigger lazy loading
+            for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
+                if (cw.getWorker() != null) {
+                    // Load worker profile to get labor types
+                    workerRepository.findByUserId(cw.getWorker().getId()).ifPresent(worker -> {
+                        // This ensures worker profile is loaded
+                    });
+                }
+            }
+        }
+
+        // Load labor type requirements
+        if (request.getLaborTypeRequirements() != null) {
+            request.getLaborTypeRequirements().size(); // Trigger lazy loading
+        }
+
+        Map<String, Object> status = new HashMap<>();
+        int totalConfirmed = request.getConfirmedWorkers() != null ? request.getConfirmedWorkers().size() : 0;
+        int totalRequired = request.getNumberOfWorkers();
+        int totalPending = Math.max(0, totalRequired - totalConfirmed);
+        
+        status.put("requestId", request.getId());
+        status.put("totalConfirmed", totalConfirmed);
+        status.put("totalRequired", totalRequired);
+        status.put("totalPending", totalPending);
+
+        // Group confirmed workers by labor type
+        Map<Worker.LaborType, List<Map<String, Object>>> confirmedByLaborType = new HashMap<>();
+        Map<Worker.LaborType, Integer> requiredByLaborType = new HashMap<>();
+
+        // Initialize required counts from labor type requirements
+        if (request.getLaborTypeRequirements() != null) {
+            for (RequestLaborTypeRequirement req : request.getLaborTypeRequirements()) {
+                requiredByLaborType.put(req.getLaborType(), req.getNumberOfWorkers());
+                confirmedByLaborType.put(req.getLaborType(), new ArrayList<>());
+            }
+        }
+
+        // Group confirmed workers by their labor types
+        if (request.getConfirmedWorkers() != null) {
+            for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
+                User workerUser = cw.getWorker();
+                Worker worker = workerRepository.findByUserId(workerUser.getId()).orElse(null);
+                
+                if (worker != null && worker.getLaborTypes() != null) {
+                    Map<String, Object> workerInfo = new HashMap<>();
+                    workerInfo.put("userId", workerUser.getId());
+                    workerInfo.put("name", workerUser.getName());
+                    workerInfo.put("phone", workerUser.getPhone());
+                    workerInfo.put("email", workerUser.getEmail());
+                    workerInfo.put("confirmedAt", cw.getConfirmedAt());
+                    
+                    // Add this worker to all matching labor types
+                    for (Worker.LaborType laborType : worker.getLaborTypes()) {
+                        if (requiredByLaborType.containsKey(laborType)) {
+                            confirmedByLaborType.get(laborType).add(workerInfo);
+                        }
+                    }
+                }
+            }
+        }
+
+        // Build status per labor type
+        List<Map<String, Object>> laborTypeStatus = new ArrayList<>();
+        for (Map.Entry<Worker.LaborType, Integer> entry : requiredByLaborType.entrySet()) {
+            Worker.LaborType laborType = entry.getKey();
+            Integer required = entry.getValue();
+            List<Map<String, Object>> confirmed = confirmedByLaborType.get(laborType);
+            int confirmedCount = confirmed != null ? confirmed.size() : 0;
+            
+            int pendingCount = Math.max(0, required - confirmedCount);
+            
+            Map<String, Object> ltStatus = new HashMap<>();
+            ltStatus.put("laborType", laborType.name());
+            ltStatus.put("required", required);
+            ltStatus.put("confirmed", confirmedCount);
+            ltStatus.put("pending", pendingCount);
+            ltStatus.put("confirmedWorkers", confirmed != null ? confirmed : new ArrayList<>());
+            ltStatus.put("canDeploy", confirmedCount >= required);
+            
+            laborTypeStatus.add(ltStatus);
+        }
+
+        status.put("laborTypeStatus", laborTypeStatus);
+        
+        // Check if all labor types have enough confirmations
+        boolean allRequirementsMet = laborTypeStatus.stream()
+                .allMatch(lt -> (Boolean) lt.get("canDeploy"));
+        status.put("allRequirementsMet", allRequirementsMet);
+        
+        // Check if at least one worker has confirmed (for deploy button visibility)
+        boolean canDeploy = totalConfirmed > 0;
+        status.put("canDeploy", canDeploy);
+
+        return status;
+    }
+
+    /**
+     * Deploy workers to customer based on labor type requirements
+     * Only deploys if all labor type requirements are met
+     */
+    @Transactional
+    public Request deployWorkers(Long requestId) {
+        Request request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        if (request.getStatus() != Request.RequestStatus.NOTIFIED && 
+            request.getStatus() != Request.RequestStatus.CONFIRMED) {
+            throw new RuntimeException("Request must be in NOTIFIED or CONFIRMED status to deploy");
+        }
+
+        // Check confirmation status
+        Map<String, Object> confirmationStatus = getRequestConfirmationStatus(requestId);
+        boolean canDeploy = confirmationStatus.get("canDeploy") != null && (Boolean) confirmationStatus.get("canDeploy");
+
+        if (!canDeploy) {
+            throw new RuntimeException("No workers have confirmed yet. Cannot deploy.");
+        }
+
+        // Get labor type status
+        @SuppressWarnings("unchecked")
+        List<Map<String, Object>> laborTypeStatus = (List<Map<String, Object>>) confirmationStatus.get("laborTypeStatus");
+
+        // Clear existing deployed workers (if any)
+        if (request.getDeployedWorkers() != null) {
+            request.getDeployedWorkers().clear();
+        }
+
+        // Deploy workers per labor type requirement
+        for (Map<String, Object> ltStatus : laborTypeStatus) {
+            Integer required = (Integer) ltStatus.get("required");
+            @SuppressWarnings("unchecked")
+            List<Map<String, Object>> confirmedWorkers = (List<Map<String, Object>>) ltStatus.get("confirmedWorkers");
+
+            // Deploy required number of workers for this labor type
+            int deployed = 0;
+            for (Map<String, Object> workerInfo : confirmedWorkers) {
+                if (deployed >= required) break;
+
+                Long userId = ((Number) workerInfo.get("userId")).longValue();
+                User workerUser = userRepository.findById(userId)
+                        .orElseThrow(() -> new RuntimeException("Worker not found"));
+
+                // Check if already deployed
+                boolean alreadyDeployed = request.getDeployedWorkers().stream()
+                        .anyMatch(dw -> dw.getWorker().getId().equals(userId));
+
+                if (!alreadyDeployed) {
+                    DeployedWorker deployedWorker = new DeployedWorker();
+                    deployedWorker.setRequest(request);
+                    deployedWorker.setWorker(workerUser);
+                    request.getDeployedWorkers().add(deployedWorker);
+                    deployed++;
+                }
+            }
+        }
+
+        request.setStatus(Request.RequestStatus.DEPLOYED);
+        Request savedRequest = requestRepository.save(request);
+
+        // Notify customer
+        Map<String, Object> deploymentData = new HashMap<>();
+        deploymentData.put("requestId", savedRequest.getId());
+        deploymentData.put("laborTypeRequirements", savedRequest.getLaborTypeRequirements().stream()
+                .map(req -> {
+                    Map<String, Object> reqData = new HashMap<>();
+                    reqData.put("laborType", req.getLaborType().name());
+                    reqData.put("numberOfWorkers", req.getNumberOfWorkers());
+                    return reqData;
+                })
+                .collect(Collectors.toList()));
+        deploymentData.put("deployedWorkers", savedRequest.getDeployedWorkers().stream()
+                .map(dw -> {
+                    Map<String, Object> workerData = new HashMap<>();
+                    workerData.put("id", dw.getWorker().getId());
+                    workerData.put("name", dw.getWorker().getName());
+                    workerData.put("phone", dw.getWorker().getPhone());
+                    return workerData;
+                })
+                .collect(Collectors.toList()));
+        messagingTemplate.convertAndSend(
+                "/topic/customer/" + savedRequest.getCustomer().getId(),
+                deploymentData
+        );
+
+        return savedRequest;
     }
 }
 

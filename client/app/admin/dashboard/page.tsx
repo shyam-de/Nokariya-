@@ -35,14 +35,16 @@ interface Request {
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'pending' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers'>('pending')
   const [requests, setRequests] = useState<Request[]>([])
+  const [activeRequests, setActiveRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
   const [concerns, setConcerns] = useState<any[]>([])
   const [workers, setWorkers] = useState<any[]>([])
   const [customers, setCustomers] = useState<any[]>([])
   const [systemUsers, setSystemUsers] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
+  const [isLoadingActive, setIsLoadingActive] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
   const [isLoadingWorkers, setIsLoadingWorkers] = useState(false)
@@ -61,6 +63,9 @@ export default function AdminDashboard() {
   const [sortBy, setSortBy] = useState('date')
   const [sortOrder, setSortOrder] = useState('desc')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  const [confirmationStatus, setConfirmationStatus] = useState<{[key: string]: any}>({})
+  const [isLoadingConfirmation, setIsLoadingConfirmation] = useState<{[key: string]: boolean}>({})
+  const [isDeploying, setIsDeploying] = useState<{[key: string]: boolean}>({})
   const [userFormData, setUserFormData] = useState({
     name: '',
     email: '',
@@ -100,6 +105,8 @@ export default function AdminDashboard() {
   useEffect(() => {
     if (activeTab === 'history') {
       fetchAllRequests()
+    } else if (activeTab === 'active') {
+      fetchActiveRequests()
     } else if (activeTab === 'concerns') {
       fetchConcerns()
     } else if (activeTab === 'workers') {
@@ -108,8 +115,27 @@ export default function AdminDashboard() {
       fetchCustomers()
     } else if (activeTab === 'systemUsers') {
       fetchSystemUsers()
+    } else if (activeTab === 'pending') {
+      fetchPendingRequests()
     }
   }, [activeTab, searchQuery, sortBy, sortOrder, statusFilter])
+
+  // Auto-refresh confirmation status for NOTIFIED/CONFIRMED requests
+  useEffect(() => {
+    if (activeTab === 'pending' || activeTab === 'active' || activeTab === 'history') {
+      const interval = setInterval(() => {
+        // Refresh confirmation status for all NOTIFIED/CONFIRMED requests
+        const requestsToCheck = activeTab === 'pending' ? requests : activeTab === 'active' ? activeRequests : allRequests
+        requestsToCheck.forEach((request: Request) => {
+          if (request.status === 'NOTIFIED' || request.status === 'CONFIRMED') {
+            fetchConfirmationStatus(request.id)
+          }
+        })
+      }, 10000) // Refresh every 10 seconds
+
+      return () => clearInterval(interval)
+    }
+  }, [activeTab, requests, activeRequests, allRequests])
 
   const fetchPendingRequests = async () => {
     setIsLoading(true)
@@ -124,6 +150,29 @@ export default function AdminDashboard() {
       toast.error(error.response?.data?.message || 'Failed to fetch requests')
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchActiveRequests = async () => {
+    setIsLoadingActive(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/requests/active`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setActiveRequests(response.data)
+      
+      // Auto-fetch confirmation status for all active requests
+      response.data.forEach((request: Request) => {
+        if (request.status === 'NOTIFIED' || request.status === 'CONFIRMED') {
+          fetchConfirmationStatus(request.id)
+        }
+      })
+    } catch (error: any) {
+      console.error('Error fetching active requests:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch active requests')
+    } finally {
+      setIsLoadingActive(false)
     }
   }
 
@@ -189,6 +238,48 @@ export default function AdminDashboard() {
       fetchPendingRequests()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to reject request')
+    }
+  }
+
+  const fetchConfirmationStatus = async (requestId: string) => {
+    setIsLoadingConfirmation({ ...isLoadingConfirmation, [requestId]: true })
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/requests/${requestId}/confirmation-status`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setConfirmationStatus({ ...confirmationStatus, [requestId]: response.data })
+    } catch (error: any) {
+      console.error('Error fetching confirmation status:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch confirmation status')
+    } finally {
+      setIsLoadingConfirmation({ ...isLoadingConfirmation, [requestId]: false })
+    }
+  }
+
+  const handleDeploy = async (requestId: string) => {
+    if (!confirm('Are you sure you want to deploy workers to this customer?')) {
+      return
+    }
+    setIsDeploying({ ...isDeploying, [requestId]: true })
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(
+        `${API_URL}/admin/requests/${requestId}/deploy`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      )
+      toast.success('Workers deployed successfully!')
+      fetchPendingRequests()
+      fetchAllRequests()
+      // Refresh confirmation status
+      delete confirmationStatus[requestId]
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to deploy workers')
+    } finally {
+      setIsDeploying({ ...isDeploying, [requestId]: false })
     }
   }
 
@@ -442,8 +533,8 @@ export default function AdminDashboard() {
     }
   }
 
-  const displayedRequests = activeTab === 'pending' ? requests : allRequests
-  const isCurrentlyLoading = activeTab === 'pending' ? isLoading : activeTab === 'history' ? isLoadingHistory : isLoadingConcerns
+  const displayedRequests = activeTab === 'pending' ? requests : activeTab === 'active' ? activeRequests : allRequests
+  const isCurrentlyLoading = activeTab === 'pending' ? isLoading : activeTab === 'active' ? isLoadingActive : activeTab === 'history' ? isLoadingHistory : isLoadingConcerns
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-orange-50">
@@ -640,6 +731,16 @@ export default function AdminDashboard() {
             📋 Pending Requests ({requests.length})
           </button>
           <button
+            onClick={() => setActiveTab('active')}
+            className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
+              activeTab === 'active'
+                ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            🚀 Active Requests ({activeRequests.length})
+          </button>
+          <button
             onClick={() => setActiveTab('history')}
             className={`flex-1 px-6 py-3 rounded-lg font-semibold transition-all duration-200 ${
               activeTab === 'history'
@@ -647,7 +748,7 @@ export default function AdminDashboard() {
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            📜 All History ({allRequests.length})
+            📜 All Request ({allRequests.length})
           </button>
           <button
             onClick={() => setActiveTab('concerns')}
@@ -1223,10 +1324,10 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
-        ) : (activeTab === 'pending' || activeTab === 'history') ? (
+        ) : (activeTab === 'pending' || activeTab === 'active' || activeTab === 'history') ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {activeTab === 'pending' ? 'Pending Approval Requests' : 'All Requests History'}
+              {activeTab === 'pending' ? 'Pending Approval Requests' : activeTab === 'active' ? 'Active Requests (Need Deployment)' : 'All Request'}
             </h2>
             
             {isCurrentlyLoading ? (
@@ -1313,6 +1414,140 @@ export default function AdminDashboard() {
                       )}
                     </div>
 
+                    {/* Confirmation Status for NOTIFIED/CONFIRMED requests */}
+                    {(request.status === 'NOTIFIED' || request.status === 'CONFIRMED') && (
+                      <div className="mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                        <div className="flex justify-between items-center mb-3">
+                          <p className="text-sm font-semibold text-blue-700">
+                            📊 Confirmation Status
+                          </p>
+                          <button
+                            onClick={() => fetchConfirmationStatus(request.id)}
+                            disabled={isLoadingConfirmation[request.id]}
+                            className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
+                          >
+                            {isLoadingConfirmation[request.id] ? 'Loading...' : '🔄 Refresh'}
+                          </button>
+                        </div>
+                        {isLoadingConfirmation[request.id] ? (
+                          <div className="flex justify-center py-2">
+                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                          </div>
+                        ) : confirmationStatus[request.id] ? (
+                          <div className="space-y-3">
+                            {/* Overall Summary */}
+                            <div className="bg-white rounded-lg p-3 border-2 border-blue-300">
+                              <div className="flex justify-between items-center mb-2">
+                                <span className="text-sm font-bold text-gray-800">Overall Status</span>
+                                <span className={`text-sm font-bold ${
+                                  confirmationStatus[request.id].allRequirementsMet ? 'text-green-600' : 'text-orange-600'
+                                }`}>
+                                  {confirmationStatus[request.id].totalConfirmed} / {confirmationStatus[request.id].totalRequired}
+                                </span>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="bg-green-50 rounded p-2 border border-green-200">
+                                  <div className="text-green-700 font-semibold">✓ Confirmed</div>
+                                  <div className="text-green-600 text-lg font-bold">{confirmationStatus[request.id].totalConfirmed}</div>
+                                </div>
+                                <div className="bg-orange-50 rounded p-2 border border-orange-200">
+                                  <div className="text-orange-700 font-semibold">⏳ Pending</div>
+                                  <div className="text-orange-600 text-lg font-bold">{confirmationStatus[request.id].totalPending || 0}</div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Per Labor Type Status */}
+                            {confirmationStatus[request.id].laborTypeStatus && (
+                              <div className="space-y-2">
+                                <div className="text-xs font-semibold text-gray-700 mb-1">Per Labor Type:</div>
+                                {confirmationStatus[request.id].laborTypeStatus.map((ltStatus: any, idx: number) => (
+                                  <div key={idx} className="bg-white rounded p-2 border border-blue-200">
+                                    <div className="flex justify-between items-center mb-1">
+                                      <span className="text-xs font-semibold text-gray-700 capitalize">
+                                        {ltStatus.laborType.toLowerCase().replace('_', ' ')}
+                                      </span>
+                                      <div className="flex gap-2">
+                                        <span className={`text-xs font-semibold ${
+                                          ltStatus.canDeploy ? 'text-green-600' : 'text-orange-600'
+                                        }`}>
+                                          ✓ {ltStatus.confirmed} / {ltStatus.required}
+                                        </span>
+                                        {ltStatus.pending > 0 && (
+                                          <span className="text-xs font-semibold text-orange-600">
+                                            ⏳ {ltStatus.pending} pending
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {ltStatus.confirmedWorkers && ltStatus.confirmedWorkers.length > 0 && (
+                                      <div className="mt-1 space-y-1">
+                                        {ltStatus.confirmedWorkers.slice(0, 3).map((worker: any, wIdx: number) => (
+                                          <p key={wIdx} className="text-xs text-gray-600">
+                                            • {worker.name} ({worker.phone})
+                                          </p>
+                                        ))}
+                                        {ltStatus.confirmedWorkers.length > 3 && (
+                                          <p className="text-xs text-gray-500">
+                                            +{ltStatus.confirmedWorkers.length - 3} more
+                                          </p>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {confirmationStatus[request.id].canDeploy && (
+                              <div className="mt-3 space-y-2">
+                                <div className={`border-2 rounded-lg p-3 text-center ${
+                                  confirmationStatus[request.id].allRequirementsMet 
+                                    ? 'bg-green-50 border-green-400' 
+                                    : 'bg-yellow-50 border-yellow-400'
+                                }`}>
+                                  <p className={`text-sm font-bold mb-2 ${
+                                    confirmationStatus[request.id].allRequirementsMet 
+                                      ? 'text-green-700' 
+                                      : 'text-yellow-700'
+                                  }`}>
+                                    {confirmationStatus[request.id].allRequirementsMet 
+                                      ? '✅ All Required Workers Confirmed!' 
+                                      : '⚠️ Few workers are available to deploy. Check with customer to deploy'}
+                                  </p>
+                                  <button
+                                    onClick={() => handleDeploy(request.id)}
+                                    disabled={isDeploying[request.id]}
+                                    className="w-full mt-3 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                                  >
+                                    {isDeploying[request.id] ? 'Deploying...' : '🚀 Deploy Workers to Customer'}
+                                  </button>
+                                  {!confirmationStatus[request.id].allRequirementsMet && (
+                                    <p className="text-xs text-yellow-600 mt-2">
+                                      ⏳ {confirmationStatus[request.id].totalConfirmed} confirmed, {confirmationStatus[request.id].totalPending || 0} more worker(s) still pending
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            {!confirmationStatus[request.id].canDeploy && (
+                              <div className="mt-3 bg-orange-50 border border-orange-200 rounded-lg p-2 text-center">
+                                <p className="text-xs text-orange-700">
+                                  ⏳ Waiting for workers to confirm
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <button
+                            onClick={() => fetchConfirmationStatus(request.id)}
+                            className="w-full text-xs px-3 py-2 bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                          >
+                            Click to view confirmation status
+                          </button>
+                        )}
+                      </div>
+                    )}
+
                     {request.deployedWorkers && request.deployedWorkers.length > 0 && (
                       <div className="mb-4 p-3 bg-green-50 rounded-lg border border-green-200">
                         <p className="text-sm font-semibold text-green-700 mb-2">
@@ -1328,7 +1563,7 @@ export default function AdminDashboard() {
                       </div>
                     )}
 
-                    {activeTab === 'pending' && (
+                    {activeTab === 'pending' && request.status === 'PENDING_ADMIN_APPROVAL' && (
                       <div className="flex gap-3 mt-4">
                         <button
                           onClick={() => handleApprove(request.id)}

@@ -24,12 +24,14 @@ interface Request {
     id: string
     name: string
     phone: string
+    email?: string
   }
   status: string
   distance?: string
   createdAt: string
   completedAt?: string
   customerRating?: number
+  workerConfirmed?: boolean
 }
 
 interface WorkHistory {
@@ -310,6 +312,42 @@ export default function WorkerDashboard() {
     }
   }
 
+  // Helper function to mask phone number
+  const maskPhone = (phone: string | undefined): string => {
+    if (!phone) return '***-***-****'
+    if (phone.length <= 4) return '***-***-' + phone.slice(-4)
+    return '***-***-' + phone.slice(-4)
+  }
+
+  // Helper function to mask email
+  const maskEmail = (email: string | undefined): string => {
+    if (!email) return '***@***.***'
+    const [localPart, domain] = email.split('@')
+    if (!domain) return '***@***.***'
+    const maskedLocal = localPart.length > 2 
+      ? localPart.slice(0, 2) + '***' 
+      : '***'
+    const [domainName, domainExt] = domain.split('.')
+    const maskedDomain = domainName.length > 2 
+      ? domainName.slice(0, 2) + '***' 
+      : '***'
+    return `${maskedLocal}@${maskedDomain}.${domainExt || '***'}`
+  }
+
+  // Helper function to mask address (show partial)
+  const maskAddress = (address: string | undefined): string => {
+    if (!address) return 'Address not available'
+    // Show first 20 characters and mask the rest
+    if (address.length <= 20) return address
+    const visiblePart = address.substring(0, 20)
+    const words = visiblePart.split(' ')
+    // Show first 2-3 words and mask the rest
+    if (words.length <= 2) {
+      return words.join(' ') + ' ***'
+    }
+    return words.slice(0, 2).join(' ') + ' ***'
+  }
+
   const toggleAvailability = async () => {
     setIsToggling(true)
     try {
@@ -438,10 +476,17 @@ export default function WorkerDashboard() {
   const getLaborTypeIcon = (type: string) => {
     const icons: { [key: string]: string } = {
       'ELECTRICIAN': '⚡',
-      'SKILLED': '🔧',
-      'UNSKILLED': '👷'
+      'DRIVER': '🚗',
+      'RIGGER': '🔩',
+      'FITTER': '🔧',
+      'COOK': '👨‍🍳',
+      'PLUMBER': '🔧',
+      'CARPENTER': '🪚',
+      'PAINTER': '🎨',
+      'LABOUR': '👷',
+      'RAJ_MISTRI': '👷‍♂️'
     }
-    return icons[type] || '👷'
+    return icons[type.toUpperCase()] || '👷'
   }
 
   const getStatusBadge = (status: string) => {
@@ -927,36 +972,19 @@ export default function WorkerDashboard() {
                       <div className="flex justify-between items-start mb-4">
                         <div className="flex-1">
                           <div className="flex items-center gap-3 mb-2">
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {work.laborTypes && work.laborTypes.length > 0 ? (
-                                work.laborTypes.map((type: string, idx: number) => (
-                                  <span key={idx} className="text-2xl">{getLaborTypeIcon(type)}</span>
-                                ))
-                              ) : (
-                                <span className="text-2xl">⚡</span>
-                              )}
-                            </div>
+                            <span className="text-2xl">⚡</span>
                             <h3 className="text-xl font-bold capitalize text-gray-900 mb-2">
                               {work.workType}
                             </h3>
-                            {work.laborTypes && work.laborTypes.length > 0 && (
-                              <div className="flex flex-wrap gap-1 mb-2">
-                                {work.laborTypes.map((type: string, idx: number) => (
-                                  <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
-                                    {type.toLowerCase()}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                            {work.startDate && work.endDate && (
-                              <div className="text-sm text-gray-600 mb-2">
-                                📅 {new Date(work.startDate).toLocaleDateString()} - {new Date(work.endDate).toLocaleDateString()}
-                                <span className="ml-2 text-xs">
-                                  ({Math.ceil((new Date(work.endDate).getTime() - new Date(work.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
-                                </span>
-                              </div>
-                            )}
                           </div>
+                          {work.startDate && work.endDate && (
+                            <div className="text-sm text-gray-600 mb-2">
+                              📅 {new Date(work.startDate).toLocaleDateString()} - {new Date(work.endDate).toLocaleDateString()}
+                              <span className="ml-2 text-xs">
+                                ({Math.ceil((new Date(work.endDate).getTime() - new Date(work.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
+                              </span>
+                            </div>
+                          )}
                           <p className="text-gray-700 text-lg mb-3 font-medium">{work.workType}</p>
                           <div className="space-y-2 text-sm">
                             <div className="flex items-center gap-2 text-gray-600">
@@ -1019,79 +1047,67 @@ export default function WorkerDashboard() {
                   </div>
                 ) : (
                   requests.map((request) => (
-                    <div key={request.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500">
-                      <div className="flex justify-between items-start mb-4">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-3 mb-2">
-                            <div className="flex flex-wrap gap-1">
-                              {request.laborTypes && request.laborTypes.length > 0 ? (
-                                request.laborTypes.map((type: string, idx: number) => (
-                                  <span key={idx} className="text-2xl">{getLaborTypeIcon(type)}</span>
-                                ))
-                              ) : (
-                                <span className="text-2xl">⚡</span>
-                              )}
+                      <div key={request.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-2">
+                              <span className="text-2xl">⚡</span>
+                              <h3 className="text-xl font-bold capitalize text-gray-900">{request.workType}</h3>
                             </div>
-                            <h3 className="text-xl font-bold capitalize text-gray-900">{request.workType}</h3>
-                          </div>
-                          {request.laborTypes && request.laborTypes.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mb-2">
-                              {request.laborTypes.map((type: string, idx: number) => (
-                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
-                                  {type.toLowerCase()}
+                            {request.startDate && request.endDate && (
+                              <div className="text-sm text-gray-600 mb-2">
+                                📅 {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
+                                <span className="ml-2 text-xs">
+                                  ({Math.ceil((new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
                                 </span>
-                              ))}
-                            </div>
-                          )}
-                          {request.startDate && request.endDate && (
-                            <div className="text-sm text-gray-600 mb-2">
-                              📅 {new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}
-                              <span className="ml-2 text-xs">
-                                ({Math.ceil((new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
-                              </span>
-                            </div>
-                          )}
-                          <p className="text-gray-700 text-lg mb-3 font-medium">{request.workType}</p>
-                          <div className="space-y-2 text-sm">
-                            <div className="flex items-center gap-2 text-gray-600">
-                              <span>👥</span>
-                              <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''} needed</span>
-                            </div>
-                            {request.distance && (
-                              <div className="flex items-center gap-2 text-primary-600 font-semibold">
-                                <span>📍</span>
-                                <span>{request.distance} km away</span>
                               </div>
                             )}
-                            <div className="flex items-center justify-between">
-                              <div className="flex items-center gap-2 text-gray-600">
-                                <span>👤</span>
-                                <span>{request.customer?.name || 'Customer'} - {request.customer?.phone || 'N/A'}</span>
-                              </div>
-                              {request.customerRating !== undefined && request.customerRating > 0 && (
-                                <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
-                                  <span className="text-yellow-500 text-sm">⭐</span>
-                                  <span className="text-xs text-gray-700 font-semibold">
-                                    {request.customerRating.toFixed(1)}
-                                  </span>
+                            <p className="text-gray-700 text-lg mb-3 font-medium">{request.workType}</p>
+                            <div className="space-y-2 text-sm">
+                              {/* Show partial/masked address */}
+                              {request.location?.address && (
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <span>📍</span>
+                                  <span>{maskAddress(request.location.address)}</span>
                                 </div>
                               )}
+                              {request.distance && (
+                                <div className="flex items-center gap-2 text-primary-600 font-semibold">
+                                  <span>📍</span>
+                                  <span>{request.distance} km away</span>
+                                </div>
+                              )}
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-gray-600">
+                                  <span>👤</span>
+                                  <span>
+                                    {request.customer?.name || 'Customer'} - {maskPhone(request.customer?.phone)}
+                                  </span>
+                                </div>
+                                {request.customerRating !== undefined && request.customerRating > 0 && (
+                                  <div className="flex items-center gap-1 bg-yellow-50 px-2 py-1 rounded-full border border-yellow-200">
+                                    <span className="text-yellow-500 text-sm">⭐</span>
+                                    <span className="text-xs text-gray-700 font-semibold">
+                                      {request.customerRating.toFixed(1)}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             </div>
                           </div>
+                          {getStatusBadge(request.status)}
                         </div>
-                        {getStatusBadge(request.status)}
-                      </div>
 
-                      <button
-                        onClick={() => handleConfirm(request.id)}
-                        disabled={!available}
-                        className="w-full bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none flex items-center justify-center gap-2"
-                      >
-                        <span>✓</span>
-                        Confirm Request
-                      </button>
-                    </div>
-                  ))
+                        <button
+                          onClick={() => handleConfirm(request.id)}
+                          disabled={!available}
+                          className="w-full py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-indigo-600 text-white"
+                        >
+                          <span>✓</span>
+                          Confirm Request
+                        </button>
+                      </div>
+                    ))
                 )}
               </div>
             )}

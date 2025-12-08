@@ -42,6 +42,20 @@ public class AdminController {
         }
     }
 
+    @GetMapping("/requests/active")
+    public ResponseEntity<?> getActiveRequests(Authentication authentication) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            }
+            Long adminId = getUserIdFromAuthentication(authentication);
+            List<Request> requests = adminService.getActiveRequests(adminId);
+            return ResponseEntity.ok(requests);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @PostMapping("/requests/{requestId}/approve")
     public ResponseEntity<?> approveRequest(
             Authentication authentication,
@@ -67,6 +81,36 @@ public class AdminController {
             }
             Request request = adminService.rejectRequest(requestId);
             return ResponseEntity.ok(Map.of("message", "Request rejected", "request", request));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @GetMapping("/requests/{requestId}/confirmation-status")
+    public ResponseEntity<?> getConfirmationStatus(
+            Authentication authentication,
+            @PathVariable Long requestId) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            }
+            Map<String, Object> status = adminService.getRequestConfirmationStatus(requestId);
+            return ResponseEntity.ok(status);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/requests/{requestId}/deploy")
+    public ResponseEntity<?> deployWorkers(
+            Authentication authentication,
+            @PathVariable Long requestId) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            }
+            Request request = adminService.deployWorkers(requestId);
+            return ResponseEntity.ok(Map.of("message", "Workers deployed successfully", "request", request));
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

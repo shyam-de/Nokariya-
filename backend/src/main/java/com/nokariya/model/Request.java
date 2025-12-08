@@ -67,6 +67,9 @@ public class Request {
     @Transient
     private Double customerRating = 0.0;
 
+    @Transient
+    private Boolean workerConfirmed = false;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

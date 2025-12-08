@@ -158,9 +158,48 @@ public class RequestService {
 
         List<Request> requests = requestRepository.findByStatusIn(statuses).stream()
                 .filter(request -> {
-                    // Force load laborTypeRequirements to avoid lazy loading issues
+                    // Force load laborTypeRequirements and confirmedWorkers to avoid lazy loading issues
                     if (request.getLaborTypeRequirements() != null) {
                         request.getLaborTypeRequirements().size(); // Trigger lazy loading
+                    }
+                    if (request.getConfirmedWorkers() != null) {
+                        request.getConfirmedWorkers().size(); // Trigger lazy loading
+                    }
+                    
+                    // Check if all requirements are already met - if yes, exclude from available requests
+                    boolean allRequirementsMet = true;
+                    if (request.getLaborTypeRequirements() != null && !request.getLaborTypeRequirements().isEmpty()) {
+                        // Group confirmed workers by labor type
+                        Map<Worker.LaborType, Integer> confirmedByLaborType = new HashMap<>();
+                        if (request.getConfirmedWorkers() != null) {
+                            for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
+                                User workerUser = cw.getWorker();
+                                Worker workerProfile = workerRepository.findByUserId(workerUser.getId()).orElse(null);
+                                if (workerProfile != null && workerProfile.getLaborTypes() != null) {
+                                    for (Worker.LaborType laborType : workerProfile.getLaborTypes()) {
+                                        confirmedByLaborType.put(laborType, confirmedByLaborType.getOrDefault(laborType, 0) + 1);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Check if all requirements are met
+                        for (RequestLaborTypeRequirement req : request.getLaborTypeRequirements()) {
+                            int confirmedCount = confirmedByLaborType.getOrDefault(req.getLaborType(), 0);
+                            if (confirmedCount < req.getNumberOfWorkers()) {
+                                allRequirementsMet = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        // Fallback: check total confirmed vs total required
+                        int totalConfirmed = request.getConfirmedWorkers() != null ? request.getConfirmedWorkers().size() : 0;
+                        allRequirementsMet = totalConfirmed >= request.getNumberOfWorkers();
+                    }
+                    
+                    // Exclude requests where all requirements are met
+                    if (allRequirementsMet) {
+                        return false;
                     }
                     
                     // Check if worker has any of the required labor types
@@ -172,8 +211,24 @@ public class RequestService {
                 })
                 .collect(Collectors.toList());
 
-        // Populate customer ratings for each request
+        // Filter out requests that this worker has already confirmed
+        List<Request> filteredRequests = new ArrayList<>();
         for (Request request : requests) {
+            // Check if this worker has confirmed this request
+            // Note: ConfirmedWorker.worker is a User, not a Worker
+            boolean workerConfirmed = request.getConfirmedWorkers().stream()
+                    .anyMatch(cw -> {
+                        User confirmedWorkerUser = cw.getWorker();
+                        return confirmedWorkerUser != null && 
+                               confirmedWorkerUser.getId().equals(workerId);
+                    });
+            
+            // Exclude requests that this worker has already confirmed
+            if (workerConfirmed) {
+                continue;
+            }
+            
+            // Populate customer ratings
             if (request.getCustomer() != null && request.getCustomer().getId() != null) {
                 // Calculate customer rating from ratings table
                 List<Rating> customerRatings = ratingRepository.findByRated(request.getCustomer());
@@ -189,9 +244,11 @@ public class RequestService {
             } else {
                 request.setCustomerRating(0.0);
             }
+            
+            filteredRequests.add(request);
         }
 
-        return requests;
+        return filteredRequests;
     }
 
     @Transactional
@@ -215,39 +272,19 @@ public class RequestService {
         confirmedWorker.setRequest(request);
         confirmedWorker.setWorker(worker);
         request.getConfirmedWorkers().add(confirmedWorker);
-
-        // If we have enough confirmations, deploy workers
-        if (request.getConfirmedWorkers().size() >= request.getNumberOfWorkers()) {
+        
+        // Update status to CONFIRMED if we have any confirmations
+        if (request.getStatus() == Request.RequestStatus.NOTIFIED) {
             request.setStatus(Request.RequestStatus.CONFIRMED);
-            // Deploy workers
-            request.getConfirmedWorkers().stream()
-                    .limit(request.getNumberOfWorkers())
-                    .forEach(cw -> {
-                        DeployedWorker deployedWorker = new DeployedWorker();
-                        deployedWorker.setRequest(request);
-                        deployedWorker.setWorker(cw.getWorker());
-                        request.getDeployedWorkers().add(deployedWorker);
-                    });
-            request.setStatus(Request.RequestStatus.DEPLOYED);
-
-            // Notify customer
-            Map<String, Object> deploymentData = new HashMap<>();
-            deploymentData.put("requestId", request.getId());
-            deploymentData.put("deployedWorkers", request.getDeployedWorkers().stream()
-                    .map(dw -> {
-                        Map<String, Object> workerData = new HashMap<>();
-                        workerData.put("id", dw.getWorker().getId());
-                        workerData.put("name", dw.getWorker().getName());
-                        return workerData;
-                    })
-                    .collect(Collectors.toList()));
-            messagingTemplate.convertAndSend(
-                    "/topic/customer/" + request.getCustomer().getId(),
-                    deploymentData
-            );
         }
 
-        return requestRepository.save(request);
+        // Save the request first to persist the confirmation
+        Request savedRequest = requestRepository.save(request);
+        
+        // Note: The request will be automatically filtered out from other workers' available requests
+        // in getAvailableRequests() if all requirements are met (checked per labor type)
+
+        return savedRequest;
     }
 
     @Transactional
