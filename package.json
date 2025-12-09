@@ -1,12 +1,12 @@
 {
-  "name": "nokariya",
+  "name": "kaamkart",
   "version": "1.0.0",
   "description": "Platform connecting labor workers with end users",
   "scripts": {
-    "dev:client": "cd client && npm run dev",
-    "dev:backend": "cd backend && mvn spring-boot:run",
-    "install:client": "cd client && npm install",
-    "build:client": "cd client && npm run build"
+    "dev:client": "cd kaamkartUI && npm run dev",
+    "dev:backend": "cd kaamkartApi && mvn spring-boot:run",
+    "install:client": "cd kaamkartUI && npm install",
+    "build:client": "cd kaamkartUI && npm run build"
   },
   "keywords": ["labor", "workers", "marketplace"],
   "author": "",

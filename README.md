@@ -1,4 +1,4 @@
-# Nokariya - Labor Worker Platform
+# KaamKart - Labor Worker Platform
 
 A platform connecting labor workers (electricians, skilled, and unskilled laborers) with end users who need their services.
 
@@ -47,15 +47,15 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 
 2. **Create Database**:
    ```bash
-   mysql -u root -p < backend/src/main/resources/db/schema.sql
+   mysql -u root -p < kaamkartApi/src/main/resources/db/schema.sql
    ```
    Or manually:
    ```sql
-   CREATE DATABASE nokariya;
+   CREATE DATABASE kaamkart;
    ```
 
 3. **Configure Database**:
-   Edit `backend/src/main/resources/application.properties`:
+   Edit `kaamkartApi/src/main/resources/application.properties`:
    ```properties
    spring.datasource.username=root
    spring.datasource.password=your_mysql_password
@@ -63,7 +63,7 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 
 4. **Build and Run Backend**:
    ```bash
-   cd backend
+   cd kaamkartApi
    mvn clean install
    mvn spring-boot:run
    ```
@@ -73,12 +73,12 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 
 1. **Install Dependencies**:
    ```bash
-   cd client
+   cd kaamkartUI
    npm install
    ```
 
 2. **Configure Environment** (optional):
-   Create `client/.env.local`:
+   Create `kaamkartUI/.env.local`:
    ```
    NEXT_PUBLIC_API_URL=http://localhost:5000/api
    NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
@@ -86,7 +86,7 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 
 3. **Run Frontend**:
    ```bash
-   cd client
+   cd kaamkartUI
    npm run dev
    ```
    Frontend will start on `http://localhost:3000`
@@ -113,14 +113,14 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 ## Project Structure
 
 ```
-nokariya/
-├── client/              # Next.js frontend
+kaamkart/
+├── kaamkartUI/         # Next.js frontend
 │   ├── app/            # Next.js app directory
 │   └── ...
-├── backend/            # Spring Boot backend
+├── kaamkartApi/        # Spring Boot backend
 │   ├── src/
 │   │   ├── main/
-│   │   │   ├── java/com/nokariya/
+│   │   │   ├── java/com/kaamkart/
 │   │   │   │   ├── model/      # JPA entities
 │   │   │   │   ├── repository/ # Data repositories
 │   │   │   │   ├── service/    # Business logic
@@ -163,7 +163,7 @@ Topics:
 ## Database Schema
 
 The database schema is automatically created by Hibernate on first run, or you can manually run:
-- `backend/src/main/resources/db/schema.sql`
+- `kaamkartApi/src/main/resources/db/schema.sql`
 
 Main tables:
 - `users` - User accounts (customers and workers)
