@@ -1,19 +1,21 @@
 # KaamKart - Labor Worker Platform
 
-A platform connecting labor workers (electricians, skilled, and unskilled laborers) with end users who need their services.
+A platform connecting labor workers (electricians, plumbers, carpenters, etc.) with customers who need their services.
+
+## 🌐 Production Deployment
+
+**Live Site**: [kaamkart.in](https://kaamkart.in)  
+**API**: [api.kaamkart.in](https://api.kaamkart.in)
 
 ## Features
 
 - **User Registration & Authentication**: Separate registration for customers and workers
-- **Request Creation**: Customers can create requests specifying:
-  - Type of labor needed (electrician, skilled, unskilled)
-  - Type of work
-  - Number of workers required
-  - Location
+- **Request Creation**: Customers can create requests specifying labor types, work details, and location
 - **Location-Based Matching**: System finds nearest available workers
-- **Real-time Notifications**: Workers receive instant notifications for new requests via WebSocket
+- **Real-time Notifications**: Workers receive instant notifications via WebSocket
 - **Worker Confirmation**: Workers can confirm availability for requests
-- **Automatic Deployment**: System automatically deploys workers once enough confirmations are received
+- **Admin Dashboard**: Super admins can manage requests, users, success stories, and advertisements
+- **Success Stories & Advertisements**: Dynamic content management for homepage
 
 ## Tech Stack
 
@@ -21,7 +23,7 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 - Next.js 14 (React)
 - TypeScript
 - Tailwind CSS
-- WebSocket Client (SockJS/STOMP)
+- WebSocket Client (Socket.io)
 - Axios
 
 ### Backend
@@ -33,108 +35,116 @@ A platform connecting labor workers (electricians, skilled, and unskilled labore
 - JWT Authentication
 - Spring Security
 
-## Setup Instructions
+## Quick Start (Development)
 
 ### Prerequisites
-- Node.js (v18 or higher) - for frontend
-- Java 17 or higher - for backend
-- Maven 3.6+ - for backend
-- MySQL 8.0+ - for database
+- Node.js 18+
+- Java 17+
+- Maven 3.6+
+- MySQL 8.0+
 
 ### Backend Setup
 
-1. **Install MySQL** and make sure it's running
+```bash
+cd kaamkartApi
 
-2. **Create Database**:
-   ```bash
-   mysql -u root -p < kaamkartApi/src/main/resources/db/schema.sql
-   ```
-   Or manually:
-   ```sql
-   CREATE DATABASE kaamkart;
-   ```
+# Create database
+mysql -u root -p < kaamkart-database.sql
 
-3. **Configure Database**:
-   Edit `kaamkartApi/src/main/resources/application.properties`:
-   ```properties
-   spring.datasource.username=root
-   spring.datasource.password=your_mysql_password
-   ```
+# Update application-dev.properties with your database credentials
 
-4. **Build and Run Backend**:
-   ```bash
-   cd kaamkartApi
-   mvn clean install
-   mvn spring-boot:run
-   ```
-   Backend will start on `http://localhost:5000`
+# Run application
+mvn spring-boot:run
+```
+
+Backend runs on `http://localhost:8585`
 
 ### Frontend Setup
 
-1. **Install Dependencies**:
+```bash
+cd kaamkartUI
+
+# Install dependencies
+npm install
+
+# Run development server
+npm run dev
+```
+
+Frontend runs on `http://localhost:3000`
+
+## Production Deployment
+
+See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete production deployment guide.
+
+### Quick Deployment Steps
+
+1. **Server Setup**
    ```bash
-   cd kaamkartUI
-   npm install
+   sudo bash scripts/setup-server.sh
    ```
 
-2. **Configure Environment** (optional):
-   Create `kaamkartUI/.env.local`:
-   ```
-   NEXT_PUBLIC_API_URL=http://localhost:5000/api
-   NEXT_PUBLIC_SOCKET_URL=http://localhost:5000
-   ```
-
-3. **Run Frontend**:
+2. **Database Setup**
    ```bash
-   cd kaamkartUI
-   npm run dev
+   mysql -u root -p < kaamkartApi/kaamkart-database.sql
    ```
-   Frontend will start on `http://localhost:3000`
 
-## Usage
+3. **Configure Environment**
+   - Backend: Edit `/etc/systemd/system/kaamkart-api.service`
+   - Frontend: Create `.env.production` in `kaamkartUI/`
 
-### For Customers:
-1. Register/Login as a customer
-2. Create a request specifying:
-   - Labor type (electrician, skilled, unskilled)
-   - Work type description
-   - Number of workers needed
-   - Location
-3. System automatically notifies nearby workers
-4. View confirmed and deployed workers
+4. **Deploy**
+   ```bash
+   cd kaamkartApi && ./deploy.sh
+   cd ../kaamkartUI && ./deploy.sh
+   ```
 
-### For Workers:
-1. Register/Login as a worker (select labor types during registration)
-2. Set availability status
-3. Receive real-time notifications for nearby requests
-4. Confirm requests you're available for
-5. Get deployed once customer has enough confirmations
+5. **SSL Certificates**
+   ```bash
+   sudo certbot --nginx -d kaamkart.in -d www.kaamkart.in -d api.kaamkart.in
+   ```
+
+## Docker Deployment
+
+```bash
+# Build and run all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
 
 ## Project Structure
 
 ```
 kaamkart/
-├── kaamkartUI/         # Next.js frontend
-│   ├── app/            # Next.js app directory
-│   └── ...
-├── kaamkartApi/        # Spring Boot backend
+├── kaamkartUI/              # Next.js frontend
+│   ├── app/                # Next.js app directory
+│   ├── Dockerfile          # Frontend Docker image
+│   └── deploy.sh          # Frontend deployment script
+├── kaamkartApi/            # Spring Boot backend
 │   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/com/kaamkart/
-│   │   │   │   ├── model/      # JPA entities
-│   │   │   │   ├── repository/ # Data repositories
-│   │   │   │   ├── service/    # Business logic
-│   │   │   │   ├── controller/ # REST controllers
-│   │   │   │   ├── config/     # Configuration
-│   │   │   │   └── dto/        # Data transfer objects
-│   │   │   └── resources/
-│   │   │       ├── application.properties
-│   │   │       └── db/schema.sql
-│   └── pom.xml
-└── README.md
+│   ├── Dockerfile         # Backend Docker image
+│   ├── deploy.sh         # Backend deployment script
+│   └── kaamkart-api.service  # Systemd service file
+├── nginx/                  # Nginx configurations
+│   └── kaamkart.in.conf  # Production Nginx config
+├── scripts/                # Deployment scripts
+│   ├── setup-server.sh    # Initial server setup
+│   └── backup-database.sh # Database backup script
+├── docker-compose.yml     # Docker Compose configuration
+└── DEPLOYMENT.md          # Complete deployment guide
 ```
 
 ## API Endpoints
+
+### Public Endpoints
+- `GET /api/public/success-stories` - Get active success stories
+- `GET /api/public/advertisements` - Get active advertisements
+- `GET /api/health` - Health check
 
 ### Authentication
 - `POST /api/auth/register` - Register new user
@@ -147,31 +157,60 @@ kaamkart/
 - `POST /api/requests/{id}/confirm` - Confirm request (worker)
 - `POST /api/requests/{id}/complete` - Complete request
 
-### Workers
-- `GET /api/workers/profile` - Get worker profile
-- `PUT /api/workers/location` - Update worker location
-- `PUT /api/workers/availability` - Update availability
+### Admin
+- `GET /api/admin/requests/pending` - Get pending requests
+- `POST /api/admin/requests/{id}/approve` - Approve request
+- `POST /api/admin/requests/{id}/deploy` - Deploy workers
 
-## WebSocket
+## Database
 
-WebSocket endpoint: `ws://localhost:5000/ws`
+The database schema is optimized for millions of users with comprehensive indexing. See:
+- `kaamkartApi/kaamkart-database.sql` - Complete database setup
+- `kaamkartApi/DATABASE_OPTIMIZATION.md` - Optimization details
+- `kaamkartApi/SCALABILITY_SUMMARY.md` - Scalability guide
 
-Topics:
-- `/topic/worker/{workerId}` - Worker notifications
-- `/topic/customer/{customerId}` - Customer notifications
+## Environment Variables
 
-## Database Schema
+### Backend
+See `kaamkartApi/.env.production.example`
 
-The database schema is automatically created by Hibernate on first run, or you can manually run:
-- `kaamkartApi/src/main/resources/db/schema.sql`
+### Frontend
+See `kaamkartUI/.env.production.example`
 
-Main tables:
-- `users` - User accounts (customers and workers)
-- `workers` - Worker profiles
-- `requests` - Customer requests
-- `confirmed_workers` - Worker confirmations
-- `deployed_workers` - Deployed workers
+## Monitoring
+
+- Health Check: `https://api.kaamkart.in/api/health`
+- Readiness: `https://api.kaamkart.in/api/health/ready`
+- Liveness: `https://api.kaamkart.in/api/health/live`
+
+## Backup
+
+Database backups are automated via cron:
+```bash
+# Manual backup
+./scripts/backup-database.sh
+
+# Automated (add to crontab)
+0 2 * * * /path/to/backup-database.sh
+```
+
+## Security
+
+- JWT authentication
+- BCrypt password hashing
+- CORS protection
+- Rate limiting (Nginx)
+- SSL/TLS encryption
+- Security headers
+- SQL injection protection (JPA)
+- XSS protection
 
 ## License
 
 ISC
+
+## Support
+
+For deployment issues, see [DEPLOYMENT.md](./DEPLOYMENT.md) or check logs:
+- Backend: `sudo journalctl -u kaamkart-api -f`
+- Nginx: `sudo tail -f /var/log/nginx/error.log`

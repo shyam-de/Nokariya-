@@ -1,0 +1,11 @@
+target/
+.git
+.gitignore
+*.md
+.idea
+.vscode
+logs/
+*.log
+deploy.sh
+.env*
+

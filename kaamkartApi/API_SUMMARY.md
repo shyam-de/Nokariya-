@@ -165,7 +165,9 @@ java -jar target/kaamkart-api-1.0.0.jar
 
 ## 📝 Next Steps for Production
 
-See `PRODUCTION_READINESS.md` for detailed recommendations including:
+See deployment guides for detailed recommendations:
+- `DEPLOYMENT.md` - General production deployment
+- `DEPLOY_DIGITALOCEAN.md` - DigitalOcean specific deployment
 - Rate limiting implementation
 - Geocoding service integration
 - Monitoring and observability
@@ -182,5 +184,5 @@ All 40 endpoints have been reviewed and are production-ready with:
 - Security
 - Transaction management
 
-The application is ready for production deployment with the recommended improvements from `PRODUCTION_READINESS.md`.
+The application is ready for production deployment.
 
