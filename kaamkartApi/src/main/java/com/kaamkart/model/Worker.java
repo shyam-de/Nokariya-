@@ -32,10 +32,9 @@ public class Worker {
     private User user;
 
     @ElementCollection
-    @CollectionTable(name = "worker_labor_types", joinColumns = @JoinColumn(name = "worker_id"))
-    @Column(name = "labor_type")
-    @Enumerated(EnumType.STRING)
-    private List<LaborType> laborTypes = new ArrayList<>();
+    @CollectionTable(name = "workers_worker_types", joinColumns = @JoinColumn(name = "worker_id"))
+    @Column(name = "worker_type")
+    private List<String> workerTypes = new ArrayList<>();
 
     @ElementCollection
     @CollectionTable(name = "worker_skills", joinColumns = @JoinColumn(name = "worker_id"))
@@ -69,19 +68,6 @@ public class Worker {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
-    }
-
-    public enum LaborType {
-        ELECTRICIAN,
-        DRIVER,
-        RIGGER,
-        FITTER,
-        COOK,
-        PLUMBER,
-        CARPENTER,
-        PAINTER,
-        LABOUR,
-        RAJ_MISTRI
     }
 }
 

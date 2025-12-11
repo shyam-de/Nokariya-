@@ -85,15 +85,31 @@ CREATE TABLE IF NOT EXISTS workers (
     INDEX idx_workers_location (current_latitude, current_longitude)
 );
 
--- Worker labor types (many-to-many)
-CREATE TABLE IF NOT EXISTS worker_labor_types (
+-- Worker Types table (dynamic, managed by super admin)
+CREATE TABLE IF NOT EXISTS worker_types (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    display_name VARCHAR(200),
+    icon VARCHAR(10),
+    description VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    display_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_worker_types_name (name),
+    INDEX idx_worker_types_active (is_active),
+    INDEX idx_worker_types_active_name (is_active, name)
+);
+
+-- Worker type assignments (many-to-many join table: workers <-> worker_types)
+CREATE TABLE IF NOT EXISTS workers_worker_types (
     worker_id BIGINT NOT NULL,
-    labor_type ENUM('ELECTRICIAN', 'DRIVER', 'RIGGER', 'FITTER', 'COOK', 'PLUMBER', 'CARPENTER', 'PAINTER', 'LABOUR', 'RAJ_MISTRI') NOT NULL,
+    worker_type VARCHAR(100) NOT NULL,
     FOREIGN KEY (worker_id) REFERENCES workers(id) ON DELETE CASCADE,
-    PRIMARY KEY (worker_id, labor_type),
-    INDEX idx_wlt_worker_id (worker_id),
-    INDEX idx_wlt_labor_type (labor_type),
-    INDEX idx_wlt_worker_labor_type (worker_id, labor_type)
+    PRIMARY KEY (worker_id, worker_type),
+    INDEX idx_wwt_worker_id (worker_id),
+    INDEX idx_wwt_worker_type (worker_type),
+    INDEX idx_wwt_worker_worker_type (worker_id, worker_type)
 );
 
 -- Worker skills
@@ -132,24 +148,24 @@ CREATE TABLE IF NOT EXISTS requests (
     INDEX idx_requests_location (location_latitude, location_longitude)
 );
 
--- Request labor types (kept for backward compatibility)
-CREATE TABLE IF NOT EXISTS request_labor_types (
+-- Request worker types (kept for backward compatibility) - now uses VARCHAR instead of ENUM
+CREATE TABLE IF NOT EXISTS request_worker_types (
     request_id BIGINT NOT NULL,
-    labor_type ENUM('ELECTRICIAN', 'DRIVER', 'RIGGER', 'FITTER', 'COOK', 'PLUMBER', 'CARPENTER', 'PAINTER', 'LABOUR', 'RAJ_MISTRI') NOT NULL,
+    worker_type VARCHAR(100) NOT NULL,
     FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE,
-    PRIMARY KEY (request_id, labor_type)
+    PRIMARY KEY (request_id, worker_type)
 );
 
--- Request labor type requirements (with counts)
-CREATE TABLE IF NOT EXISTS request_labor_type_requirements (
+-- Request worker type requirements (with counts) - now uses VARCHAR instead of ENUM
+CREATE TABLE IF NOT EXISTS request_worker_type_requirements (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     request_id BIGINT NOT NULL,
-    labor_type ENUM('ELECTRICIAN', 'DRIVER', 'RIGGER', 'FITTER', 'COOK', 'PLUMBER', 'CARPENTER', 'PAINTER', 'LABOUR', 'RAJ_MISTRI') NOT NULL,
+    worker_type VARCHAR(100) NOT NULL,
     number_of_workers INT NOT NULL,
     FOREIGN KEY (request_id) REFERENCES requests(id) ON DELETE CASCADE,
-    INDEX idx_rlt_request_id (request_id),
-    INDEX idx_rlt_labor_type (labor_type),
-    INDEX idx_rlt_request_labor_type (request_id, labor_type)
+    INDEX idx_rwt_request_id (request_id),
+    INDEX idx_rwt_worker_type (worker_type),
+    INDEX idx_rwt_request_worker_type (request_id, worker_type)
 );
 
 -- Confirmed workers table
@@ -247,11 +263,11 @@ CREATE TABLE IF NOT EXISTS concern_messages (
 -- Success Stories table
 CREATE TABLE IF NOT EXISTS success_stories (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
+    title VARCHAR(200) NOT NULL UNIQUE,
     description TEXT NOT NULL,
     customer_name VARCHAR(100),
     worker_name VARCHAR(100),
-    labor_type VARCHAR(50),
+    worker_type VARCHAR(50),
     rating INT,
     image_url VARCHAR(500),
     is_active BOOLEAN DEFAULT TRUE,
@@ -266,7 +282,7 @@ CREATE TABLE IF NOT EXISTS success_stories (
 -- Advertisements table
 CREATE TABLE IF NOT EXISTS advertisements (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    title VARCHAR(200) NOT NULL,
+    title VARCHAR(200) NOT NULL UNIQUE,
     text TEXT NOT NULL,
     image_url VARCHAR(500),
     link_url VARCHAR(500),
@@ -285,8 +301,109 @@ CREATE TABLE IF NOT EXISTS advertisements (
     INDEX idx_ads_date_range (start_date, end_date)
 );
 
+-- Password Reset Tokens table
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    token VARCHAR(100) NOT NULL UNIQUE,
+    user_id BIGINT NOT NULL,
+    is_system_user BOOLEAN NOT NULL DEFAULT FALSE,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_reset_token_token (token),
+    INDEX idx_reset_token_user_id (user_id),
+    INDEX idx_reset_token_expires_at (expires_at),
+    INDEX idx_reset_token_user_expires (user_id, expires_at)
+);
+
+-- API Logs table (for tracking essential API request/response data)
+-- Only logs necessary fields: errors, critical operations, and performance metrics
+CREATE TABLE IF NOT EXISTS api_logs (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    endpoint VARCHAR(500) NOT NULL,
+    method VARCHAR(10) NOT NULL,
+    user_id BIGINT,
+    ip_address VARCHAR(45),
+    user_agent VARCHAR(500),  -- Only logged for errors
+    request_body TEXT,         -- Only logged for errors or critical endpoints
+    response_body TEXT,        -- Only logged for errors
+    status_code INT NOT NULL,
+    response_time_ms BIGINT,
+    error_message TEXT,       -- Only for errors
+    error_stack_trace TEXT,    -- Only for errors
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_api_logs_endpoint (endpoint(255)),
+    INDEX idx_api_logs_method (method),
+    INDEX idx_api_logs_status (status_code),
+    INDEX idx_api_logs_user_id (user_id),
+    INDEX idx_api_logs_created_at (created_at DESC),
+    INDEX idx_api_logs_endpoint_status (endpoint(255), status_code),
+    INDEX idx_api_logs_user_created (user_id, created_at DESC)
+);
+
 -- ============================================================================
--- 2. INITIAL DATA - SUPER ADMIN USERS
+-- 2. INITIAL DATA - WORKER TYPES
+-- ============================================================================
+
+-- Insert initial worker types (can be managed by super admin later)
+INSERT INTO worker_types (name, display_name, icon, description, is_active, display_order) VALUES
+('ELECTRICIAN', 'Electrician', '⚡', 'Electrical repairs, installations & maintenance', TRUE, 1),
+('DRIVER', 'Driver', '🚗', 'Professional drivers for all your transportation needs', TRUE, 2),
+('RIGGER', 'Rigger', '🔩', 'Expert rigging and lifting services', TRUE, 3),
+('FITTER', 'Fitter', '🔧', 'Mechanical fitting and assembly work', TRUE, 4),
+('COOK', 'Cook', '👨‍🍳', 'Professional cooking and kitchen services', TRUE, 5),
+('PLUMBER', 'Plumber', '🔧', 'Plumbing repairs, installations & maintenance', TRUE, 6),
+('CARPENTER', 'Carpenter', '🪚', 'Carpentry, furniture & woodwork', TRUE, 7),
+('PAINTER', 'Painter', '🎨', 'Interior & exterior painting services', TRUE, 8),
+('UNSKILLED_WORKER', 'Unskilled Worker', '👷', 'Unskilled worker for all manual tasks', TRUE, 9),
+('RAJ_MISTRI', 'Raj Mistri', '👷‍♂️', 'Supervisor & foreman for construction projects', TRUE, 10)
+ON DUPLICATE KEY UPDATE
+    display_name = VALUES(display_name),
+    icon = VALUES(icon),
+    description = VALUES(description);
+
+-- ============================================================================
+-- 3. INITIAL DATA - SUCCESS STORIES
+-- ============================================================================
+
+-- Insert default success stories
+INSERT INTO success_stories (title, description, customer_name, worker_name, worker_type, rating, is_active, display_order) VALUES
+('Excellent Electrical Work', 'Got my entire house rewired by an expert electrician from KaamKart. Professional service, timely completion, and reasonable pricing. Highly recommended!', 'Rajesh Kumar', 'Amit Sharma', 'ELECTRICIAN', 5, TRUE, 1),
+('Reliable Driver Service', 'Used KaamKart driver for my daily commute. Punctual, safe, and courteous. Made my life so much easier!', 'Priya Singh', 'Vikram Mehta', 'DRIVER', 5, TRUE, 2),
+('Perfect Plumbing Solution', 'Had a major leak in my bathroom. The plumber from KaamKart fixed it quickly and efficiently. Great work!', 'Anil Verma', 'Suresh Patel', 'PLUMBER', 5, TRUE, 3),
+('Beautiful Home Painting', 'Got my entire house painted through KaamKart. The painter did an amazing job with attention to detail. Love the results!', 'Meera Joshi', 'Ramesh Yadav', 'PAINTER', 5, TRUE, 4),
+('Expert Carpentry Work', 'Needed custom furniture for my home. The carpenter from KaamKart delivered exactly what I wanted. Excellent craftsmanship!', 'Deepak Malhotra', 'Kiran Reddy', 'CARPENTER', 5, TRUE, 5)
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title),
+    description = VALUES(description),
+    customer_name = VALUES(customer_name),
+    worker_name = VALUES(worker_name),
+    worker_type = VALUES(worker_type),
+    rating = VALUES(rating),
+    is_active = VALUES(is_active),
+    display_order = VALUES(display_order);
+
+-- ============================================================================
+-- 4. INITIAL DATA - ADVERTISEMENTS
+-- ============================================================================
+
+-- Insert default advertisements
+INSERT INTO advertisements (title, text, link_url, link_text, is_active, display_order, start_date, end_date) VALUES
+('Find Skilled Workers Fast!', 'Connect with verified workers for all your needs. Electricians, Plumbers, Drivers, and more. Book now!', '/login', 'Get Started', TRUE, 1, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR)),
+('Trusted by Thousands', 'Join thousands of satisfied customers who found reliable workers through KaamKart. Your trusted labor connection platform.', '/', 'Learn More', TRUE, 2, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR)),
+('Verified Workers Only', 'All workers on KaamKart are verified and background checked. Your safety and satisfaction is our priority.', '/login', 'Browse Workers', TRUE, 3, NOW(), DATE_ADD(NOW(), INTERVAL 1 YEAR))
+ON DUPLICATE KEY UPDATE
+    title = VALUES(title),
+    text = VALUES(text),
+    link_url = VALUES(link_url),
+    link_text = VALUES(link_text),
+    is_active = VALUES(is_active),
+    display_order = VALUES(display_order),
+    start_date = VALUES(start_date),
+    end_date = VALUES(end_date);
+
+-- ============================================================================
+-- 5. INITIAL DATA - SUPER ADMIN USERS
 -- ============================================================================
 
 -- Create superadmin@kaamkart.in as system user with super admin privileges
@@ -330,7 +447,7 @@ ON DUPLICATE KEY UPDATE
     blocked = FALSE;
 
 -- ============================================================================
--- 3. PERFORMANCE OPTIMIZATIONS
+-- 6. PERFORMANCE OPTIMIZATIONS
 -- ============================================================================
 
 -- Analyze tables to update statistics (helps query optimizer)
@@ -341,16 +458,17 @@ ANALYZE TABLE confirmed_workers;
 ANALYZE TABLE deployed_workers;
 ANALYZE TABLE ratings;
 ANALYZE TABLE concerns;
-ANALYZE TABLE worker_labor_types;
-ANALYZE TABLE request_labor_types;
-ANALYZE TABLE request_labor_type_requirements;
+ANALYZE TABLE workers_worker_types;
+ANALYZE TABLE request_worker_types;
+ANALYZE TABLE request_worker_type_requirements;
 ANALYZE TABLE concern_messages;
 ANALYZE TABLE system_users;
 ANALYZE TABLE success_stories;
 ANALYZE TABLE advertisements;
+ANALYZE TABLE worker_types;
 
 -- ============================================================================
--- 4. VERIFICATION QUERIES
+-- 7. VERIFICATION QUERIES
 -- ============================================================================
 
 -- Verify super admin users were created

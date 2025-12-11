@@ -15,8 +15,8 @@ public interface WorkerRepository extends JpaRepository<Worker, Long> {
     Optional<Worker> findByUser(User user);
     Optional<Worker> findByUserId(Long userId);
     
-    @Query("SELECT w FROM Worker w WHERE :laborType MEMBER OF w.laborTypes AND w.available = true AND w.verified = true")
-    List<Worker> findAvailableWorkersByLaborType(@Param("laborType") Worker.LaborType laborType);
+    @Query("SELECT w FROM Worker w WHERE :workerType MEMBER OF w.workerTypes AND w.available = true AND w.verified = true")
+    List<Worker> findAvailableWorkersByWorkerType(@Param("workerType") String workerType);
 
     List<Worker> findAllByOrderByCreatedAtDesc();
 }

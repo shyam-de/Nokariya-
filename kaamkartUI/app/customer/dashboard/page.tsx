@@ -10,8 +10,8 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
 interface Request {
   id: string
-  laborTypes: string[]
-  laborTypeRequirements?: Array<{ laborType: string; numberOfWorkers: number }>
+  workerTypes: string[]
+  workerTypeRequirements?: Array<{ laborType: string; numberOfWorkers: number }>
   workType: string
   numberOfWorkers: number
   status: string
@@ -70,8 +70,9 @@ export default function CustomerDashboard() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [workerTypes, setLaborTypes] = useState<any[]>([])
   const [formData, setFormData] = useState({
-    laborTypeRequirements: [] as Array<{ laborType: string; numberOfWorkers: number }>,
+    workerTypeRequirements: [] as Array<{ laborType: string; numberOfWorkers: number }>,
     workType: '',
     startDate: '',
     endDate: '',
@@ -128,8 +129,18 @@ export default function CustomerDashboard() {
     setUser(userObj)
     fetchRequests()
     fetchProfile()
+    fetchLaborTypes()
     // Location will only be detected when user clicks "Detect Current Location" button
   }, [])
+
+  const fetchLaborTypes = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/public/worker-types`)
+      setLaborTypes(response.data)
+    } catch (error) {
+      console.error('Error fetching labor types:', error)
+    }
+  }
 
   useEffect(() => {
     if (activeTab === 'concerns') {
@@ -257,13 +268,13 @@ export default function CustomerDashboard() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    if (formData.laborTypeRequirements.length === 0) {
+    if (formData.workerTypeRequirements.length === 0) {
       toast.error('Please add at least one labor type requirement')
       return
     }
     
     // Validate all requirements have labor type selected
-    const invalidRequirements = formData.laborTypeRequirements.filter(req => !req.laborType || req.laborType === '')
+    const invalidRequirements = formData.workerTypeRequirements.filter(req => !req.laborType || req.laborType === '')
     if (invalidRequirements.length > 0) {
       toast.error('Please select labor type for all requirements')
       return
@@ -292,7 +303,7 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       const requestData = {
-        laborTypeRequirements: formData.laborTypeRequirements.map(req => ({
+        workerTypeRequirements: formData.workerTypeRequirements.map(req => ({
           laborType: req.laborType.toUpperCase(),
           numberOfWorkers: req.numberOfWorkers
         })),
@@ -321,7 +332,7 @@ export default function CustomerDashboard() {
       toast.success('Request created! It is now pending admin approval.')
       setShowRequestForm(false)
       setFormData({
-        laborTypeRequirements: [],
+        workerTypeRequirements: [],
         workType: '',
         startDate: '',
         endDate: '',
@@ -747,35 +758,29 @@ export default function CustomerDashboard() {
                     <span>👷</span> Labor Requirements <span className="text-red-500">*</span>
                   </h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
-                    {formData.laborTypeRequirements.map((req, index) => (
+                    {formData.workerTypeRequirements.map((req, index) => (
                       <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-sm">
                         <div className="flex-1">
                           <select
                             value={req.laborType}
                             onChange={(e) => {
-                              const updated = [...formData.laborTypeRequirements]
+                              const updated = [...formData.workerTypeRequirements]
                               updated[index].laborType = e.target.value
-                              setFormData({ ...formData, laborTypeRequirements: updated })
+                              setFormData({ ...formData, workerTypeRequirements: updated })
                             }}
                             className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                             required
                           >
-                            <option value="">Select Labor Type</option>
-                            {[
-                              { value: 'ELECTRICIAN', label: '⚡ Electrician' },
-                              { value: 'DRIVER', label: '🚗 Driver' },
-                              { value: 'RIGGER', label: '🔩 Rigger' },
-                              { value: 'FITTER', label: '🔧 Fitter' },
-                              { value: 'COOK', label: '👨‍🍳 Cook' },
-                              { value: 'PLUMBER', label: '🔧 Plumber' },
-                              { value: 'CARPENTER', label: '🪚 Carpenter' },
-                              { value: 'PAINTER', label: '🎨 Painter' },
-                              { value: 'LABOUR', label: '👷 Labour' },
-                              { value: 'RAJ_MISTRI', label: '👷‍♂️ Raj Mistri' }
-                            ].filter(type => !formData.laborTypeRequirements.some((r, i) => i !== index && r.laborType === type.value))
-                            .map((type) => (
-                              <option key={type.value} value={type.value}>{type.label}</option>
-                            ))}
+                            <option value="">Select Worker Type</option>
+                            {workerTypes
+                              .filter(lt => lt.isActive)
+                              .filter(lt => !formData.workerTypeRequirements.some((r, i) => i !== index && r.laborType === lt.name))
+                              .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                              .map((type) => (
+                                <option key={type.name} value={type.name}>
+                                  {type.icon || '🔧'} {type.displayName || type.name}
+                                </option>
+                              ))}
                           </select>
                         </div>
                         <div className="w-24">
@@ -784,9 +789,9 @@ export default function CustomerDashboard() {
                             min="1"
                             value={req.numberOfWorkers}
                             onChange={(e) => {
-                              const updated = [...formData.laborTypeRequirements]
+                              const updated = [...formData.workerTypeRequirements]
                               updated[index].numberOfWorkers = parseInt(e.target.value) || 1
-                              setFormData({ ...formData, laborTypeRequirements: updated })
+                              setFormData({ ...formData, workerTypeRequirements: updated })
                             }}
                             className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                             placeholder="Count"
@@ -796,8 +801,8 @@ export default function CustomerDashboard() {
                         <button
                           type="button"
                           onClick={() => {
-                            const updated = formData.laborTypeRequirements.filter((_, i) => i !== index)
-                            setFormData({ ...formData, laborTypeRequirements: updated })
+                            const updated = formData.workerTypeRequirements.filter((_, i) => i !== index)
+                            setFormData({ ...formData, workerTypeRequirements: updated })
                           }}
                           className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
                           title="Remove"
@@ -811,7 +816,7 @@ export default function CustomerDashboard() {
                       onClick={() => {
                         setFormData({
                           ...formData,
-                          laborTypeRequirements: [...formData.laborTypeRequirements, { laborType: '', numberOfWorkers: 1 }]
+                          workerTypeRequirements: [...formData.workerTypeRequirements, { laborType: '', numberOfWorkers: 1 }]
                         })
                       }}
                       className="w-full px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-medium border-2 border-dashed border-primary-300"
@@ -819,14 +824,14 @@ export default function CustomerDashboard() {
                       + Add Labor Type
                     </button>
                   </div>
-                  {formData.laborTypeRequirements.length === 0 && (
+                  {formData.workerTypeRequirements.length === 0 && (
                     <p className="text-xs text-red-500 mt-2">Please add at least one labor type requirement</p>
                   )}
-                  {formData.laborTypeRequirements.length > 0 && (
+                  {formData.workerTypeRequirements.length > 0 && (
                     <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
                       <p className="text-sm text-blue-800 font-semibold">
                         Total Workers Required: {
-                          formData.laborTypeRequirements.reduce((sum, req) => sum + (req.numberOfWorkers || 0), 0)
+                          formData.workerTypeRequirements.reduce((sum, req) => sum + (req.numberOfWorkers || 0), 0)
                         }
                       </p>
                     </div>
@@ -1447,9 +1452,9 @@ export default function CustomerDashboard() {
                       <div className="space-y-1 text-sm">
                         <div className="flex items-center gap-2 text-gray-600 flex-wrap">
                           <span>⚡</span>
-                          {request.laborTypes && request.laborTypes.length > 0 ? (
+                          {request.workerTypes && request.workerTypes.length > 0 ? (
                             <div className="flex flex-wrap gap-1">
-                              {request.laborTypes.map((type: string, idx: number) => (
+                              {request.workerTypes.map((type: string, idx: number) => (
                                 <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
                                   {type.toLowerCase()}
                                 </span>

@@ -71,6 +71,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                         UsernamePasswordAuthenticationToken authentication =
                                 new UsernamePasswordAuthenticationToken(userId, null, authorities);
                         SecurityContextHolder.getContext().setAuthentication(authentication);
+                        // Set userId in request attribute for logging interceptor
+                        request.setAttribute("userId", userId);
                         logger.debug("JWT authentication successful for user: {} on path: {}", userId, requestPath);
                     } else {
                         logger.warn("JWT validation failed: User {} not found in database", userId);

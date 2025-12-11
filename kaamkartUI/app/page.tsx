@@ -42,15 +42,17 @@ export default function Home() {
         const userObj = JSON.parse(user)
         if (userObj.role === 'customer') {
           router.push('/customer/dashboard')
+          return
         } else if (userObj.role === 'worker') {
           router.push('/worker/dashboard')
+          return
         }
       } catch (e) {
         // Invalid user data, continue to show home page
         console.error('Error parsing user data:', e)
       }
     }
-    // Always set loaded to true to show the page
+    // Show page immediately (don't wait for API calls)
     setIsLoaded(true)
   }, [router])
 
@@ -78,35 +80,47 @@ export default function Home() {
     imageUrl?: string;
   }>>([])
 
-  // Fetch advertisements and success stories
+  // Labor types data - fetched from API
+  const [workerTypes, setLaborTypes] = useState<Array<{
+    id: number;
+    name: string;
+    displayName?: string;
+    icon?: string;
+    description?: string;
+    isActive: boolean;
+    displayOrder: number;
+  }>>([])
+
+  // Fetch advertisements, success stories, and labor types in parallel for faster loading
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch active advertisements
-        const adResponse = await fetch(`${API_URL}/public/advertisements`)
-        if (adResponse.ok) {
-          const ads = await adResponse.json()
-          console.log('Fetched advertisements:', ads)
-          setAdvertisements(Array.isArray(ads) ? ads : [])
-        } else {
-          console.error('Failed to fetch advertisements:', adResponse.status, adResponse.statusText)
-        }
-      } catch (error) {
-        console.error('Error fetching advertisements:', error)
-      }
+        // Fetch all data in parallel instead of sequentially
+        const [adResponse, workerTypesResponse, storiesResponse] = await Promise.all([
+          fetch(`${API_URL}/public/advertisements`).catch(() => null),
+          fetch(`${API_URL}/public/worker-types`).catch(() => null),
+          fetch(`${API_URL}/public/success-stories`).catch(() => null)
+        ])
 
-      try {
-        // Fetch active success stories
-        const storiesResponse = await fetch(`${API_URL}/public/success-stories`)
-        if (storiesResponse.ok) {
+        // Process advertisements
+        if (adResponse?.ok) {
+          const ads = await adResponse.json()
+          setAdvertisements(Array.isArray(ads) ? ads : [])
+        }
+
+        // Process worker types
+        if (workerTypesResponse?.ok) {
+          const types = await workerTypesResponse.json()
+          setLaborTypes(Array.isArray(types) ? types.filter((lt: any) => lt.isActive) : [])
+        }
+
+        // Process success stories
+        if (storiesResponse?.ok) {
           const stories = await storiesResponse.json()
-          console.log('Fetched success stories:', stories)
           setSuccessStories(Array.isArray(stories) ? stories : [])
-        } else {
-          console.error('Failed to fetch success stories:', storiesResponse.status, storiesResponse.statusText)
         }
       } catch (error) {
-        console.error('Error fetching success stories:', error)
+        console.error('Error fetching data:', error)
       }
     }
     fetchData()
@@ -178,26 +192,18 @@ export default function Home() {
     return () => clearInterval(interval)
   }, [advertisements, dismissedAds])
 
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
-      </div>
-    )
-  }
+  // Show page immediately, don't wait for all data to load
+  // Content will appear progressively as data loads
 
-  const laborTypes = [
-    { icon: '⚡', name: 'Electrician', desc: 'Electrical repairs, installations & maintenance' },
-    { icon: '🚗', name: 'Driver', desc: 'Professional drivers for all your transportation needs' },
-    { icon: '🔩', name: 'Rigger', desc: 'Expert rigging and lifting services' },
-    { icon: '🔧', name: 'Fitter', desc: 'Mechanical fitting and assembly work' },
-    { icon: '👨‍🍳', name: 'Cook', desc: 'Professional cooking and kitchen services' },
-    { icon: '🔧', name: 'Plumber', desc: 'Plumbing repairs, installations & maintenance' },
-    { icon: '🪚', name: 'Carpenter', desc: 'Carpentry, furniture & woodwork' },
-    { icon: '🎨', name: 'Painter', desc: 'Interior & exterior painting services' },
-    { icon: '👷', name: 'Labour', desc: 'General labor for all manual tasks' },
-    { icon: '👷‍♂️', name: 'Raj Mistri', desc: 'Supervisor & foreman for construction projects' }
-  ]
+  // Labor types are now fetched from API - use the state variable
+  const displayLaborTypes = workerTypes
+    .filter(lt => lt.isActive)
+    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+    .map(lt => ({
+      icon: lt.icon || '🔧',
+      name: lt.displayName || lt.name,
+      desc: lt.description || ''
+    }))
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 relative overflow-hidden">
@@ -558,7 +564,7 @@ export default function Home() {
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
-          {laborTypes.map((type, index) => (
+          {displayLaborTypes.map((type, index) => (
             <div
               key={index}
               className="group bg-white border-2 border-gray-200 rounded-2xl p-6 hover:border-primary-400 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform cursor-pointer bg-gradient-to-br from-white to-gray-50 relative overflow-hidden animate-fade-in-up"

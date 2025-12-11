@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import axios from 'axios'
@@ -12,15 +12,34 @@ export default function Login() {
   const router = useRouter()
   const [isLogin, setIsLogin] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [forgotPasswordEmail, setForgotPasswordEmail] = useState('')
+  const [workerTypes, setLaborTypes] = useState<any[]>([])
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     phone: '',
     secondaryPhone: '',
     password: '',
+    confirmPassword: '',
     role: 'customer',
-    laborTypes: [] as string[]
+    workerTypes: [] as string[]
   })
+
+  useEffect(() => {
+    // Fetch active labor types
+    const fetchLaborTypes = async () => {
+      try {
+        const response = await axios.get(`${API_URL}/public/worker-types`)
+        setLaborTypes(response.data)
+      } catch (error) {
+        console.error('Error fetching labor types:', error)
+      }
+    }
+    fetchLaborTypes()
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,6 +50,7 @@ export default function Login() {
       if (isLogin) {
         if (!formData.email || !formData.password) {
           toast.error('Email and password are required')
+          setIsLoading(false)
           return
         }
         data = { 
@@ -39,12 +59,40 @@ export default function Login() {
         }
         console.log('Login attempt:', { email: data.email })
       } else {
+        // Validation for registration
+        if (!formData.name || !formData.email || !formData.phone || !formData.password) {
+          toast.error('Please fill all required fields')
+          setIsLoading(false)
+          return
+        }
+        
+        if (formData.password.length < 6) {
+          toast.error('Password must be at least 6 characters long')
+          setIsLoading(false)
+          return
+        }
+        
+        if (formData.password !== formData.confirmPassword) {
+          toast.error('Passwords do not match')
+          setIsLoading(false)
+          return
+        }
+        
+        if (formData.role === 'worker' && formData.workerTypes.length === 0) {
+          toast.error('Please select a worker type')
+          setIsLoading(false)
+          return
+        }
+        
         // Convert to uppercase for API enum
         data = {
-          ...formData,
+          name: formData.name,
           email: formData.email.trim().toLowerCase(),
+          phone: formData.phone,
+          secondaryPhone: formData.secondaryPhone || null,
+          password: formData.password,
           role: formData.role.toUpperCase(),
-          laborTypes: formData.laborTypes.map(type => type.toUpperCase())
+          workerTypes: formData.workerTypes.map(type => type.toUpperCase())
         }
       }
 
@@ -92,19 +140,19 @@ export default function Login() {
     if (formData.role === 'worker') {
       setFormData({
         ...formData,
-        laborTypes: [type] // Only one selection
+        workerTypes: [type] // Only one selection
       })
     } else {
       // For other cases (if any), keep checkbox behavior
-      if (formData.laborTypes.includes(type)) {
+      if (formData.workerTypes.includes(type)) {
         setFormData({
           ...formData,
-          laborTypes: formData.laborTypes.filter(t => t !== type)
+          workerTypes: formData.workerTypes.filter(t => t !== type)
         })
       } else {
         setFormData({
           ...formData,
-          laborTypes: [...formData.laborTypes, type]
+          workerTypes: [...formData.workerTypes, type]
         })
       }
     }
@@ -126,11 +174,64 @@ export default function Login() {
             KaamKart
           </h1>
           <p className="text-gray-600">
-            {isLogin ? 'Welcome back!' : 'Create your account'}
+            {showForgotPassword ? 'Reset Password' : isLogin ? 'Welcome back!' : 'Create your account'}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        {showForgotPassword ? (
+          <div className="space-y-4">
+            <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 space-y-3">
+              <h3 className="font-semibold text-gray-800">Forgot Password?</h3>
+              <p className="text-sm text-gray-600">Enter your email address and we'll send you a link to reset your password.</p>
+              <input
+                type="email"
+                value={forgotPasswordEmail}
+                onChange={(e) => setForgotPasswordEmail(e.target.value)}
+                placeholder="Enter your email"
+                className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    if (!forgotPasswordEmail) {
+                      toast.error('Please enter your email')
+                      return
+                    }
+                    setIsLoading(true)
+                    try {
+                      const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+                        email: forgotPasswordEmail.trim().toLowerCase()
+                      })
+                      toast.success(response.data.message || 'Password reset link sent!')
+                      setShowForgotPassword(false)
+                      setForgotPasswordEmail('')
+                    } catch (error: any) {
+                      toast.error(error.response?.data?.message || 'Failed to send reset link')
+                    } finally {
+                      setIsLoading(false)
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false)
+                    setForgotPasswordEmail('')
+                  }}
+                  className="px-4 py-3 border-2 border-gray-300 rounded-lg font-medium hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
           {!isLogin && (
             <>
               <div className="space-y-2">
@@ -192,15 +293,72 @@ export default function Login() {
             <label className="block text-sm font-medium text-gray-700">
               Password
             </label>
-            <input
-              type="password"
-              required
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-              placeholder="Enter your password"
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                required
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                placeholder="Enter your password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                  </svg>
+                ) : (
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
+
+          {!isLogin && (
+            <div className="space-y-2">
+              <label className="block text-sm font-medium text-gray-700">
+                Confirm Password <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                  className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
+                  placeholder="Confirm your password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 focus:outline-none"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                <p className="text-xs text-red-500">Passwords do not match</p>
+              )}
+            </div>
+          )}
 
           {!isLogin && (
             <div className="space-y-2">
@@ -213,7 +371,7 @@ export default function Login() {
                     type="radio"
                     value="customer"
                     checked={formData.role === 'customer'}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value, laborTypes: [] })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, workerTypes: [], password: '', confirmPassword: '' })}
                     className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="group-hover:text-primary-600 transition-colors">Customer</span>
@@ -235,34 +393,32 @@ export default function Login() {
           {!isLogin && formData.role === 'worker' && (
             <div className="space-y-2 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Labor Type <span className="text-red-500">*</span> (Select one)
+                  Worker Type <span className="text-red-500">*</span> (Select one)
                 </label>
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { value: 'electrician', label: '⚡ Electrician' },
-                  { value: 'driver', label: '🚗 Driver' },
-                  { value: 'rigger', label: '🔩 Rigger' },
-                  { value: 'fitter', label: '🔧 Fitter' },
-                  { value: 'cook', label: '👨‍🍳 Cook' },
-                  { value: 'plumber', label: '🔧 Plumber' },
-                  { value: 'carpenter', label: '🪚 Carpenter' },
-                  { value: 'painter', label: '🎨 Painter' },
-                  { value: 'labour', label: '👷 Labour' },
-                  { value: 'raj_mistri', label: '👷‍♂️ Raj Mistri' }
-                ].map((type) => (
-                  <label key={type.value} className="flex items-center cursor-pointer group hover:bg-white p-2 rounded transition-colors border border-gray-200 hover:border-primary-300">
-                    <input
-                      type="radio"
-                      name="laborType"
-                      checked={formData.laborTypes.includes(type.value)}
-                      onChange={() => toggleLaborType(type.value)}
-                      className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
-                      required={formData.role === 'worker'}
-                    />
-                    <span className="text-sm group-hover:text-primary-600 transition-colors font-medium">{type.label}</span>
-                  </label>
-                ))}
-              </div>
+              {workerTypes.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading worker types...</p>
+              ) : (
+                <div className="grid grid-cols-2 gap-2">
+                  {workerTypes
+                    .filter(lt => lt.isActive)
+                    .sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                    .map((type) => (
+                    <label key={type.name} className="flex items-center cursor-pointer group hover:bg-white p-2 rounded transition-colors border border-gray-200 hover:border-primary-300">
+                      <input
+                        type="radio"
+                        name="laborType"
+                        checked={formData.workerTypes.includes(type.name.toLowerCase())}
+                        onChange={() => toggleLaborType(type.name.toLowerCase())}
+                        className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
+                        required={formData.role === 'worker'}
+                      />
+                      <span className="text-sm group-hover:text-primary-600 transition-colors font-medium">
+                        {type.icon || '🔧'} {type.displayName || type.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -284,14 +440,27 @@ export default function Login() {
             )}
           </button>
         </form>
+        )}
 
         <div className="mt-6 text-center">
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            className="text-primary-600 hover:text-primary-700 font-medium transition-all duration-200 hover:scale-105 transform"
-          >
-            {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
-          </button>
+          {!showForgotPassword && (
+            <>
+              {isLogin && (
+                <button
+                  onClick={() => setShowForgotPassword(true)}
+                  className="block w-full mb-3 text-sm text-primary-600 hover:text-primary-700 font-medium transition-all duration-200"
+                >
+                  Forgot Password?
+                </button>
+              )}
+              <button
+                onClick={() => setIsLogin(!isLogin)}
+                className="text-primary-600 hover:text-primary-700 font-medium transition-all duration-200 hover:scale-105 transform"
+              >
+                {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

@@ -7,9 +7,11 @@ import com.kaamkart.model.ConcernMessage;
 import com.kaamkart.model.Request;
 import com.kaamkart.model.SuccessStory;
 import com.kaamkart.model.User;
+import com.kaamkart.model.WorkerType;
 import com.kaamkart.service.AdminService;
 import com.kaamkart.service.AdvertisementService;
 import com.kaamkart.service.ConcernService;
+import com.kaamkart.service.WorkerTypeService;
 import com.kaamkart.service.SuccessStoryService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -41,6 +43,9 @@ public class AdminController {
 
     @Autowired
     private AdvertisementService advertisementService;
+
+    @Autowired
+    private WorkerTypeService workerTypeService;
 
     @GetMapping("/requests/pending")
     public ResponseEntity<?> getPendingRequests(Authentication authentication) {
@@ -74,13 +79,27 @@ public class AdminController {
     public ResponseEntity<?> approveRequest(
             Authentication authentication,
             @PathVariable Long requestId) {
+        long startTime = System.currentTimeMillis();
+        
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
+            Long adminId = getUserIdFromAuthentication(authentication);
+            logger.info("✅ APPROVE REQUEST | RequestID: {} | Admin: {} | Timestamp: {}", 
+                    requestId, adminId, System.currentTimeMillis());
+            
             Request request = adminService.approveRequest(requestId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("✅ REQUEST APPROVED | RequestID: {} | Admin: {} | Duration: {}ms", 
+                    requestId, adminId, duration);
+            
             return ResponseEntity.ok(Map.of("message", "Request approved and workers notified", "request", request));
         } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("❌ REQUEST APPROVAL FAILED | RequestID: {} | Error: {} | Duration: {}ms", 
+                    requestId, e.getMessage(), duration, e);
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
@@ -89,13 +108,27 @@ public class AdminController {
     public ResponseEntity<?> rejectRequest(
             Authentication authentication,
             @PathVariable Long requestId) {
+        long startTime = System.currentTimeMillis();
+        
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
+            Long adminId = getUserIdFromAuthentication(authentication);
+            logger.info("❌ REJECT REQUEST | RequestID: {} | Admin: {} | Timestamp: {}", 
+                    requestId, adminId, System.currentTimeMillis());
+            
             Request request = adminService.rejectRequest(requestId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("✅ REQUEST REJECTED | RequestID: {} | Admin: {} | Duration: {}ms", 
+                    requestId, adminId, duration);
+            
             return ResponseEntity.ok(Map.of("message", "Request rejected", "request", request));
         } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("❌ REQUEST REJECTION FAILED | RequestID: {} | Error: {} | Duration: {}ms", 
+                    requestId, e.getMessage(), duration, e);
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
@@ -149,7 +182,7 @@ public class AdminController {
                     request.getPassword(),
                     request.getRole(),
                     request.getLocation(),
-                    request.getLaborTypes(),
+                    request.getWorkerTypes(),
                     request.getIsSuperAdmin() != null ? request.getIsSuperAdmin() : false
             );
 
@@ -556,6 +589,107 @@ public class AdminController {
                 return ResponseEntity.ok(Map.of("message", "Advertisement deleted successfully"));
             } catch (Exception e) {
                 logger.error("Error deleting advertisement", e);
+                return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            }
+        }
+
+        // ========== Labor Type Management (Super Admin Only) ==========
+        
+        @GetMapping("/worker-types")
+        public ResponseEntity<?> getAllWorkerTypes(Authentication authentication) {
+            try {
+                if (authentication == null) {
+                    return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+                Long adminId = getUserIdFromAuthentication(authentication);
+                if (!adminService.isSuperAdmin(adminId)) {
+                    return ResponseEntity.status(403).body(Map.of("message", "Only super admin can access this"));
+                }
+                List<WorkerType> workerTypes = workerTypeService.getAllWorkerTypes();
+                return ResponseEntity.ok(workerTypes);
+            } catch (Exception e) {
+                logger.error("Error fetching worker types", e);
+                return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            }
+        }
+        
+        @PostMapping("/worker-types")
+        public ResponseEntity<?> createWorkerType(
+                Authentication authentication,
+                @RequestBody WorkerType workerType) {
+            try {
+                if (authentication == null) {
+                    return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+                Long adminId = getUserIdFromAuthentication(authentication);
+                if (!adminService.isSuperAdmin(adminId)) {
+                    return ResponseEntity.status(403).body(Map.of("message", "Only super admin can create worker types"));
+                }
+                WorkerType created = workerTypeService.createWorkerType(workerType);
+                return ResponseEntity.ok(created);
+            } catch (Exception e) {
+                logger.error("Error creating worker type", e);
+                return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            }
+        }
+        
+        @PutMapping("/worker-types/{id}")
+        public ResponseEntity<?> updateWorkerType(
+                Authentication authentication,
+                @PathVariable Long id,
+                @RequestBody WorkerType workerType) {
+            try {
+                if (authentication == null) {
+                    return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+                Long adminId = getUserIdFromAuthentication(authentication);
+                if (!adminService.isSuperAdmin(adminId)) {
+                    return ResponseEntity.status(403).body(Map.of("message", "Only super admin can update worker types"));
+                }
+                WorkerType updated = workerTypeService.updateWorkerType(id, workerType);
+                return ResponseEntity.ok(updated);
+            } catch (Exception e) {
+                logger.error("Error updating worker type", e);
+                return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            }
+        }
+        
+        @DeleteMapping("/worker-types/{id}")
+        public ResponseEntity<?> deleteWorkerType(
+                Authentication authentication,
+                @PathVariable Long id) {
+            try {
+                if (authentication == null) {
+                    return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+                Long adminId = getUserIdFromAuthentication(authentication);
+                if (!adminService.isSuperAdmin(adminId)) {
+                    return ResponseEntity.status(403).body(Map.of("message", "Only super admin can delete worker types"));
+                }
+                workerTypeService.deleteWorkerType(id);
+                return ResponseEntity.ok(Map.of("message", "Worker type deleted successfully"));
+            } catch (Exception e) {
+                logger.error("Error deleting worker type", e);
+                return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
+            }
+        }
+        
+        @PostMapping("/worker-types/{id}/toggle-active")
+        public ResponseEntity<?> toggleWorkerTypeActive(
+                Authentication authentication,
+                @PathVariable Long id) {
+            try {
+                if (authentication == null) {
+                    return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+                }
+                Long adminId = getUserIdFromAuthentication(authentication);
+                if (!adminService.isSuperAdmin(adminId)) {
+                    return ResponseEntity.status(403).body(Map.of("message", "Only super admin can toggle worker type status"));
+                }
+                WorkerType updated = workerTypeService.toggleActiveStatus(id);
+                return ResponseEntity.ok(updated);
+            } catch (Exception e) {
+                logger.error("Error toggling worker type status", e);
                 return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
             }
         }

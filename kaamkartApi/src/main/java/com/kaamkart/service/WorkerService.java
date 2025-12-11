@@ -85,10 +85,8 @@ public class WorkerService {
             Map<String, Object> entry = new HashMap<>();
             entry.put("type", "deployed");
             entry.put("requestId", dw.getRequest().getId());
-            entry.put("laborTypes", dw.getRequest().getLaborTypes() != null ? 
-                dw.getRequest().getLaborTypes().stream()
-                    .map(Enum::name)
-                    .collect(java.util.stream.Collectors.toList()) : new ArrayList<>());
+            entry.put("workerTypes", dw.getRequest().getWorkerTypes() != null ? 
+                dw.getRequest().getWorkerTypes() : new ArrayList<>());
             entry.put("workType", dw.getRequest().getWorkType());
             entry.put("location", dw.getRequest().getLocation());
             entry.put("status", dw.getRequest().getStatus());
@@ -109,10 +107,9 @@ public class WorkerService {
                 Map<String, Object> entry = new HashMap<>();
                 entry.put("type", "confirmed");
                 entry.put("requestId", cw.getRequest().getId());
-                entry.put("laborTypes", cw.getRequest().getLaborTypes() != null ? 
-                    cw.getRequest().getLaborTypes().stream()
-                        .map(Enum::name)
-                        .collect(java.util.stream.Collectors.toList()) : new ArrayList<>());
+                entry.put("workerTypes", cw.getRequest().getWorkerTypes() != null ? 
+                    cw.getRequest().getWorkerTypes()
+                        : new ArrayList<>());
                 entry.put("workType", cw.getRequest().getWorkType());
                 entry.put("startDate", cw.getRequest().getStartDate());
                 entry.put("endDate", cw.getRequest().getEndDate());

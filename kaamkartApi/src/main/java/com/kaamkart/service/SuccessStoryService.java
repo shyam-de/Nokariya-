@@ -47,7 +47,7 @@ public class SuccessStoryService {
         existingStory.setDescription(updatedStory.getDescription());
         existingStory.setCustomerName(updatedStory.getCustomerName());
         existingStory.setWorkerName(updatedStory.getWorkerName());
-        existingStory.setLaborType(updatedStory.getLaborType());
+        existingStory.setWorkerType(updatedStory.getWorkerType());
         existingStory.setRating(updatedStory.getRating());
         existingStory.setImageUrl(updatedStory.getImageUrl());
         existingStory.setIsActive(updatedStory.getIsActive());

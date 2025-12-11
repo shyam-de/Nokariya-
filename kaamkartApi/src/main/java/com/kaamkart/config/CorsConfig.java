@@ -23,7 +23,11 @@ public class CorsConfig {
         
         // Split comma-separated origins
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        origins.forEach(origin -> config.addAllowedOrigin(origin.trim()));
+        origins.forEach(origin -> {
+            String trimmedOrigin = origin.trim();
+            // Use exact origin when credentials are enabled
+            config.addAllowedOrigin(trimmedOrigin);
+        });
         
         config.addAllowedHeader("*");
         config.addAllowedMethod("*");

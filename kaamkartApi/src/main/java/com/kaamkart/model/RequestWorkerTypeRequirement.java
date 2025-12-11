@@ -7,15 +7,15 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "request_labor_type_requirements", indexes = {
-    @Index(name = "idx_rlt_request_id", columnList = "request_id"),
-    @Index(name = "idx_rlt_labor_type", columnList = "labor_type"),
-    @Index(name = "idx_rlt_request_labor_type", columnList = "request_id,labor_type")
+@Table(name = "request_worker_type_requirements", indexes = {
+    @Index(name = "idx_rwt_request_id", columnList = "request_id"),
+    @Index(name = "idx_rwt_worker_type", columnList = "worker_type"),
+    @Index(name = "idx_rwt_request_worker_type", columnList = "request_id,worker_type")
 })
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class RequestLaborTypeRequirement {
+public class RequestWorkerTypeRequirement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -25,9 +25,8 @@ public class RequestLaborTypeRequirement {
     @JsonIgnore
     private Request request;
 
-    @Enumerated(EnumType.STRING)
-    @Column(name = "labor_type", nullable = false)
-    private Worker.LaborType laborType;
+    @Column(name = "worker_type", nullable = false, length = 100)
+    private String workerType;
 
     @Column(name = "number_of_workers", nullable = false)
     private Integer numberOfWorkers;

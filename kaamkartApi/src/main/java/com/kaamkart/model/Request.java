@@ -35,13 +35,12 @@ public class Request {
     private User customer;
 
     @ElementCollection
-    @CollectionTable(name = "request_labor_types", joinColumns = @JoinColumn(name = "request_id"))
-    @Column(name = "labor_type")
-    @Enumerated(EnumType.STRING)
-    private List<Worker.LaborType> laborTypes = new ArrayList<>();
+    @CollectionTable(name = "request_worker_types", joinColumns = @JoinColumn(name = "request_id"))
+    @Column(name = "worker_type")
+    private List<String> workerTypes = new ArrayList<>();
 
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RequestLaborTypeRequirement> laborTypeRequirements = new ArrayList<>();
+    private List<RequestWorkerTypeRequirement> workerTypeRequirements = new ArrayList<>();
 
     @Column(name = "work_type", nullable = false)
     private String workType;

@@ -484,7 +484,7 @@ export default function WorkerDashboard() {
       'PLUMBER': '🔧',
       'CARPENTER': '🪚',
       'PAINTER': '🎨',
-      'LABOUR': '👷',
+      'UNSKILLED_WORKER': '👷',
       'RAJ_MISTRI': '👷‍♂️'
     }
     return icons[type.toUpperCase()] || '👷'

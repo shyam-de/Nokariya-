@@ -1,12 +1,16 @@
 package com.kaamkart.service;
 
+import com.kaamkart.dto.ForgotPasswordRequest;
 import com.kaamkart.dto.LoginRequest;
 import com.kaamkart.dto.RegisterRequest;
+import com.kaamkart.dto.ResetPasswordRequest;
 import com.kaamkart.model.Location;
+import com.kaamkart.model.PasswordResetToken;
 import com.kaamkart.model.Rating;
 import com.kaamkart.model.User;
 import com.kaamkart.model.Worker;
 import com.kaamkart.model.SystemUser;
+import com.kaamkart.repository.PasswordResetTokenRepository;
 import com.kaamkart.repository.RatingRepository;
 import com.kaamkart.repository.SystemUserRepository;
 import com.kaamkart.repository.UserRepository;
@@ -19,6 +23,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -47,6 +54,9 @@ public class AuthService {
     @Autowired
     private SystemUserRepository systemUserRepository;
 
+    @Autowired
+    private PasswordResetTokenRepository passwordResetTokenRepository;
+
     @Transactional
     public Map<String, Object> register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -72,10 +82,10 @@ public class AuthService {
         user = userRepository.save(user);
 
         // If worker, create worker profile
-        if (user.getRole() == User.UserRole.WORKER && request.getLaborTypes() != null) {
+        if (user.getRole() == User.UserRole.WORKER && request.getWorkerTypes() != null) {
             Worker worker = new Worker();
             worker.setUser(user);
-            worker.setLaborTypes(request.getLaborTypes());
+            worker.setWorkerTypes(request.getWorkerTypes());
             if (request.getLocation() != null) {
                 Location currentLocation = new Location();
                 currentLocation.setLatitude(request.getLocation().getLatitude());
@@ -223,6 +233,138 @@ public class AuthService {
     private Integer getTotalRatingsCount(User user) {
         List<Rating> ratings = ratingRepository.findByRated(user);
         return ratings.size();
+    }
+
+    /**
+     * Generate password reset token for forgot password
+     */
+    @Transactional
+    public Map<String, Object> forgotPassword(ForgotPasswordRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        logger.info("🔑 FORGOT PASSWORD REQUEST | Email: {}", email);
+
+        // Check if user exists (regular user or system user)
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        Optional<SystemUser> systemUserOpt = systemUserRepository.findByEmail(email);
+
+        if (userOpt.isEmpty() && systemUserOpt.isEmpty()) {
+            // Don't reveal if user exists or not (security best practice)
+            logger.warn("⚠️ FORGOT PASSWORD | Email not found: {}", email);
+            return Map.of("message", "If an account exists with this email, a password reset link has been sent.");
+        }
+
+        Long userId;
+        Boolean isSystemUser;
+        String userName;
+
+        if (systemUserOpt.isPresent()) {
+            SystemUser systemUser = systemUserOpt.get();
+            userId = systemUser.getId();
+            isSystemUser = true;
+            userName = systemUser.getName();
+        } else {
+            User user = userOpt.get();
+            userId = user.getId();
+            isSystemUser = false;
+            userName = user.getName();
+        }
+
+        // Invalidate all existing tokens for this user
+        passwordResetTokenRepository.invalidateAllTokensForUser(userId, isSystemUser);
+
+        // Generate secure token
+        String token = generateSecureToken();
+
+        // Create reset token (valid for 1 hour)
+        PasswordResetToken resetToken = new PasswordResetToken();
+        resetToken.setToken(token);
+        resetToken.setUserId(userId);
+        resetToken.setIsSystemUser(isSystemUser);
+        resetToken.setExpiresAt(LocalDateTime.now().plusHours(1));
+        resetToken.setUsed(false);
+        passwordResetTokenRepository.save(resetToken);
+
+        logger.info("✅ PASSWORD RESET TOKEN CREATED | User: {} | Email: {} | Token: {}", 
+                userId, email, token.substring(0, 10) + "...");
+
+        // TODO: Send email with reset link
+        // For now, return token in response (in production, send via email)
+        // Format: /reset-password?token=TOKEN
+        String resetLink = "/reset-password?token=" + token;
+
+        return Map.of(
+            "message", "If an account exists with this email, a password reset link has been sent.",
+            "token", token, // Remove this in production - only for testing
+            "resetLink", resetLink, // Remove this in production - only for testing
+            "expiresIn", "1 hour"
+        );
+    }
+
+    /**
+     * Reset password using token
+     */
+    @Transactional
+    public Map<String, Object> resetPassword(ResetPasswordRequest request) {
+        String token = request.getToken().trim();
+        String newPassword = request.getNewPassword();
+
+        logger.info("🔐 RESET PASSWORD REQUEST | Token: {}...", token.substring(0, Math.min(10, token.length())));
+
+        // Find token
+        Optional<PasswordResetToken> tokenOpt = passwordResetTokenRepository.findByTokenAndUsedFalse(token);
+        if (tokenOpt.isEmpty()) {
+            logger.warn("❌ RESET PASSWORD FAILED | Invalid or used token");
+            throw new RuntimeException("Invalid or expired reset token");
+        }
+
+        PasswordResetToken resetToken = tokenOpt.get();
+
+        // Check if token is valid
+        if (!resetToken.isValid()) {
+            logger.warn("❌ RESET PASSWORD FAILED | Token expired");
+            throw new RuntimeException("Reset token has expired. Please request a new one.");
+        }
+
+        // Check if token is already used
+        if (resetToken.getUsed()) {
+            logger.warn("❌ RESET PASSWORD FAILED | Token already used");
+            throw new RuntimeException("Reset token has already been used. Please request a new one.");
+        }
+
+        // Update password
+        String encodedPassword = passwordEncoder.encode(newPassword);
+        
+        if (resetToken.getIsSystemUser()) {
+            SystemUser systemUser = systemUserRepository.findById(resetToken.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            systemUser.setPassword(encodedPassword);
+            systemUserRepository.save(systemUser);
+            logger.info("✅ PASSWORD RESET SUCCESS | SystemUser: {} | Email: {}", 
+                    resetToken.getUserId(), systemUser.getEmail());
+        } else {
+            User user = userRepository.findById(resetToken.getUserId())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            user.setPassword(encodedPassword);
+            userRepository.save(user);
+            logger.info("✅ PASSWORD RESET SUCCESS | User: {} | Email: {}", 
+                    resetToken.getUserId(), user.getEmail());
+        }
+
+        // Mark token as used
+        resetToken.setUsed(true);
+        passwordResetTokenRepository.save(resetToken);
+
+        return Map.of("message", "Password has been reset successfully. You can now login with your new password.");
+    }
+
+    /**
+     * Generate secure random token
+     */
+    private String generateSecureToken() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 }
 

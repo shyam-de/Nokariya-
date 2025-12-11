@@ -7,6 +7,15 @@ A platform connecting labor workers (electricians, plumbers, carpenters, etc.) w
 **Live Site**: [kaamkart.in](https://kaamkart.in)  
 **API**: [api.kaamkart.in](https://api.kaamkart.in)
 
+### Quick Deploy to kaamkart.in
+
+```bash
+# On your production server, run:
+sudo bash QUICK_DEPLOY_KAAMKART_IN.sh
+```
+
+See [DEPLOY_KAAMKART_IN.md](./DEPLOY_KAAMKART_IN.md) for detailed instructions.
+
 ## Features
 
 - **User Registration & Authentication**: Separate registration for customers and workers
@@ -35,47 +44,24 @@ A platform connecting labor workers (electricians, plumbers, carpenters, etc.) w
 - JWT Authentication
 - Spring Security
 
-## Quick Start (Development)
-
-### Prerequisites
-- Node.js 18+
-- Java 17+
-- Maven 3.6+
-- MySQL 8.0+
-
-### Backend Setup
+## Quick Start (Local Development)
 
 ```bash
-cd kaamkartApi
-
-# Create database
-mysql -u root -p < kaamkart-database.sql
-
-# Update application-dev.properties with your database credentials
-
-# Run application
-mvn spring-boot:run
+./start-local.sh
 ```
 
-Backend runs on `http://localhost:8585`
+This will start:
+- Backend on `http://localhost:8585`
+- Frontend on `http://localhost:3000`
 
-### Frontend Setup
-
-```bash
-cd kaamkartUI
-
-# Install dependencies
-npm install
-
-# Run development server
-npm run dev
-```
-
-Frontend runs on `http://localhost:3000`
+See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for details.
 
 ## Production Deployment
 
-See [DEPLOYMENT.md](./DEPLOYMENT.md) for complete production deployment guide.
+- **General**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
+- **DigitalOcean**: See [DEPLOY_DIGITALOCEAN.md](./DEPLOY_DIGITALOCEAN.md)
+- **AWS**: See [aws/README.md](./aws/README.md) for AWS deployment options
+- **kaamkart.in**: See [DEPLOY_KAAMKART_IN.md](./DEPLOY_KAAMKART_IN.md) for domain-specific deployment
 
 ### Quick Deployment Steps
 
@@ -166,8 +152,6 @@ kaamkart/
 
 The database schema is optimized for millions of users with comprehensive indexing. See:
 - `kaamkartApi/kaamkart-database.sql` - Complete database setup
-- `kaamkartApi/DATABASE_OPTIMIZATION.md` - Optimization details
-- `kaamkartApi/SCALABILITY_SUMMARY.md` - Scalability guide
 
 ## Environment Variables
 

@@ -10,7 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
 interface Request {
   id: string
-  laborTypes: string[]
+  workerTypes: string[]
   startDate?: string
   endDate?: string
   workType: string
@@ -35,7 +35,7 @@ interface Request {
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers' | 'successStories' | 'advertisements'>('pending')
+  const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers' | 'successStories' | 'advertisements' | 'workerTypes'>('pending')
   const [requests, setRequests] = useState<Request[]>([])
   const [activeRequests, setActiveRequests] = useState<Request[]>([])
   const [allRequests, setAllRequests] = useState<Request[]>([])
@@ -89,12 +89,25 @@ export default function AdminDashboard() {
   const [showAdForm, setShowAdForm] = useState(false)
   const [editingStory, setEditingStory] = useState<any>(null)
   const [editingAd, setEditingAd] = useState<any>(null)
+  // Worker Types
+  const [workerTypes, setWorkerTypes] = useState<any[]>([])
+  const [isLoadingWorkerTypes, setIsLoadingWorkerTypes] = useState(false)
+  const [showWorkerTypeForm, setShowWorkerTypeForm] = useState(false)
+  const [editingWorkerType, setEditingWorkerType] = useState<any>(null)
+  const [workerTypeFormData, setWorkerTypeFormData] = useState({
+    name: '',
+    displayName: '',
+    icon: '',
+    description: '',
+    isActive: true,
+    displayOrder: 0
+  })
   const [storyFormData, setStoryFormData] = useState({
     title: '',
     description: '',
     storyType: 'customer' as 'customer' | 'worker', // 'customer' or 'worker'
     name: '', // Single name field (either customer or worker name)
-    laborType: '',
+    workerType: '',
     rating: 5,
     imageUrl: '',
     isActive: true,
@@ -118,7 +131,7 @@ export default function AdminDashboard() {
     secondaryPhone: '',
     password: '',
     role: 'customer' as 'customer' | 'worker' | 'admin',
-    laborType: '' as string, // Single labor type for worker
+    workerType: '' as string, // Single labor type for worker
     isSuperAdmin: false
   })
 
@@ -181,6 +194,121 @@ export default function AdminDashboard() {
     }
   }
 
+  const fetchWorkerTypes = async () => {
+    if (!user || (user.superAdmin !== true && user.superAdmin !== 'true')) return
+    setIsLoadingWorkerTypes(true)
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(`${API_URL}/admin/worker-types`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setWorkerTypes(response.data)
+    } catch (error: any) {
+      console.error('Error fetching worker types:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch worker types')
+    } finally {
+      setIsLoadingWorkerTypes(false)
+    }
+  }
+
+  // Fetch worker types for user creation (uses public endpoint, works for all admins)
+  const fetchWorkerTypesForUserCreation = async () => {
+    setIsLoadingWorkerTypes(true)
+    try {
+      const response = await axios.get(`${API_URL}/public/worker-types`)
+      setWorkerTypes(response.data)
+    } catch (error: any) {
+      console.error('Error fetching worker types:', error)
+      toast.error(error.response?.data?.message || 'Failed to fetch worker types')
+    } finally {
+      setIsLoadingWorkerTypes(false)
+    }
+  }
+
+  const handleCreateWorkerType = async () => {
+    if (!workerTypeFormData.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/admin/worker-types`, workerTypeFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Worker type created successfully')
+      setShowWorkerTypeForm(false)
+      setWorkerTypeFormData({
+        name: '',
+        displayName: '',
+        icon: '',
+        description: '',
+        isActive: true,
+        displayOrder: 0
+      })
+      fetchWorkerTypes()
+    } catch (error: any) {
+      console.error('Error creating worker type:', error)
+      toast.error(error.response?.data?.message || 'Failed to create worker type')
+    }
+  }
+
+  const handleUpdateWorkerType = async () => {
+    if (!workerTypeFormData.name.trim()) {
+      toast.error('Name is required')
+      return
+    }
+    try {
+      const token = localStorage.getItem('token')
+      await axios.put(`${API_URL}/admin/worker-types/${editingWorkerType.id}`, workerTypeFormData, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Worker type updated successfully')
+      setShowWorkerTypeForm(false)
+      setEditingWorkerType(null)
+      setWorkerTypeFormData({
+        name: '',
+        displayName: '',
+        icon: '',
+        description: '',
+        isActive: true,
+        displayOrder: 0
+      })
+      fetchWorkerTypes()
+    } catch (error: any) {
+      console.error('Error updating worker type:', error)
+      toast.error(error.response?.data?.message || 'Failed to update worker type')
+    }
+  }
+
+  const handleDeleteWorkerType = async (id: number) => {
+    if (!confirm('Are you sure you want to delete this worker type?')) return
+    try {
+      const token = localStorage.getItem('token')
+      await axios.delete(`${API_URL}/admin/worker-types/${id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Worker type deleted successfully')
+      fetchWorkerTypes()
+    } catch (error: any) {
+      console.error('Error deleting worker type:', error)
+      toast.error(error.response?.data?.message || 'Failed to delete worker type')
+    }
+  }
+
+  const handleToggleWorkerTypeActive = async (id: number) => {
+    try {
+      const token = localStorage.getItem('token')
+      await axios.post(`${API_URL}/admin/worker-types/${id}/toggle-active`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      toast.success('Worker type status updated')
+      fetchWorkerTypes()
+    } catch (error: any) {
+      console.error('Error toggling worker type status:', error)
+      toast.error(error.response?.data?.message || 'Failed to update worker type status')
+    }
+  }
+
   useEffect(() => {
     if (activeTab === 'history') {
       fetchAllRequests()
@@ -200,6 +328,8 @@ export default function AdminDashboard() {
       fetchSuccessStories()
     } else if (activeTab === 'advertisements') {
       fetchAdvertisements()
+    } else if (activeTab === 'workerTypes') {
+      fetchWorkerTypes()
     }
   }, [activeTab, searchQuery, sortBy, sortOrder, statusFilter, 
       workersSearch, workersSortBy, workersSortOrder, workersLocationFilter,
@@ -596,7 +726,7 @@ export default function AdminDashboard() {
       const token = localStorage.getItem('token')
       
       // Validate worker has a labor type selected
-      if (userFormData.role === 'worker' && !userFormData.laborType) {
+      if (userFormData.role === 'worker' && !userFormData.workerType) {
         toast.error('Please select a labor type for the worker')
         setIsCreatingUser(false)
         return
@@ -605,8 +735,8 @@ export default function AdminDashboard() {
       const data = {
         ...userFormData,
         role: userFormData.role.toUpperCase(),
-        laborTypes: userFormData.role === 'worker' && userFormData.laborType 
-          ? [userFormData.laborType.toUpperCase()] 
+        workerTypes: userFormData.role === 'worker' && userFormData.workerType 
+          ? [userFormData.workerType.toUpperCase()] 
           : []
       }
       
@@ -623,7 +753,7 @@ export default function AdminDashboard() {
         secondaryPhone: '',
         password: '',
         role: 'customer',
-        laborType: '',
+        workerType: '',
         isSuperAdmin: false
       })
     } catch (error: any) {
@@ -712,7 +842,14 @@ export default function AdminDashboard() {
               <p className="text-sm md:text-base text-gray-600">Manage requests, users, and monitor platform activity</p>
             </div>
             <button
-              onClick={() => setShowCreateUser(!showCreateUser)}
+              onClick={() => {
+                const newState = !showCreateUser
+                setShowCreateUser(newState)
+                if (newState) {
+                  // Fetch worker types when opening the form
+                  fetchWorkerTypesForUserCreation()
+                }
+              }}
               className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <span className="text-lg md:text-xl">{showCreateUser ? '✕' : '+'}</span>
@@ -723,9 +860,9 @@ export default function AdminDashboard() {
 
         {/* Create User Form */}
         {showCreateUser && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-6 border-2 border-green-200 animate-slide-down">
+          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-green-200 animate-slide-down relative z-10">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New User</h2>
-            <form onSubmit={handleCreateUser} className="space-y-5">
+            <form onSubmit={handleCreateUser} className="space-y-5 max-h-[80vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
@@ -777,7 +914,14 @@ export default function AdminDashboard() {
                   <select
                     required
                     value={userFormData.role}
-                    onChange={(e) => setUserFormData({ ...userFormData, role: e.target.value as any, laborType: '', isSuperAdmin: false })}
+                    onChange={(e) => {
+                      const newRole = e.target.value as any
+                      setUserFormData({ ...userFormData, role: newRole, workerType: '', isSuperAdmin: false })
+                      // Fetch worker types when role changes to worker
+                      if (newRole === 'worker' && workerTypes.length === 0) {
+                        fetchWorkerTypesForUserCreation()
+                      }
+                    }}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                   >
                     <option value="customer">Customer</option>
@@ -794,34 +938,36 @@ export default function AdminDashboard() {
               </div>
 
               {userFormData.role === 'worker' && (
-                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Labor Type (Select one)</label>
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { value: 'electrician', label: '⚡ Electrician' },
-                      { value: 'driver', label: '🚗 Driver' },
-                      { value: 'rigger', label: '🔩 Rigger' },
-                      { value: 'fitter', label: '🔧 Fitter' },
-                      { value: 'cook', label: '👨‍🍳 Cook' },
-                      { value: 'plumber', label: '🔧 Plumber' },
-                      { value: 'carpenter', label: '🪚 Carpenter' },
-                      { value: 'painter', label: '🎨 Painter' },
-                      { value: 'labour', label: '👷 Labour' },
-                      { value: 'raj_mistri', label: '👷‍♂️ Raj Mistri' }
-                    ].map((type) => (
-                      <label key={type.value} className="flex items-center cursor-pointer px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all border border-gray-200 hover:border-green-300">
-                        <input
-                          type="radio"
-                          name="laborType"
-                          value={type.value}
-                          checked={userFormData.laborType === type.value}
-                          onChange={(e) => setUserFormData({ ...userFormData, laborType: e.target.value })}
-                          className="mr-2 w-4 h-4 text-green-600 focus:ring-green-500"
-                        />
-                        <span className="text-sm">{type.label}</span>
-                      </label>
-                    ))}
-                  </div>
+                <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Worker Type (Select one) <span className="text-red-500">*</span></label>
+                  {isLoadingWorkerTypes ? (
+                    <p className="text-sm text-gray-500">Loading worker types...</p>
+                  ) : workerTypes.filter((type: any) => type.isActive).length === 0 ? (
+                    <div className="space-y-2">
+                      <p className="text-sm text-red-500">No active worker types available.</p>
+                      <p className="text-xs text-gray-500">Please add worker types from the "Worker Types" tab or contact a super admin.</p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-2">
+                      {workerTypes
+                        .filter((type: any) => type.isActive)
+                        .sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0))
+                        .map((type: any) => (
+                          <label key={type.name} className="flex items-center cursor-pointer px-3 py-2 bg-white rounded-lg shadow-sm hover:shadow-md transition-all border border-gray-200 hover:border-green-300">
+                            <input
+                              type="radio"
+                              name="workerType"
+                              value={type.name.toLowerCase()}
+                              checked={userFormData.workerType === type.name.toLowerCase()}
+                              onChange={(e) => setUserFormData({ ...userFormData, workerType: e.target.value })}
+                              className="mr-2 w-4 h-4 text-green-600 focus:ring-green-500"
+                              required={userFormData.role === 'worker'}
+                            />
+                            <span className="text-sm">{type.icon || '🔧'} {type.displayName || type.name}</span>
+                          </label>
+                        ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -844,7 +990,7 @@ export default function AdminDashboard() {
                       secondaryPhone: '',
                       password: '',
                       role: 'customer',
-                      laborType: '',
+                      workerType: '',
                       isSuperAdmin: false
                     })
                   }}
@@ -858,7 +1004,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Tabs */}
-        <div className="bg-white rounded-xl shadow-lg p-2 mb-6 overflow-x-auto">
+        <div className="bg-white rounded-xl shadow-lg p-2 mb-6 overflow-x-auto relative z-0">
           <div className="flex gap-2 min-w-max md:min-w-0">
             <button
               onClick={() => setActiveTab('pending')}
@@ -951,6 +1097,16 @@ export default function AdminDashboard() {
                   }`}
                 >
                   <span className="hidden sm:inline">📢 </span>Ads ({advertisements.length})
+                </button>
+                <button
+                  onClick={() => setActiveTab('workerTypes')}
+                  className={`px-3 py-2 md:px-4 md:py-3 lg:px-6 whitespace-nowrap rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 ${
+                    activeTab === 'workerTypes'
+                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md'
+                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                  }`}
+                >
+                  <span className="hidden sm:inline">🔧 </span>Worker Types ({workerTypes.length})
                 </button>
               </>
             )}
@@ -1324,7 +1480,7 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium text-gray-700">Labor Types:</span>
                         <div className="flex flex-wrap gap-1">
-                          {worker.laborTypes?.map((type: string) => (
+                          {worker.workerTypes?.map((type: string) => (
                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                               {type}
                             </span>
@@ -1678,8 +1834,8 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-2 text-gray-600 flex-wrap">
                         <span>⚡</span>
                         <div className="flex flex-wrap gap-1">
-                          {request.laborTypes && request.laborTypes.length > 0 ? (
-                            request.laborTypes.map((type: string, idx: number) => (
+                          {request.workerTypes && request.workerTypes.length > 0 ? (
+                            request.workerTypes.map((type: string, idx: number) => (
                               <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
                                 {type.toLowerCase()}
                               </span>
@@ -1774,14 +1930,14 @@ export default function AdminDashboard() {
                             </div>
                             
                             {/* Per Labor Type Status */}
-                            {confirmationStatus[request.id].laborTypeStatus && (
+                            {confirmationStatus[request.id].workerTypeStatus && (
                               <div className="space-y-2">
                                 <div className="text-xs font-semibold text-gray-700 mb-1">Per Labor Type:</div>
-                                {confirmationStatus[request.id].laborTypeStatus.map((ltStatus: any, idx: number) => (
+                                {confirmationStatus[request.id].workerTypeStatus.map((ltStatus: any, idx: number) => (
                                   <div key={idx} className="bg-white rounded p-2 border border-blue-200">
                                     <div className="flex justify-between items-center mb-1">
                                       <span className="text-xs font-semibold text-gray-700 capitalize">
-                                        {ltStatus.laborType.toLowerCase().replace('_', ' ')}
+                                        {ltStatus.workerType.toLowerCase().replace('_', ' ')}
                                       </span>
                                       <div className="flex gap-2">
                                         <span className={`text-xs font-semibold ${
@@ -2098,7 +2254,7 @@ export default function AdminDashboard() {
                   description: '',
                   storyType: 'customer',
                   name: '',
-                  laborType: '',
+                  workerType: '',
                   rating: 5,
                   imageUrl: '',
                   isActive: true,
@@ -2192,8 +2348,8 @@ export default function AdminDashboard() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Labor Type</label>
                   <input
                     type="text"
-                    value={storyFormData.laborType}
-                    onChange={(e) => setStoryFormData({ ...storyFormData, laborType: e.target.value })}
+                    value={storyFormData.workerType}
+                    onChange={(e) => setStoryFormData({ ...storyFormData, workerType: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   />
                 </div>
@@ -2312,7 +2468,7 @@ export default function AdminDashboard() {
                           description: story.description || '',
                           storyType: storyType,
                           name: name,
-                          laborType: story.laborType || '',
+                          workerType: story.workerType || '',
                           rating: story.rating || 5,
                           imageUrl: story.imageUrl || '',
                           isActive: story.isActive !== false,
@@ -2580,6 +2736,199 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Labor Types Tab */}
+      {activeTab === 'workerTypes' && (user?.superAdmin === true || user?.superAdmin === 'true') && (
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold text-gray-800">🔧 Worker Type Management</h2>
+            <button
+              onClick={() => {
+                setEditingWorkerType(null)
+                setWorkerTypeFormData({
+                  name: '',
+                  displayName: '',
+                  icon: '',
+                  description: '',
+                  isActive: true,
+                  displayOrder: 0
+                })
+                setShowWorkerTypeForm(true)
+              }}
+              className="bg-purple-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-600 transition-colors"
+            >
+              + Add Worker Type
+            </button>
+          </div>
+
+          {showWorkerTypeForm && (
+            <div className="mb-6 bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
+              <h3 className="text-xl font-bold mb-4">{editingWorkerType ? 'Edit' : 'Add'} Worker Type</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (Code) *</label>
+                  <input
+                    type="text"
+                    value={workerTypeFormData.name}
+                    onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, name: e.target.value.toUpperCase() })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., ELECTRICIAN"
+                    disabled={!!editingWorkerType}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Uppercase code (cannot be changed after creation)</p>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                  <input
+                    type="text"
+                    value={workerTypeFormData.displayName}
+                    onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, displayName: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., Electrician"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Icon (Emoji)</label>
+                  <input
+                    type="text"
+                    value={workerTypeFormData.icon}
+                    onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, icon: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    placeholder="e.g., ⚡"
+                    maxLength={10}
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
+                  <input
+                    type="number"
+                    value={workerTypeFormData.displayOrder}
+                    onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, displayOrder: parseInt(e.target.value) || 0 })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <textarea
+                    value={workerTypeFormData.description}
+                    onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, description: e.target.value })}
+                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    rows={3}
+                    placeholder="e.g., Electrical repairs, installations & maintenance"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={workerTypeFormData.isActive}
+                      onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, isActive: e.target.checked })}
+                      className="w-5 h-5"
+                    />
+                    <span className="text-sm font-medium text-gray-700">Active (Show in registration and requests)</span>
+                  </label>
+                </div>
+              </div>
+              <div className="flex gap-3 mt-4">
+                <button
+                  onClick={editingWorkerType ? handleUpdateWorkerType : handleCreateWorkerType}
+                  className="flex-1 bg-purple-500 text-white py-2 rounded-lg font-semibold hover:bg-purple-600 transition-colors"
+                >
+                  {editingWorkerType ? 'Update' : 'Create'} Worker Type
+                </button>
+                <button
+                  onClick={() => {
+                    setShowWorkerTypeForm(false)
+                    setEditingWorkerType(null)
+                    setWorkerTypeFormData({
+                      name: '',
+                      displayName: '',
+                      icon: '',
+                      description: '',
+                      isActive: true,
+                      displayOrder: 0
+                    })
+                  }}
+                  className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          )}
+
+          {isLoadingWorkerTypes ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading worker types...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {workerTypes.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <p>No worker types found. Create your first worker type!</p>
+                </div>
+              ) : (
+                workerTypes.map((lt) => (
+                  <div key={lt.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">{lt.icon || '🔧'}</span>
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-800">
+                            {lt.displayName || lt.name}
+                          </h3>
+                          <p className="text-sm text-gray-500">Code: {lt.name}</p>
+                          {lt.description && (
+                            <p className="text-gray-600 mt-1">{lt.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex flex-col items-end gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${lt.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
+                          {lt.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                        <span className="text-xs text-gray-500">Order: {lt.displayOrder}</span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={() => {
+                          setEditingWorkerType(lt)
+                          setWorkerTypeFormData({
+                            name: lt.name,
+                            displayName: lt.displayName || '',
+                            icon: lt.icon || '',
+                            description: lt.description || '',
+                            isActive: lt.isActive !== false,
+                            displayOrder: lt.displayOrder || 0
+                          })
+                          setShowWorkerTypeForm(true)
+                        }}
+                        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleWorkerTypeActive(lt.id)}
+                        className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
+                      >
+                        {lt.isActive ? 'Deactivate' : 'Activate'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteWorkerType(lt.id)}
+                        className="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           )}
         </div>

@@ -91,8 +91,8 @@ public class AdminService {
                             request.getCustomer().getPhone().toLowerCase().contains(searchLower) ||
                             (request.getLocation() != null && request.getLocation().getAddress() != null && 
                              request.getLocation().getAddress().toLowerCase().contains(searchLower)) ||
-                            (request.getLaborTypes() != null && request.getLaborTypes().stream()
-                                .anyMatch(lt -> lt.name().toLowerCase().contains(searchLower))) ||
+                            (request.getWorkerTypes() != null && request.getWorkerTypes().stream()
+                                .anyMatch(lt -> lt.toLowerCase().contains(searchLower))) ||
                             request.getStatus().name().toLowerCase().contains(searchLower)
                     )
                     .collect(Collectors.toList());
@@ -147,8 +147,8 @@ public class AdminService {
 
         // Find nearest available and verified workers for all required labor types
         Set<Worker> allAvailableWorkers = new HashSet<>();
-        for (Worker.LaborType laborType : savedRequest.getLaborTypes()) {
-            List<Worker> workers = workerRepository.findAvailableWorkersByLaborType(laborType);
+        for (String workerType : savedRequest.getWorkerTypes()) {
+            List<Worker> workers = workerRepository.findAvailableWorkersByWorkerType(workerType);
             allAvailableWorkers.addAll(workers);
         }
         List<Worker> availableWorkers = new ArrayList<>(allAvailableWorkers);
@@ -192,21 +192,19 @@ public class AdminService {
         // Only notify workers whose labor types match the request requirements
         Map<String, Object> notificationData = new HashMap<>();
         notificationData.put("requestId", finalRequest.getId());
-        notificationData.put("laborTypes", finalRequest.getLaborTypes().stream()
-                .map(Enum::name)
-                .collect(Collectors.toList()));
+        notificationData.put("workerTypes", finalRequest.getWorkerTypes());
         
         // Include labor type requirements with worker counts
-        if (finalRequest.getLaborTypeRequirements() != null && !finalRequest.getLaborTypeRequirements().isEmpty()) {
-            List<Map<String, Object>> laborTypeReqs = finalRequest.getLaborTypeRequirements().stream()
+        if (finalRequest.getWorkerTypeRequirements() != null && !finalRequest.getWorkerTypeRequirements().isEmpty()) {
+            List<Map<String, Object>> workerTypeReqs = finalRequest.getWorkerTypeRequirements().stream()
                     .map(req -> {
                         Map<String, Object> reqData = new HashMap<>();
-                        reqData.put("laborType", req.getLaborType().name());
+                        reqData.put("workerType", req.getWorkerType());
                         reqData.put("numberOfWorkers", req.getNumberOfWorkers());
                         return reqData;
                     })
                     .collect(Collectors.toList());
-            notificationData.put("laborTypeRequirements", laborTypeReqs);
+            notificationData.put("workerTypeRequirements", workerTypeReqs);
         }
         
         notificationData.put("workType", finalRequest.getWorkType());
@@ -431,10 +429,10 @@ public class AdminService {
             }
             
             // Check if worker has at least one matching labor type
-            boolean hasMatchingLaborType = finalRequest.getLaborTypes().stream()
-                    .anyMatch(laborType -> worker.getLaborTypes().contains(laborType));
+            boolean hasMatchingWorkerType = finalRequest.getWorkerTypes().stream()
+                    .anyMatch(workerType -> worker.getWorkerTypes().contains(workerType));
             
-            if (hasMatchingLaborType) {
+            if (hasMatchingWorkerType) {
                 // CRITICAL: Final safety checks before sending notification
                 // 1. Verify worker is still verified (double-check)
                 if (worker.getVerified() == null || !worker.getVerified()) {
@@ -520,7 +518,7 @@ public class AdminService {
         return requestRepository.save(request);
     }
 
-    // Helper method removed - now using Worker.LaborType directly in Request
+    // Helper method removed - now using String for labor types in Request
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);
@@ -551,7 +549,7 @@ public class AdminService {
     }
 
     @Transactional
-    public Object createUser(Long creatingAdminId, String name, String email, String phone, String secondaryPhone, String password, User.UserRole role, LocationDto location, List<Worker.LaborType> laborTypes, Boolean isSuperAdmin) {
+    public Object createUser(Long creatingAdminId, String name, String email, String phone, String secondaryPhone, String password, User.UserRole role, LocationDto location, List<String> workerTypes, Boolean isSuperAdmin) {
         // Check if email already exists in either table
         if (userRepository.existsByEmail(email) || systemUserRepository.existsByEmail(email)) {
             throw new RuntimeException("User with this email already exists");
@@ -604,10 +602,10 @@ public class AdminService {
         user = userRepository.save(user);
 
         // If worker, create worker profile
-        if (role == User.UserRole.WORKER && laborTypes != null && !laborTypes.isEmpty()) {
+        if (role == User.UserRole.WORKER && workerTypes != null && !workerTypes.isEmpty()) {
             Worker worker = new Worker();
             worker.setUser(user);
-            worker.setLaborTypes(laborTypes);
+            worker.setWorkerTypes(workerTypes);
             // Note: Aadhaar number can be added later via profile update
             if (location != null) {
                 Location currentLocation = new Location();
@@ -660,14 +658,14 @@ public class AdminService {
                         String phone = worker.getUser().getPhone() != null ? worker.getUser().getPhone() : "";
                         String address = worker.getCurrentLocation() != null && worker.getCurrentLocation().getAddress() != null 
                                 ? worker.getCurrentLocation().getAddress().toLowerCase() : "";
-                        String laborTypes = worker.getLaborTypes() != null 
-                                ? worker.getLaborTypes().stream()
-                                        .map(lt -> lt.name().toLowerCase())
+                        String workerTypes = worker.getWorkerTypes() != null 
+                                ? worker.getWorkerTypes().stream()
+                                        .map(String::toLowerCase)
                                         .collect(Collectors.joining(" "))
                                 : "";
                         return name.contains(searchLower) || email.contains(searchLower) || 
                                phone.contains(searchLower) || address.contains(searchLower) ||
-                               laborTypes.contains(searchLower);
+                               workerTypes.contains(searchLower);
                     })
                     .collect(Collectors.toList());
         }
@@ -711,7 +709,7 @@ public class AdminService {
             workerData.put("email", worker.getUser().getEmail());
             workerData.put("phone", worker.getUser().getPhone());
             workerData.put("secondaryPhone", worker.getUser().getSecondaryPhone());
-            workerData.put("laborTypes", worker.getLaborTypes());
+            workerData.put("workerTypes", worker.getWorkerTypes());
             workerData.put("rating", worker.getRating());
             workerData.put("totalJobs", worker.getTotalJobs());
             workerData.put("available", worker.getAvailable());
@@ -1126,8 +1124,8 @@ public class AdminService {
         }
 
         // Load labor type requirements
-        if (request.getLaborTypeRequirements() != null) {
-            request.getLaborTypeRequirements().size(); // Trigger lazy loading
+        if (request.getWorkerTypeRequirements() != null) {
+            request.getWorkerTypeRequirements().size(); // Trigger lazy loading
         }
 
         Map<String, Object> status = new HashMap<>();
@@ -1141,14 +1139,14 @@ public class AdminService {
         status.put("totalPending", totalPending);
 
         // Group confirmed workers by labor type
-        Map<Worker.LaborType, List<Map<String, Object>>> confirmedByLaborType = new HashMap<>();
-        Map<Worker.LaborType, Integer> requiredByLaborType = new HashMap<>();
+        Map<String, List<Map<String, Object>>> confirmedByWorkerType = new HashMap<>();
+        Map<String, Integer> requiredByWorkerType = new HashMap<>();
 
         // Initialize required counts from labor type requirements
-        if (request.getLaborTypeRequirements() != null) {
-            for (RequestLaborTypeRequirement req : request.getLaborTypeRequirements()) {
-                requiredByLaborType.put(req.getLaborType(), req.getNumberOfWorkers());
-                confirmedByLaborType.put(req.getLaborType(), new ArrayList<>());
+        if (request.getWorkerTypeRequirements() != null) {
+            for (RequestWorkerTypeRequirement req : request.getWorkerTypeRequirements()) {
+                requiredByWorkerType.put(req.getWorkerType(), req.getNumberOfWorkers());
+                confirmedByWorkerType.put(req.getWorkerType(), new ArrayList<>());
             }
         }
 
@@ -1158,7 +1156,7 @@ public class AdminService {
                 User workerUser = cw.getWorker();
                 Worker worker = workerRepository.findByUserId(workerUser.getId()).orElse(null);
                 
-                if (worker != null && worker.getLaborTypes() != null) {
+                if (worker != null && worker.getWorkerTypes() != null) {
                     Map<String, Object> workerInfo = new HashMap<>();
                     workerInfo.put("userId", workerUser.getId());
                     workerInfo.put("name", workerUser.getName());
@@ -1167,9 +1165,9 @@ public class AdminService {
                     workerInfo.put("confirmedAt", cw.getConfirmedAt());
                     
                     // Add this worker to all matching labor types
-                    for (Worker.LaborType laborType : worker.getLaborTypes()) {
-                        if (requiredByLaborType.containsKey(laborType)) {
-                            confirmedByLaborType.get(laborType).add(workerInfo);
+                    for (String workerType : worker.getWorkerTypes()) {
+                        if (requiredByWorkerType.containsKey(workerType)) {
+                            confirmedByWorkerType.get(workerType).add(workerInfo);
                         }
                     }
                 }
@@ -1177,30 +1175,30 @@ public class AdminService {
         }
 
         // Build status per labor type
-        List<Map<String, Object>> laborTypeStatus = new ArrayList<>();
-        for (Map.Entry<Worker.LaborType, Integer> entry : requiredByLaborType.entrySet()) {
-            Worker.LaborType laborType = entry.getKey();
+        List<Map<String, Object>> workerTypeStatus = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : requiredByWorkerType.entrySet()) {
+            String workerType = entry.getKey();
             Integer required = entry.getValue();
-            List<Map<String, Object>> confirmed = confirmedByLaborType.get(laborType);
+            List<Map<String, Object>> confirmed = confirmedByWorkerType.get(workerType);
             int confirmedCount = confirmed != null ? confirmed.size() : 0;
             
             int pendingCount = Math.max(0, required - confirmedCount);
             
             Map<String, Object> ltStatus = new HashMap<>();
-            ltStatus.put("laborType", laborType.name());
+            ltStatus.put("workerType", workerType);
             ltStatus.put("required", required);
             ltStatus.put("confirmed", confirmedCount);
             ltStatus.put("pending", pendingCount);
             ltStatus.put("confirmedWorkers", confirmed != null ? confirmed : new ArrayList<>());
             ltStatus.put("canDeploy", confirmedCount >= required);
             
-            laborTypeStatus.add(ltStatus);
+            workerTypeStatus.add(ltStatus);
         }
 
-        status.put("laborTypeStatus", laborTypeStatus);
+        status.put("workerTypeStatus", workerTypeStatus);
         
         // Check if all labor types have enough confirmations
-        boolean allRequirementsMet = laborTypeStatus.stream()
+        boolean allRequirementsMet = workerTypeStatus.stream()
                 .allMatch(lt -> (Boolean) lt.get("canDeploy"));
         status.put("allRequirementsMet", allRequirementsMet);
         
@@ -1235,7 +1233,7 @@ public class AdminService {
 
         // Get labor type status
         @SuppressWarnings("unchecked")
-        List<Map<String, Object>> laborTypeStatus = (List<Map<String, Object>>) confirmationStatus.get("laborTypeStatus");
+        List<Map<String, Object>> workerTypeStatus = (List<Map<String, Object>>) confirmationStatus.get("workerTypeStatus");
 
         // Clear existing deployed workers (if any)
         if (request.getDeployedWorkers() != null) {
@@ -1243,7 +1241,7 @@ public class AdminService {
         }
 
         // Deploy workers per labor type requirement
-        for (Map<String, Object> ltStatus : laborTypeStatus) {
+        for (Map<String, Object> ltStatus : workerTypeStatus) {
             Integer required = (Integer) ltStatus.get("required");
             @SuppressWarnings("unchecked")
             List<Map<String, Object>> confirmedWorkers = (List<Map<String, Object>>) ltStatus.get("confirmedWorkers");
@@ -1277,10 +1275,10 @@ public class AdminService {
         // Notify customer
         Map<String, Object> deploymentData = new HashMap<>();
         deploymentData.put("requestId", savedRequest.getId());
-        deploymentData.put("laborTypeRequirements", savedRequest.getLaborTypeRequirements().stream()
+        deploymentData.put("workerTypeRequirements", savedRequest.getWorkerTypeRequirements().stream()
                 .map(req -> {
                     Map<String, Object> reqData = new HashMap<>();
-                    reqData.put("laborType", req.getLaborType().name());
+                    reqData.put("workerType", req.getWorkerType());
                     reqData.put("numberOfWorkers", req.getNumberOfWorkers());
                     return reqData;
                 })

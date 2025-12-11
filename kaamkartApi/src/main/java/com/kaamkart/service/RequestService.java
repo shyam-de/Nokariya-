@@ -1,8 +1,9 @@
 package com.kaamkart.service;
 
 import com.kaamkart.dto.CreateRequestDto;
-import com.kaamkart.dto.LaborTypeRequirementDto;
+import com.kaamkart.dto.WorkerTypeRequirementDto;
 import com.kaamkart.model.*;
+import com.kaamkart.model.RequestWorkerTypeRequirement;
 import com.kaamkart.repository.RatingRepository;
 import com.kaamkart.repository.RequestRepository;
 import com.kaamkart.repository.UserRepository;
@@ -46,7 +47,7 @@ public class RequestService {
                     .orElseThrow(() -> new RuntimeException("Customer not found"));
 
             // Validate labor type requirements
-            if (dto.getLaborTypeRequirements() == null || dto.getLaborTypeRequirements().isEmpty()) {
+            if (dto.getWorkerTypeRequirements() == null || dto.getWorkerTypeRequirements().isEmpty()) {
                 throw new RuntimeException("At least one labor type requirement is required");
             }
 
@@ -87,30 +88,30 @@ public class RequestService {
             request.setEndDate(dto.getEndDate());
 
             // Process labor type requirements
-            List<Worker.LaborType> allLaborTypes = new ArrayList<>();
+            List<String> allWorkerTypes = new ArrayList<>();
             int totalWorkers = 0;
-            List<RequestLaborTypeRequirement> requirements = new ArrayList<>();
+            List<RequestWorkerTypeRequirement> requirements = new ArrayList<>();
             
-            for (LaborTypeRequirementDto req : dto.getLaborTypeRequirements()) {
-                if (req.getLaborType() == null) {
-                    throw new RuntimeException("Labor type cannot be null");
+            for (WorkerTypeRequirementDto req : dto.getWorkerTypeRequirements()) {
+                if (req.getWorkerType() == null) {
+                    throw new RuntimeException("Worker type cannot be null");
                 }
                 if (req.getNumberOfWorkers() == null || req.getNumberOfWorkers() < 1) {
-                    throw new RuntimeException("Number of workers must be at least 1 for each labor type");
+                    throw new RuntimeException("Number of workers must be at least 1 for each worker type");
                 }
                 
-                allLaborTypes.add(req.getLaborType());
+                allWorkerTypes.add(req.getWorkerType());
                 totalWorkers += req.getNumberOfWorkers();
                 
-                RequestLaborTypeRequirement requirement = new RequestLaborTypeRequirement();
+                RequestWorkerTypeRequirement requirement = new RequestWorkerTypeRequirement();
                 requirement.setRequest(request);
-                requirement.setLaborType(req.getLaborType());
+                requirement.setWorkerType(req.getWorkerType());
                 requirement.setNumberOfWorkers(req.getNumberOfWorkers());
                 requirements.add(requirement);
             }
             
-            request.setLaborTypes(allLaborTypes); // Keep for backward compatibility
-            request.setLaborTypeRequirements(requirements);
+            request.setWorkerTypes(allWorkerTypes); // Keep for backward compatibility
+            request.setWorkerTypeRequirements(requirements);
             request.setNumberOfWorkers(totalWorkers);
 
             Location location = new Location();
@@ -193,11 +194,11 @@ public class RequestService {
                 .orElseThrow(() -> new RuntimeException("Customer not found"));
         List<Request> requests = requestRepository.findByCustomerOrderByCreatedAtDesc(customer);
         
-        // Eagerly load laborTypeRequirements for each request to avoid lazy loading issues
+        // Eagerly load workerTypeRequirements for each request to avoid lazy loading issues
         for (Request request : requests) {
-            // Force load laborTypeRequirements
-            if (request.getLaborTypeRequirements() != null) {
-                request.getLaborTypeRequirements().size(); // Trigger lazy loading
+            // Force load workerTypeRequirements
+            if (request.getWorkerTypeRequirements() != null) {
+                request.getWorkerTypeRequirements().size(); // Trigger lazy loading
             }
             
             // Populate worker ratings for deployed workers
@@ -234,9 +235,9 @@ public class RequestService {
 
         List<Request> requests = requestRepository.findByStatusIn(statuses).stream()
                 .filter(request -> {
-                    // Force load laborTypeRequirements and confirmedWorkers to avoid lazy loading issues
-                    if (request.getLaborTypeRequirements() != null) {
-                        request.getLaborTypeRequirements().size(); // Trigger lazy loading
+                    // Force load workerTypeRequirements and confirmedWorkers to avoid lazy loading issues
+                    if (request.getWorkerTypeRequirements() != null) {
+                        request.getWorkerTypeRequirements().size(); // Trigger lazy loading
                     }
                     if (request.getConfirmedWorkers() != null) {
                         request.getConfirmedWorkers().size(); // Trigger lazy loading
@@ -244,24 +245,24 @@ public class RequestService {
                     
                     // Check if all requirements are already met - if yes, exclude from available requests
                     boolean allRequirementsMet = true;
-                    if (request.getLaborTypeRequirements() != null && !request.getLaborTypeRequirements().isEmpty()) {
+                    if (request.getWorkerTypeRequirements() != null && !request.getWorkerTypeRequirements().isEmpty()) {
                         // Group confirmed workers by labor type
-                        Map<Worker.LaborType, Integer> confirmedByLaborType = new HashMap<>();
+                        Map<String, Integer> confirmedByWorkerType = new HashMap<>();
                         if (request.getConfirmedWorkers() != null) {
                             for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
                                 User workerUser = cw.getWorker();
                                 Worker workerProfile = workerRepository.findByUserId(workerUser.getId()).orElse(null);
-                                if (workerProfile != null && workerProfile.getLaborTypes() != null) {
-                                    for (Worker.LaborType laborType : workerProfile.getLaborTypes()) {
-                                        confirmedByLaborType.put(laborType, confirmedByLaborType.getOrDefault(laborType, 0) + 1);
+                                if (workerProfile != null && workerProfile.getWorkerTypes() != null) {
+                                    for (String workerType : workerProfile.getWorkerTypes()) {
+                                        confirmedByWorkerType.put(workerType, confirmedByWorkerType.getOrDefault(workerType, 0) + 1);
                                     }
                                 }
                             }
                         }
                         
                         // Check if all requirements are met
-                        for (RequestLaborTypeRequirement req : request.getLaborTypeRequirements()) {
-                            int confirmedCount = confirmedByLaborType.getOrDefault(req.getLaborType(), 0);
+                        for (RequestWorkerTypeRequirement req : request.getWorkerTypeRequirements()) {
+                            int confirmedCount = confirmedByWorkerType.getOrDefault(req.getWorkerType(), 0);
                             if (confirmedCount < req.getNumberOfWorkers()) {
                                 allRequirementsMet = false;
                                 break;
@@ -279,11 +280,11 @@ public class RequestService {
                     }
                     
                     // Check if worker has any of the required labor types
-                    if (request.getLaborTypes() == null || request.getLaborTypes().isEmpty()) {
+                    if (request.getWorkerTypes() == null || request.getWorkerTypes().isEmpty()) {
                         return false;
                     }
-                    return request.getLaborTypes().stream()
-                            .anyMatch(laborType -> worker.getLaborTypes().contains(laborType));
+                    return request.getWorkerTypes().stream()
+                            .anyMatch(workerType -> worker.getWorkerTypes().contains(workerType));
                 })
                 .collect(Collectors.toList());
 

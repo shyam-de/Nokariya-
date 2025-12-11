@@ -9,8 +9,8 @@ import java.util.List;
 
 @Data
 public class CreateRequestDto {
-    @NotNull(message = "Labor type requirements are required")
-    private List<LaborTypeRequirementDto> laborTypeRequirements;
+    @NotNull(message = "Worker type requirements are required")
+    private List<WorkerTypeRequirementDto> workerTypeRequirements;
 
     @NotBlank(message = "Work type is required")
     private String workType;

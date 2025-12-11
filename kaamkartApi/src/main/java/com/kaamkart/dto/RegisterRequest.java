@@ -1,7 +1,6 @@
 package com.kaamkart.dto;
 
 import com.kaamkart.model.User;
-import com.kaamkart.model.Worker;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -29,6 +28,6 @@ public class RegisterRequest {
 
     private User.UserRole role;
     private LocationDto location;
-    private List<Worker.LaborType> laborTypes;
+    private List<String> workerTypes;
 }
 

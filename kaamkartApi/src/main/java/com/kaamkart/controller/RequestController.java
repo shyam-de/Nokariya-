@@ -35,17 +35,27 @@ public class RequestController {
     public ResponseEntity<?> createRequest(
             Authentication authentication,
             @Valid @RequestBody CreateRequestDto dto) {
+        long startTime = System.currentTimeMillis();
+        
         try {
-            logger.debug("Received request creation from user: {}", getUserIdFromAuthentication(authentication));
-            logger.debug("Labor type requirements count: {}", 
-                    dto.getLaborTypeRequirements() != null ? dto.getLaborTypeRequirements().size() : 0);
-            
             Long userId = getUserIdFromAuthentication(authentication);
+            int workerTypeCount = dto.getWorkerTypeRequirements() != null ? dto.getWorkerTypeRequirements().size() : 0;
+            
+            logger.info("📝 CREATE REQUEST | User: {} | WorkerTypes: {} | WorkType: {} | StartDate: {}", 
+                    userId, workerTypeCount, dto.getWorkType(), dto.getStartDate());
+            logger.debug("Request creation details - User: {}, WorkerTypeRequirements: {}", userId, workerTypeCount);
+            
             Request request = requestService.createRequest(userId, dto);
-            logger.info("Request created successfully: ID={}, User={}", request.getId(), userId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("✅ REQUEST CREATED | RequestID: {} | User: {} | Duration: {}ms", 
+                    request.getId(), userId, duration);
+            
             return ResponseEntity.ok(Map.of("message", "Request created successfully", "request", request));
         } catch (Exception e) {
-            logger.error("Error in createRequest controller: {}", e.getMessage(), e);
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("❌ REQUEST CREATION FAILED | User: {} | Error: {} | Duration: {}ms", 
+                    getUserIdFromAuthentication(authentication), e.getMessage(), duration, e);
             String errorMessage = e.getMessage() != null ? e.getMessage() : "Failed to create request";
             return ResponseEntity.badRequest().body(Map.of("message", errorMessage, "error", e.getClass().getSimpleName()));
         }
@@ -85,11 +95,24 @@ public class RequestController {
     public ResponseEntity<?> confirmRequest(
             Authentication authentication,
             @PathVariable Long requestId) {
+        long startTime = System.currentTimeMillis();
+        
         try {
             Long userId = getUserIdFromAuthentication(authentication);
+            logger.info("✅ CONFIRM REQUEST | RequestID: {} | User: {} | Timestamp: {}", 
+                    requestId, userId, System.currentTimeMillis());
+            
             Request request = requestService.confirmRequest(requestId, userId);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            logger.info("✅ REQUEST CONFIRMED | RequestID: {} | User: {} | Duration: {}ms", 
+                    requestId, userId, duration);
+            
             return ResponseEntity.ok(Map.of("message", "Request confirmed", "request", request));
         } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("❌ REQUEST CONFIRMATION FAILED | RequestID: {} | User: {} | Error: {} | Duration: {}ms", 
+                    requestId, getUserIdFromAuthentication(authentication), e.getMessage(), duration, e);
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }

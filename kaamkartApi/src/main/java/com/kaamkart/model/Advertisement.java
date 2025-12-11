@@ -24,7 +24,7 @@ public class Advertisement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, unique = true, length = 200)
     private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")

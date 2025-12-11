@@ -21,7 +21,7 @@ public class SuccessStory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 200)
+    @Column(nullable = false, unique = true, length = 200)
     private String title;
 
     @Column(nullable = false, columnDefinition = "TEXT")
@@ -33,8 +33,8 @@ public class SuccessStory {
     @Column(name = "worker_name", length = 100)
     private String workerName;
 
-    @Column(name = "labor_type", length = 50)
-    private String laborType;
+    @Column(name = "worker_type", length = 50)
+    private String workerType;
 
     @Column(name = "rating")
     private Integer rating; // 1-5 stars

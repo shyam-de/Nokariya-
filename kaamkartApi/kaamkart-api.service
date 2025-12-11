@@ -11,7 +11,10 @@ Group=www-data
 WorkingDirectory=/opt/kaamkart-api
 
 # Java options
-Environment="JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
+# Optimized for AWS Free Tier (t2.micro with 1GB RAM)
+# Default: -Xms512m -Xmx1024m (for 2GB+ RAM)
+# Free Tier: -Xms256m -Xmx384m (for 1GB RAM)
+Environment="JAVA_OPTS=-Xms256m -Xmx384m -XX:+UseG1GC -XX:MaxGCPauseMillis=200"
 
 # Spring Boot options
 Environment="SPRING_PROFILES_ACTIVE=prod"

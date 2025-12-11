@@ -40,7 +40,11 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
-        origins.forEach(origin -> configuration.addAllowedOrigin(origin.trim()));
+        origins.forEach(origin -> {
+            String trimmedOrigin = origin.trim();
+            // Use exact origin when credentials are enabled
+            configuration.addAllowedOrigin(trimmedOrigin);
+        });
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
