@@ -878,44 +878,47 @@ export default function AdminDashboard() {
         {/* Create User Form */}
         {showCreateUser && (
           <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-green-200 animate-slide-down relative z-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New User</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('admin.createNewUser')}</h2>
             <form onSubmit={handleCreateUser} className="space-y-5 max-h-[80vh] overflow-y-auto pr-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.name')}</label>
                   <input
                     type="text"
                     required
                     value={userFormData.name}
                     onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder="Enter full name"
+                    placeholder={t('admin.namePlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.email')}</label>
                   <input
                     type="email"
                     required
                     value={userFormData.email}
                     onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder="Enter email"
+                    placeholder={t('admin.emailPlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.phone')}</label>
                   <input
                     type="tel"
                     required
                     value={userFormData.phone}
                     onChange={(e) => setUserFormData({ ...userFormData, phone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder="Enter phone number"
+                    placeholder={t('admin.phonePlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.password')}</label>
                   <input
                     type="password"
                     required
@@ -923,11 +926,12 @@ export default function AdminDashboard() {
                     value={userFormData.password}
                     onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder="Enter password (min 6 characters)"
+                    placeholder={t('admin.passwordPlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Role</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.role')}</label>
                   <select
                     required
                     value={userFormData.role}
@@ -940,10 +944,11 @@ export default function AdminDashboard() {
                       }
                     }}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                    lang={language}
                   >
-                    <option value="customer">Customer</option>
-                    <option value="worker">Worker</option>
-                    {(user?.superAdmin === true || user?.superAdmin === 'true') && <option value="admin">Admin</option>}
+                    <option value="customer">{t('admin.roleCustomer')}</option>
+                    <option value="worker">{t('admin.roleWorker')}</option>
+                    {(user?.superAdmin === true || user?.superAdmin === 'true') && <option value="admin">{t('admin.roleAdmin')}</option>}
                   </select>
                   {!(user?.superAdmin === true || user?.superAdmin === 'true') && (
                     <p className="text-xs text-gray-500 mt-1">
@@ -956,13 +961,13 @@ export default function AdminDashboard() {
 
               {userFormData.role === 'worker' && (
                 <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-3">Worker Type (Select one) <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-3" lang={language}>{t('admin.workerType')} <span className="text-red-500">*</span></label>
                   {isLoadingWorkerTypes ? (
-                    <p className="text-sm text-gray-500">Loading worker types...</p>
+                    <p className="text-sm text-gray-500" lang={language}>{t('admin.loadingWorkerTypes')}</p>
                   ) : workerTypes.filter((type: any) => type.isActive).length === 0 ? (
                     <div className="space-y-2">
-                      <p className="text-sm text-red-500">No active worker types available.</p>
-                      <p className="text-xs text-gray-500">Please add worker types from the "Worker Types" tab or contact a super admin.</p>
+                      <p className="text-sm text-red-500" lang={language}>{t('admin.noActiveWorkerTypes')}</p>
+                      <p className="text-xs text-gray-500" lang={language}>{t('admin.noActiveWorkerTypesHelp')}</p>
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-2">
@@ -994,7 +999,7 @@ export default function AdminDashboard() {
                   disabled={isCreatingUser}
                   className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isCreatingUser ? 'Creating...' : 'Create User'}
+                  {isCreatingUser ? t('admin.creating') : t('admin.createUser')}
                 </button>
                 <button
                   type="button"
@@ -1012,8 +1017,9 @@ export default function AdminDashboard() {
                     })
                   }}
                   className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
+                  lang={language}
                 >
-                  Cancel
+                  {t('admin.cancel')}
                 </button>
               </div>
             </form>
@@ -1109,7 +1115,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">⭐ </span>Stories ({successStories.length})
+                  <span className="hidden sm:inline">⭐ </span><span lang={language}>{t('admin.successStories')}</span> ({successStories.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('advertisements')}
@@ -1119,7 +1125,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">📢 </span>Ads ({advertisements.length})
+                  <span className="hidden sm:inline">📢 </span><span lang={language}>{t('admin.advertisements')}</span> ({advertisements.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('workerTypes')}
@@ -1129,7 +1135,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">🔧 </span>Worker Types ({workerTypes.length})
+                  <span className="hidden sm:inline">🔧 </span><span lang={language}>{t('admin.workerTypes')}</span> ({workerTypes.length})
                 </button>
               </>
             )}
@@ -1141,42 +1147,45 @@ export default function AdminDashboard() {
           <div className="bg-white rounded-xl shadow-lg p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>🔍 {t('admin.search')}</label>
                 <input
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by work type, customer, location, status..."
+                  placeholder={t('admin.searchPlaceholder')}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                  lang={language}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
                 <select
                   value={sortBy}
                   onChange={(e) => setSortBy(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  lang={language}
                 >
-                  <option value="date">Date</option>
-                  <option value="status">Status</option>
-                  <option value="worktype">Work Type</option>
-                  <option value="customername">Customer Name</option>
+                  <option value="date">{t('admin.sortByDate')}</option>
+                  <option value="status">{t('admin.sortByStatus')}</option>
+                  <option value="worktype">{t('admin.sortByWorkType')}</option>
+                  <option value="customername">{t('admin.sortByCustomerName')}</option>
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
                 <select
                   value={sortOrder}
                   onChange={(e) => setSortOrder(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  lang={language}
                 >
-                  <option value="desc">Newest First</option>
-                  <option value="asc">Oldest First</option>
+                  <option value="desc">{t('admin.newestFirst')}</option>
+                  <option value="asc">{t('admin.oldestFirst')}</option>
                 </select>
               </div>
             </div>
             <div className="mt-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Filter by Status</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.filterByStatus')}</label>
               <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setStatusFilter('all')}
@@ -1185,22 +1194,27 @@ export default function AdminDashboard() {
                       ? 'bg-red-500 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
+                  lang={language}
                 >
-                  All
+                  {t('admin.all')}
                 </button>
-                {['PENDING_ADMIN_APPROVAL', 'NOTIFIED', 'CONFIRMED', 'DEPLOYED', 'COMPLETED', 'REJECTED'].map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => setStatusFilter(status)}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      statusFilter === status
-                        ? 'bg-red-500 text-white'
-                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`}
-                  >
-                    {status.replace(/_/g, ' ')}
-                  </button>
-                ))}
+                {['PENDING_ADMIN_APPROVAL', 'NOTIFIED', 'CONFIRMED', 'DEPLOYED', 'COMPLETED', 'REJECTED'].map((status) => {
+                  const statusKey = `status${status.toLowerCase().replace(/_/g, '')}`
+                  return (
+                    <button
+                      key={status}
+                      onClick={() => setStatusFilter(status)}
+                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                        statusFilter === status
+                          ? 'bg-red-500 text-white'
+                          : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      }`}
+                      lang={language}
+                    >
+                      {t(`admin.${statusKey}`) || status.replace(/_/g, ' ')}
+                    </button>
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -1210,21 +1224,22 @@ export default function AdminDashboard() {
         {activeTab === 'concerns' ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">All Concerns</h2>
+              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allConcerns')}</h2>
               <button
                 onClick={fetchConcerns}
                 disabled={isLoadingConcerns}
                 className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                lang={language}
               >
                 {isLoadingConcerns ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Refreshing...</span>
+                    <span>{t('admin.refreshing')}</span>
                   </>
                 ) : (
                   <>
                     <span>🔄</span>
-                    <span>Refresh</span>
+                    <span>{t('admin.refresh')}</span>
                   </>
                 )}
               </button>
@@ -1236,8 +1251,8 @@ export default function AdminDashboard() {
             ) : concerns.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">📢</div>
-                <p className="text-xl text-gray-500 mb-2">No concerns raised yet</p>
-                <p className="text-gray-400">All clear, admin!</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noConcernsYet')}</p>
+                <p className="text-gray-400" lang={language}>{t('admin.allClear')}</p>
               </div>
             ) : (
               <div className="space-y-6">
@@ -1246,7 +1261,7 @@ export default function AdminDashboard() {
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold text-gray-900">Concern #{concern.id}</h3>
+                          <h3 className="text-xl font-bold text-gray-900" lang={language}>{t('admin.concern')} #{concern.id}</h3>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             concern.type === 'WORK_QUALITY' ? 'bg-blue-100 text-blue-800' :
                             concern.type === 'PAYMENT_ISSUE' ? 'bg-yellow-100 text-yellow-800' :
@@ -1254,49 +1269,49 @@ export default function AdminDashboard() {
                             concern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {concern.type.replace(/_/g, ' ')}
+                            {t(`customer.${concern.type.toLowerCase()}`) || concern.type.replace(/_/g, ' ')}
                           </span>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             concern.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                             concern.status === 'IN_REVIEW' ? 'bg-blue-100 text-blue-800' :
                             concern.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
-                          }`}>
-                            {concern.status.replace(/_/g, ' ')}
+                          }`} lang={language}>
+                            {t(`admin.concernStatus${concern.status.toLowerCase().replace(/_/g, '')}`) || concern.status.replace(/_/g, ' ')}
                           </span>
                         </div>
                         <div className="space-y-2 text-sm text-gray-600 mb-4">
-                          <p>
-                            <span className="font-semibold">Raised by:</span> {concern.raisedBy?.name || 'Unknown'} ({concern.raisedBy?.email || 'N/A'}) 
+                          <p lang={language}>
+                            <span className="font-semibold">{t('admin.raisedBy')}:</span> {concern.raisedBy?.name || t('admin.unknown')} ({concern.raisedBy?.email || t('admin.na')}) 
                             <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
                               concern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
                               concern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
                               'bg-gray-100 text-gray-800'
-                            }`}>
-                              {concern.raisedBy?.role === 'CUSTOMER' ? 'Customer' : 
-                               concern.raisedBy?.role === 'WORKER' ? 'Worker' : 
-                               'Unknown'}
+                            }`} lang={language}>
+                              {concern.raisedBy?.role === 'CUSTOMER' ? t('admin.roleCustomer') : 
+                               concern.raisedBy?.role === 'WORKER' ? t('admin.roleWorker') : 
+                               t('admin.unknown')}
                             </span>
                           </p>
                           {concern.request && (
-                            <p><span className="font-semibold">Related Request:</span> {concern.request.workType} (ID: {concern.request.id})</p>
+                            <p lang={language}><span className="font-semibold">{t('admin.relatedRequest')}:</span> {concern.request.workType} ({t('admin.id')}: {concern.request.id})</p>
                           )}
                           {concern.relatedTo && (
-                            <p><span className="font-semibold">Related to:</span> {concern.relatedTo.name} ({concern.relatedTo.email})</p>
+                            <p lang={language}><span className="font-semibold">{t('admin.relatedTo')}:</span> {concern.relatedTo.name} ({concern.relatedTo.email})</p>
                           )}
-                          <p><span className="font-semibold">Created:</span> {new Date(concern.createdAt).toLocaleString()}</p>
+                          <p lang={language}><span className="font-semibold">{t('admin.created')}:</span> {new Date(concern.createdAt).toLocaleString()}</p>
                           {concern.resolvedAt && (
-                            <p><span className="font-semibold">Resolved:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
+                            <p lang={language}><span className="font-semibold">{t('admin.resolved')}:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
                           )}
                         </div>
                         <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                          <p className="font-semibold text-gray-900 mb-2">Description:</p>
-                          <p className="text-gray-700">{concern.description}</p>
+                          <p className="font-semibold text-gray-900 mb-2" lang={language}>{t('admin.description')}:</p>
+                          <p className="text-gray-700" lang={language}>{concern.description}</p>
                         </div>
                         
                         {/* Conversation Thread */}
                         <div className="mb-4">
-                          <p className="font-semibold text-gray-900 mb-3">Conversation:</p>
+                          <p className="font-semibold text-gray-900 mb-3" lang={language}>{t('admin.conversation')}:</p>
                           {isLoadingMessages[concern.id] ? (
                             <div className="flex justify-center py-4">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-red-600"></div>
@@ -1348,7 +1363,7 @@ export default function AdminDashboard() {
                               })}
                             </div>
                           ) : (
-                            <p className="text-gray-500 text-sm italic">No messages yet.</p>
+                            <p className="text-gray-500 text-sm italic" lang={language}>{t('admin.noMessagesYet')}</p>
                           )}
                         </div>
                       </div>
@@ -1376,14 +1391,15 @@ export default function AdminDashboard() {
                         }}
                         className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
                       >
-                        {concern.status === 'PENDING' ? 'Review & Respond' : 'Update Status'}
+                        {concern.status === 'PENDING' ? t('admin.reviewAndRespond') : t('admin.updateStatus')}
                       </button>
                       {concern.status === 'PENDING' && (
                         <button
                           onClick={() => handleUpdateConcernStatus(concern.id, 'DISMISSED')}
                           className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                          lang={language}
                         >
-                          Dismiss
+                          {t('admin.dismiss')}
                         </button>
                       )}
                     </div>
@@ -1395,21 +1411,22 @@ export default function AdminDashboard() {
         ) : activeTab === 'workers' ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">All Workers</h2>
+              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allWorkers')}</h2>
               <button
                 onClick={fetchWorkers}
                 disabled={isLoadingWorkers}
                 className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                lang={language}
               >
                 {isLoadingWorkers ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Loading...</span>
+                    <span>{t('admin.loading')}</span>
                   </>
                 ) : (
                   <>
                     <span>🔄</span>
-                    <span>Refresh</span>
+                    <span>{t('admin.refresh')}</span>
                   </>
                 )}
               </button>
@@ -1419,37 +1436,40 @@ export default function AdminDashboard() {
             <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>🔍 {t('admin.search')}</label>
                   <input
                     type="text"
                     value={workersSearch}
                     onChange={(e) => setWorkersSearch(e.target.value)}
-                    placeholder="Search by name, email, phone, address, labor type..."
+                    placeholder={t('admin.searchWorkersPlaceholder')}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
                   <select
                     value={workersSortBy}
                     onChange={(e) => setWorkersSortBy(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    lang={language}
                   >
-                    <option value="date">Date</option>
-                    <option value="name">Name</option>
-                    <option value="rating">Rating</option>
-                    <option value="totaljobs">Total Jobs</option>
+                    <option value="date">{t('admin.sortByDate')}</option>
+                    <option value="name">{t('admin.sortByName')}</option>
+                    <option value="rating">{t('admin.sortByRating')}</option>
+                    <option value="totaljobs">{t('admin.sortByTotalJobs')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
                   <select
                     value={workersSortOrder}
                     onChange={(e) => setWorkersSortOrder(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    lang={language}
                   >
-                    <option value="desc">Newest First</option>
-                    <option value="asc">Oldest First</option>
+                    <option value="desc">{t('admin.newestFirst')}</option>
+                    <option value="asc">{t('admin.oldestFirst')}</option>
                   </select>
                 </div>
               </div>
@@ -1475,7 +1495,7 @@ export default function AdminDashboard() {
             ) : workers.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">👷</div>
-                <p className="text-xl text-gray-500 mb-2">No workers found</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noWorkersFound')}</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1499,7 +1519,7 @@ export default function AdminDashboard() {
                     
                     <div className="space-y-2 mb-4">
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Labor Types:</span>
+                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.laborTypes')}</span>
                         <div className="flex flex-wrap gap-1">
                           {worker.workerTypes?.map((type: string) => (
                             <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
@@ -1509,17 +1529,17 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Rating:</span>
+                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.rating')}</span>
                         <span className="text-sm text-gray-600">⭐ {worker.rating || 0.0}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Total Jobs:</span>
+                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.totalJobs')}</span>
                         <span className="text-sm text-gray-600">{worker.totalJobs || 0}</span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Available:</span>
-                        <span className={`text-sm ${worker.available ? 'text-green-600' : 'text-red-600'}`}>
-                          {worker.available ? '✓ Yes' : '✗ No'}
+                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.available')}</span>
+                        <span className={`text-sm ${worker.available ? 'text-green-600' : 'text-red-600'}`} lang={language}>
+                          {worker.available ? t('admin.yes') : t('admin.no')}
                         </span>
                       </div>
                     </div>
@@ -1533,7 +1553,7 @@ export default function AdminDashboard() {
                               : 'bg-yellow-500 text-white hover:bg-yellow-600'
                           }`}
                         >
-                          {worker.verified ? '✓ Verified' : '⚠ Not Verified'}
+                          {worker.verified ? t('admin.verified') : t('admin.notVerified')}
                         </button>
                         <button
                           onClick={() => handleToggleBlock(worker.userId)}
@@ -1542,8 +1562,9 @@ export default function AdminDashboard() {
                             ? 'bg-green-500 text-white hover:bg-green-600'
                             : 'bg-red-500 text-white hover:bg-red-600'
                         }`}
+                        lang={language}
                       >
-                        {worker.blocked ? '🔓 Unblock' : '🚫 Block'}
+                        {worker.blocked ? t('admin.unblock') : t('admin.block')}
                       </button>
                     </div>
                     
@@ -1560,21 +1581,22 @@ export default function AdminDashboard() {
         ) : activeTab === 'customers' ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">All Customers</h2>
+              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allCustomers')}</h2>
               <button
                 onClick={fetchCustomers}
                 disabled={isLoadingCustomers}
                 className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                lang={language}
               >
                 {isLoadingCustomers ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Loading...</span>
+                    <span>{t('admin.loading')}</span>
                   </>
                 ) : (
                   <>
                     <span>🔄</span>
-                    <span>Refresh</span>
+                    <span>{t('admin.refresh')}</span>
                   </>
                 )}
               </button>
@@ -1584,35 +1606,38 @@ export default function AdminDashboard() {
             <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>🔍 {t('admin.search')}</label>
                   <input
                     type="text"
                     value={customersSearch}
                     onChange={(e) => setCustomersSearch(e.target.value)}
-                    placeholder="Search by name, email, phone, address..."
+                    placeholder={t('admin.searchCustomersPlaceholder')}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
                   <select
                     value={customersSortBy}
                     onChange={(e) => setCustomersSortBy(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    lang={language}
                   >
-                    <option value="date">Date</option>
-                    <option value="name">Name</option>
+                    <option value="date">{t('admin.sortByDate')}</option>
+                    <option value="name">{t('admin.sortByName')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
                   <select
                     value={customersSortOrder}
                     onChange={(e) => setCustomersSortOrder(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                    lang={language}
                   >
-                    <option value="desc">Newest First</option>
-                    <option value="asc">Oldest First</option>
+                    <option value="desc">{t('admin.newestFirst')}</option>
+                    <option value="asc">{t('admin.oldestFirst')}</option>
                   </select>
                 </div>
               </div>
@@ -1625,7 +1650,7 @@ export default function AdminDashboard() {
                       onChange={(e) => setCustomersLocationFilter(e.target.checked)}
                       className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">📍 Filter by my location (within 50km radius)</span>
+                    <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.filterByMyLocation')}</span>
                   </label>
                 </div>
               )}
@@ -1638,7 +1663,7 @@ export default function AdminDashboard() {
             ) : customers.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">👥</div>
-                <p className="text-xl text-gray-500 mb-2">No customers found</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noCustomersFound')}</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -1675,7 +1700,7 @@ export default function AdminDashboard() {
                             : 'bg-red-500 text-white hover:bg-red-600'
                         }`}
                       >
-                        {customer.blocked ? '🔓 Unblock' : '🚫 Block'}
+                        {customer.blocked ? t('admin.unblock') : t('admin.block')}
                       </button>
                     </div>
                   </div>
@@ -1686,21 +1711,22 @@ export default function AdminDashboard() {
         ) : activeTab === 'systemUsers' ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">System Users (Admins)</h2>
+              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.systemUsersAdmins')}</h2>
               <button
                 onClick={fetchSystemUsers}
                 disabled={isLoadingSystemUsers}
                 className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                lang={language}
               >
                 {isLoadingSystemUsers ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Loading...</span>
+                    <span>{t('admin.loading')}</span>
                   </>
                 ) : (
                   <>
                     <span>🔄</span>
-                    <span>Refresh</span>
+                    <span>{t('admin.refresh')}</span>
                   </>
                 )}
               </button>
@@ -1762,7 +1788,7 @@ export default function AdminDashboard() {
             ) : systemUsers.length === 0 ? (
               <div className="text-center py-12">
                 <div className="text-6xl mb-4">👨‍💼</div>
-                <p className="text-xl text-gray-500 mb-2">No system users found</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noSystemUsersFound')}</p>
               </div>
             ) : (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
