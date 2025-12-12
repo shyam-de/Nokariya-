@@ -35,21 +35,17 @@ export default function Home() {
     return () => window.removeEventListener('resize', updateStoriesPerPage)
   }, [])
 
+  const [user, setUser] = useState<any>(null)
+
   useEffect(() => {
-    // Check if user is already logged in
+    // Check if user is already logged in - but don't redirect, allow them to see home page
     const token = localStorage.getItem('token')
-    const user = localStorage.getItem('user')
+    const userStr = localStorage.getItem('user')
     
-    if (token && user) {
+    if (token && userStr) {
       try {
-        const userObj = JSON.parse(user)
-        if (userObj.role === 'customer') {
-          router.push('/customer/dashboard')
-          return
-        } else if (userObj.role === 'worker') {
-          router.push('/worker/dashboard')
-          return
-        }
+        const userObj = JSON.parse(userStr)
+        setUser(userObj)
       } catch (e) {
         // Invalid user data, continue to show home page
         console.error('Error parsing user data:', e)
@@ -57,7 +53,7 @@ export default function Home() {
     }
     // Show page immediately (don't wait for API calls)
     setIsLoaded(true)
-  }, [router])
+  }, [])
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
   // Using fetch for public endpoints to avoid axios overhead
@@ -232,29 +228,41 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 md:h-16">
             <div className="flex items-center">
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
+              <Link href="/" className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate hover:scale-105 transition-transform">
                 KaamKart
-              </h1>
+              </Link>
               <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline whitespace-nowrap" lang={language}>{t('home.subtitle')}</span>
             </div>
             
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-4">
               <LanguageSwitcher />
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-primary-600 font-medium transition-all duration-200 hover:scale-105"
-                lang={language}
-              >
-                {t('home.login')}
-              </Link>
-              <Link
-                href="/login"
-                className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
-                lang={language}
-              >
-                {t('home.getStarted')}
-              </Link>
+              {user ? (
+                <Link
+                  href={user.role === 'customer' ? '/customer/dashboard' : user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
+                  lang={language}
+                >
+                  {t('home.profile') || 'Profile'}
+                </Link>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    className="text-gray-700 hover:text-primary-600 font-medium transition-all duration-200 hover:scale-105"
+                    lang={language}
+                  >
+                    {t('home.login')}
+                  </Link>
+                  <Link
+                    href="/login"
+                    className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
+                    lang={language}
+                  >
+                    {t('home.getStarted')}
+                  </Link>
+                </>
+              )}
             </div>
 
             {/* Mobile Navigation - Language Switcher and Hamburger */}
@@ -282,22 +290,48 @@ export default function Home() {
               <div className="px-4 py-2">
                 <LanguageSwitcher />
               </div>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
-                lang={language}
-              >
-                {t('home.login')}
-              </Link>
-              <Link
-                href="/login"
-                onClick={() => setMobileMenuOpen(false)}
-                className="block w-full px-4 py-3 text-center bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
-                lang={language}
-              >
-                {t('home.getStarted')}
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href={user.role === 'customer' ? '/customer/dashboard' : user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
+                    lang={language}
+                  >
+                    {t('home.dashboard')}
+                  </Link>
+                  <button
+                    onClick={() => {
+                      localStorage.removeItem('token')
+                      localStorage.removeItem('user')
+                      window.location.href = '/'
+                    }}
+                    className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
+                    lang={language}
+                  >
+                    {t('home.logout')}
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
+                    lang={language}
+                  >
+                    {t('home.login')}
+                  </Link>
+                  <Link
+                    href="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block w-full px-4 py-3 text-center bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                    lang={language}
+                  >
+                    {t('home.getStarted')}
+                  </Link>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -485,23 +519,46 @@ export default function Home() {
             {t('home.heroSubDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up delay-200">
-            <Link
-              href="/login"
-              className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
-              lang={language}
-            >
-              <span className="relative z-10 flex items-center justify-center gap-2">
-                <span>🔍 {t('home.findWorkersNow')}</span>
-              </span>
-              <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-            </Link>
-            <Link
-              href="/login"
-              className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
-              lang={language}
-            >
-              👷 {t('home.joinAsWorker')}
-            </Link>
+            {user && user.role === 'customer' ? (
+              <Link
+                href="/customer/dashboard"
+                className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
+                lang={language}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span>🔍 {t('home.findWorkersNow')}</span>
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+            ) : (
+              <Link
+                href={user ? (user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard') : '/login'}
+                className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
+                lang={language}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2">
+                  <span>🔍 {t('home.findWorkersNow')}</span>
+                </span>
+                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+              </Link>
+            )}
+            {user && user.role === 'customer' ? (
+              <Link
+                href="/customer/dashboard"
+                className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
+                lang={language}
+              >
+                👷 {t('home.joinAsWorker')}
+              </Link>
+            ) : (
+              <Link
+                href={user ? (user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard') : '/login'}
+                className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
+                lang={language}
+              >
+                👷 {t('home.joinAsWorker')}
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -821,18 +878,48 @@ export default function Home() {
               Join thousands of customers and workers already using KaamKart to connect and get work done
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link
-                href="/login"
-                className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
-              >
-                🚀 Sign Up Now - It's Free!
-              </Link>
-              <Link
-                href="/login"
-                className="bg-transparent border-3 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-primary-600 transition-all duration-200 hover:scale-110 transform"
-              >
-                🔑 Login to Your Account
-              </Link>
+              {user && user.role === 'customer' ? (
+                <Link
+                  href="/customer/dashboard"
+                  className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
+                  lang={language}
+                >
+                  🚀 {t('home.profile') || 'Go to Dashboard'}
+                </Link>
+              ) : user ? (
+                <Link
+                  href={user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
+                  lang={language}
+                >
+                  🚀 {t('home.profile') || 'Go to Dashboard'}
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
+                  lang={language}
+                >
+                  🚀 {t('home.register') || 'Sign Up Now - It\'s Free!'}
+                </Link>
+              )}
+              {user ? (
+                <Link
+                  href={user.role === 'customer' ? '/customer/dashboard' : user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  className="bg-transparent border-3 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-primary-600 transition-all duration-200 hover:scale-110 transform"
+                  lang={language}
+                >
+                  🔑 {t('home.profile') || 'Go to Dashboard'}
+                </Link>
+              ) : (
+                <Link
+                  href="/login"
+                  className="bg-transparent border-3 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-primary-600 transition-all duration-200 hover:scale-110 transform"
+                  lang={language}
+                >
+                  🔑 {t('home.login')}
+                </Link>
+              )}
             </div>
           </div>
         </div>
