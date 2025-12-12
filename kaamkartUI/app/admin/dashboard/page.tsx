@@ -630,10 +630,7 @@ export default function AdminDashboard() {
   const fetchConcernMessages = async (concernId: string) => {
     setIsLoadingMessages({ ...isLoadingMessages, [concernId]: true })
     try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_URL}/concerns/${concernId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await apiClient.get(`/concerns/${concernId}/messages`)
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
     } catch (error) {
       console.error('Error fetching messages:', error)
@@ -697,27 +694,22 @@ export default function AdminDashboard() {
     
     setIsUpdatingConcern(true)
     try {
-      const token = localStorage.getItem('token')
-      await axios.post(`${API_URL}/admin/concerns/${concernId}/message`, {
+      await apiClient.post(`/admin/concerns/${concernId}/message`, {
         message: newMessage.trim()
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       toast.success('Message added successfully!')
       setNewMessage('')
       fetchConcernMessages(concernId)
       // Refresh the selected concern to show new message
       if (selectedConcern) {
-        const concernsResponse = await axios.get(`${API_URL}/admin/concerns`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
+        const concernsResponse = await apiClient.get('/admin/concerns')
         const updatedConcern = concernsResponse.data.find((c: any) => c.id === selectedConcern.id)
         if (updatedConcern) {
           setSelectedConcern(updatedConcern)
         }
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to add message')
+      toast.error(error.message || error.response?.data?.message || 'Failed to add message')
     } finally {
       setIsUpdatingConcern(false)
     }
