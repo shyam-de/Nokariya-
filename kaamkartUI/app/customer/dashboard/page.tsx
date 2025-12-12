@@ -375,7 +375,6 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       const response = await apiClient.put('/profile', profileData, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       toast.success('Profile updated successfully!')
       setShowProfileModal(false)
@@ -395,7 +394,6 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       await apiClient.post(`/requests/${requestId}/complete`, {}, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       toast.success('Request marked as completed!')
       fetchRequests()
@@ -423,7 +421,6 @@ export default function CustomerDashboard() {
             rating: ratingData.rating,
             comment: ratingData.comment
           }, {
-            headers: { Authorization: `Bearer ${token}` }
           })
         }
       }
@@ -462,7 +459,6 @@ export default function CustomerDashboard() {
       }
       
       await apiClient.post('/concerns', data, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       
       toast.success('Concern submitted successfully! Admin will review it.')
@@ -490,7 +486,6 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       const response = await apiClient.get('/concerns/my-concerns', {
-        headers: { Authorization: `Bearer ${token}` }
       })
       setMyConcerns(response.data)
       // Fetch messages for all concerns
@@ -510,7 +505,6 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       const response = await apiClient.get(`/concerns/${concernId}/messages`, {
-        headers: { Authorization: `Bearer ${token}` }
       })
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
     } catch (error) {
