@@ -502,10 +502,7 @@ export default function AdminDashboard() {
   const fetchConcerns = async () => {
     setIsLoadingConcerns(true)
     try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_URL}/admin/concerns`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await apiClient.get('/admin/concerns')
       // Filter out RESOLVED concerns - admin only sees active concerns
       const activeConcerns = response.data.filter((concern: any) => concern.status !== 'RESOLVED')
       setConcerns(activeConcerns)
