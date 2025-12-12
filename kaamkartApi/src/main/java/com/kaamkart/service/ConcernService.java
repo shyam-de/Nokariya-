@@ -128,6 +128,15 @@ public class ConcernService {
         Concern concern = concernRepository.findById(concernId)
                 .orElseThrow(() -> new RuntimeException("Concern not found"));
 
+        // Handle system users (negative IDs) - they are stored in SystemUser table, not User table
+        // For system users, we skip adding to message thread since adminResponse is already saved in concern
+        if (userId < 0) {
+            // System user - adminResponse is already saved in the concern entity
+            // Return null or throw exception to indicate message was not added to thread
+            // The adminResponse field in Concern already contains the message
+            throw new RuntimeException("System users cannot add messages to concern thread. Admin response is saved in concern.");
+        }
+
         User sentBy = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 

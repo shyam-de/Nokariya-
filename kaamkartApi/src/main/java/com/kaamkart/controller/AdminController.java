@@ -291,9 +291,19 @@ public class AdminController {
                 Concern concern = concernService.updateConcernStatus(concernId, status, adminResponse);
                 
                 // If admin provided a response, add it as a message to the conversation
+                // Note: System users (negative IDs) cannot add messages to thread, but adminResponse is already saved in concern
                 if (adminResponse != null && !adminResponse.trim().isEmpty()) {
                     Long adminId = getUserIdFromAuthentication(authentication);
-                    concernService.addMessageToConcern(concernId, adminId, adminResponse);
+                    // Only add message if it's a regular user (positive ID), not a system user
+                    if (adminId > 0) {
+                        try {
+                            concernService.addMessageToConcern(concernId, adminId, adminResponse);
+                        } catch (Exception e) {
+                            // If message addition fails, it's okay - adminResponse is already saved in concern
+                            logger.warn("Could not add message to concern thread: {}", e.getMessage());
+                        }
+                    }
+                    // For system users (adminId < 0), adminResponse is already saved in concern entity
                 }
                 
                 return ResponseEntity.ok(Map.of(
