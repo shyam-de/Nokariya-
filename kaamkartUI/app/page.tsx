@@ -2,9 +2,17 @@
 
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+
+interface User {
+  id: string | number
+  name: string
+  email: string
+  role: string
+  [key: string]: any
+}
 
 export default function Home() {
   const router = useRouter()
@@ -19,6 +27,8 @@ export default function Home() {
 
   // Calculate stories per page based on screen size
   useEffect(() => {
+    if (typeof window === 'undefined') return
+    
     const updateStoriesPerPage = () => {
       const width = window.innerWidth
       if (width < 640) {
@@ -35,20 +45,50 @@ export default function Home() {
     return () => window.removeEventListener('resize', updateStoriesPerPage)
   }, [])
 
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<User | null>(null)
+
+  // Helper function to get dashboard URL based on user role
+  const getDashboardUrl = useMemo(() => {
+    return (user: User | null): string => {
+      if (!user) return '/login'
+      const role = user.role?.toLowerCase()
+      if (role === 'customer') return '/customer/dashboard'
+      if (role === 'worker') return '/worker/dashboard'
+      return '/admin/dashboard'
+    }
+  }, [])
+
+  // Helper function to check if user has specific role
+  const hasRole = useMemo(() => {
+    return (user: User | null, role: string): boolean => {
+      return user?.role?.toLowerCase() === role.toLowerCase()
+    }
+  }, [])
 
   useEffect(() => {
     // Check if user is already logged in - but don't redirect, allow them to see home page
+    if (typeof window === 'undefined') {
+      setIsLoaded(true)
+      return
+    }
+
     const token = localStorage.getItem('token')
     const userStr = localStorage.getItem('user')
     
     if (token && userStr) {
       try {
-        const userObj = JSON.parse(userStr)
+        const userObj = JSON.parse(userStr) as User
         setUser(userObj)
       } catch (e) {
-        // Invalid user data, continue to show home page
-        console.error('Error parsing user data:', e)
+        // Invalid user data, clear it and continue to show home page
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+        }
+        // Silently handle error - don't log in production
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error parsing user data:', e)
+        }
       }
     }
     // Show page immediately (don't wait for API calls)
@@ -120,7 +160,11 @@ export default function Home() {
           setSuccessStories(Array.isArray(stories) ? stories : [])
         }
       } catch (error) {
-        console.error('Error fetching data:', error)
+        // Silently handle errors - data will just not display
+        // Log only in development
+        if (process.env.NODE_ENV === 'development') {
+          console.error('Error fetching data:', error)
+        }
       }
     }
     fetchData()
@@ -240,7 +284,7 @@ export default function Home() {
               {user ? (
                 <>
                   <Link
-                    href={user.role?.toLowerCase() === 'customer' ? '/customer/dashboard' : user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                    href={getDashboardUrl(user)}
                     className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
                     lang={language}
                   >
@@ -306,7 +350,7 @@ export default function Home() {
               {user ? (
                 <>
                   <Link
-                    href={user.role?.toLowerCase() === 'customer' ? '/customer/dashboard' : user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                    href={getDashboardUrl(user)}
                     onClick={() => setMobileMenuOpen(false)}
                     className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
                     lang={language}
@@ -532,46 +576,23 @@ export default function Home() {
             {t('home.heroSubDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up delay-200">
-            {user && user.role?.toLowerCase() === 'customer' ? (
-              <Link
-                href="/customer/dashboard"
-                className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
-                lang={language}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <span>🔍 {t('home.findWorkersNow')}</span>
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
-            ) : (
-              <Link
-                href={user ? (user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard') : '/login'}
-                className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
-                lang={language}
-              >
-                <span className="relative z-10 flex items-center justify-center gap-2">
-                  <span>🔍 {t('home.findWorkersNow')}</span>
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              </Link>
-            )}
-            {user && user.role?.toLowerCase() === 'customer' ? (
-              <Link
-                href="/customer/dashboard"
-                className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
-                lang={language}
-              >
-                👷 {t('home.joinAsWorker')}
-              </Link>
-            ) : (
-              <Link
-                href={user ? (user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard') : '/login'}
-                className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
-                lang={language}
-              >
-                👷 {t('home.joinAsWorker')}
-              </Link>
-            )}
+            <Link
+              href={getDashboardUrl(user)}
+              className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
+              lang={language}
+            >
+              <span className="relative z-10 flex items-center justify-center gap-2">
+                <span>🔍 {t('home.findWorkersNow')}</span>
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+            </Link>
+            <Link
+              href={getDashboardUrl(user)}
+              className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
+              lang={language}
+            >
+              👷 {t('home.joinAsWorker')}
+            </Link>
           </div>
         </div>
       </section>
@@ -891,17 +912,9 @@ export default function Home() {
               Join thousands of customers and workers already using KaamKart to connect and get work done
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {user && user.role?.toLowerCase() === 'customer' ? (
+              {user ? (
                 <Link
-                  href="/customer/dashboard"
-                  className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
-                  lang={language}
-                >
-                  🚀 {t('home.goToDashboard') || 'Go to Dashboard'}
-                </Link>
-              ) : user ? (
-                <Link
-                  href={user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  href={getDashboardUrl(user)}
                   className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
                   lang={language}
                 >
@@ -918,7 +931,7 @@ export default function Home() {
               )}
               {user ? (
                 <Link
-                  href={user.role?.toLowerCase() === 'customer' ? '/customer/dashboard' : user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  href={getDashboardUrl(user)}
                   className="bg-transparent border-3 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-primary-600 transition-all duration-200 hover:scale-110 transform"
                   lang={language}
                 >
