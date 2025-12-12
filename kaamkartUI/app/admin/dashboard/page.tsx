@@ -2222,15 +2222,23 @@ export default function AdminDashboard() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Admin Response (Optional - will be added as message):</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Admin Response {user && user.id && user.id < 0 ? '(Required for system admins)' : '(Optional - will be added as message)'}:
+                </label>
                 <textarea
                   value={adminResponse}
                   onChange={(e) => setAdminResponse(e.target.value)}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
                   rows={3}
-                  placeholder="Enter your response to this concern... (This will be added as a message when updating status)"
+                  placeholder={user && user.id && user.id < 0 
+                    ? "Enter your response to this concern... (This will be saved in the concern)" 
+                    : "Enter your response to this concern... (This will be added as a message when updating status)"}
                 />
-                <p className="text-xs text-gray-500 mt-1">This will be added as a message when you update the status</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  {user && user.id && user.id < 0 
+                    ? "System admins: Response will be saved in the concern. Regular admins can also add messages separately above." 
+                    : "This will be added as a message when you update the status"}
+                </p>
               </div>
             </div>
             <div className="space-y-3">
