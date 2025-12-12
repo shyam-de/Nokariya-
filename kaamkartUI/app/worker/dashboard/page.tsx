@@ -164,6 +164,34 @@ export default function WorkerDashboard() {
     fetchWorkHistory()
     fetchProfile()
     fetchMyConcerns()
+    
+    // Check for chatbot data in sessionStorage
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const action = urlParams.get('action')
+      
+      if (action === 'raiseConcern') {
+        const chatbotData = sessionStorage.getItem('chatbotConcernData')
+        if (chatbotData) {
+          try {
+            const data = JSON.parse(chatbotData)
+            setConcernData({
+              type: data.type || 'OTHER',
+              description: data.description || '',
+              requestId: '',
+              relatedToUserId: ''
+            })
+            setShowConcernModal(true)
+            sessionStorage.removeItem('chatbotConcernData')
+            // Clean URL
+            window.history.replaceState({}, '', '/worker/dashboard')
+            toast.success(t('chatbot.concernFormOpened') || 'Concern form opened with your details!')
+          } catch (e) {
+            console.error('Error parsing chatbot data:', e)
+          }
+        }
+      }
+    }
   }, [])
 
   const fetchProfile = async () => {

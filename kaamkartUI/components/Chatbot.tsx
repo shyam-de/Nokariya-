@@ -102,6 +102,31 @@ export default function Chatbot({ user }: ChatbotProps) {
           t('chatbot.quickReplyHelp') || 'How to use KaamKart'
         ])
       }, 600)
+    } else if (user?.role?.toLowerCase() === 'worker') {
+      addBotMessage(
+        t('chatbot.quickReplies') || 'You can ask me:',
+        300
+      )
+      setTimeout(() => {
+        addMessage('', 'bot', [
+          t('chatbot.quickReplyRaiseConcern') || 'Raise a concern',
+          t('chatbot.quickReplyHelp') || 'How to use KaamKart',
+          t('chatbot.quickReplyContact') || 'Contact support'
+        ])
+      }, 600)
+    } else if (user?.role?.toLowerCase() === 'admin') {
+      addBotMessage(
+        t('chatbot.quickReplies') || 'You can ask me:',
+        300
+      )
+      setTimeout(() => {
+        addMessage('', 'bot', [
+          t('chatbot.quickReplyViewStats') || 'View statistics',
+          t('chatbot.quickReplyPendingRequests') || 'Pending requests',
+          t('chatbot.quickReplyManageWorkers') || 'Manage workers',
+          t('chatbot.quickReplyHelp') || 'Admin help'
+        ])
+      }, 600)
     } else {
       addBotMessage(
         t('chatbot.quickReplies') || 'You can ask me:',
@@ -131,8 +156,8 @@ export default function Chatbot({ user }: ChatbotProps) {
       }
       startRequestFlow()
     } else if (reply.includes('Concern') || reply.includes('concern') || reply.includes('चिंता')) {
-      if (!user || user.role?.toLowerCase() !== 'customer') {
-        addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer to raise concerns.')
+      if (!user || (user.role?.toLowerCase() !== 'customer' && user.role?.toLowerCase() !== 'worker')) {
+        addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer or worker to raise concerns.')
         if (!user) {
           setTimeout(() => {
             addBotMessage(t('chatbot.loginPrompt') || 'Would you like to sign up or login? Type "sign up" or "login" to get started!')
@@ -147,6 +172,24 @@ export default function Chatbot({ user }: ChatbotProps) {
       showHowItWorks()
     } else if (reply.includes('Sign up') || reply.includes('sign up') || reply.includes('साइन अप') || reply.includes('रजिस्टर')) {
       showSignUpInfo()
+    } else if (reply.includes('Stats') || reply.includes('stats') || reply.includes('statistics') || reply.includes('आंकड़े')) {
+      if (user?.role?.toLowerCase() === 'admin') {
+        showAdminStats()
+      } else {
+        addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
+      }
+    } else if (reply.includes('Pending') || reply.includes('pending') || reply.includes('लंबित')) {
+      if (user?.role?.toLowerCase() === 'admin') {
+        showPendingRequests()
+      } else {
+        addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
+      }
+    } else if (reply.includes('Manage') || reply.includes('manage') || reply.includes('Workers') || reply.includes('workers') || reply.includes('कर्मचारी')) {
+      if (user?.role?.toLowerCase() === 'admin') {
+        showManageWorkers()
+      } else {
+        addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
+      }
     } else if (reply.includes('Help') || reply.includes('help') || reply.includes('मदद')) {
       showHelp()
     } else {
@@ -199,11 +242,49 @@ export default function Chatbot({ user }: ChatbotProps) {
 
       case 'location':
         if (userInput.toLowerCase().includes('current') || userInput.toLowerCase().includes('gps') || userInput.toLowerCase().includes('location')) {
-          setRequestData({ ...requestData, useCurrentLocation: true })
-          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: Current Location\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          setRequestData({ ...requestData, useCurrentLocation: true, optionalFieldsAsked: false })
+          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- Or type "skip" to proceed without optional details')
         } else {
-          setRequestData({ ...requestData, location: userInput, useCurrentLocation: false })
-          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${userInput}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
+          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- Or type "skip" to proceed without optional details')
+        }
+        break
+
+      case 'optionalFields':
+        setRequestData({ ...requestData, optionalFieldsAsked: true })
+        if (userInput.toLowerCase().includes('skip') || userInput.toLowerCase().trim() === '') {
+          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+        } else {
+          // Try to parse landmark and area from user input
+          const lowerInput = userInput.toLowerCase()
+          let landmark = ''
+          let area = ''
+          
+          // Simple parsing - look for keywords
+          if (lowerInput.includes('landmark') || lowerInput.includes('near') || lowerInput.includes('beside')) {
+            const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+area|$)/i)
+            if (landmarkMatch) {
+              landmark = landmarkMatch[1].trim()
+            }
+          }
+          if (lowerInput.includes('area')) {
+            const areaMatch = userInput.match(/area[:\s]+(.+)/i)
+            if (areaMatch) {
+              area = areaMatch[1].trim()
+            }
+          }
+          
+          // If no specific keywords, treat as landmark
+          if (!landmark && !area) {
+            landmark = userInput.trim()
+          }
+          
+          setRequestData({ 
+            ...requestData, 
+            landmark: landmark || requestData.landmark,
+            area: area || requestData.area
+          })
+          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}\nLandmark: ${landmark || 'None'}\nArea: ${area || 'None'}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
         }
         break
 
@@ -267,6 +348,7 @@ export default function Chatbot({ user }: ChatbotProps) {
     if (!requestData.workerCountText) return 'workerCount'
     if (!requestData.startDate || !requestData.endDate) return 'dates'
     if (!requestData.location && !requestData.useCurrentLocation) return 'location'
+    if (requestData.optionalFieldsAsked === undefined) return 'optionalFields'
     return 'confirm'
   }
 
@@ -280,8 +362,16 @@ export default function Chatbot({ user }: ChatbotProps) {
     addBotMessage(t('chatbot.navigatingToDashboard') || 'Redirecting you to the request form...')
     setTimeout(() => {
       if (typeof window !== 'undefined') {
-        // Store request data in sessionStorage
-        sessionStorage.setItem('chatbotRequestData', JSON.stringify(requestData))
+        // Store request data in sessionStorage with all optional fields
+        const requestDataToStore = {
+          ...requestData,
+          landmark: requestData.landmark || '',
+          area: requestData.area || '',
+          state: requestData.state || '',
+          city: requestData.city || '',
+          pinCode: requestData.pinCode || ''
+        }
+        sessionStorage.setItem('chatbotRequestData', JSON.stringify(requestDataToStore))
         router.push('/customer/dashboard?action=createRequest')
       }
     }, 1500)
@@ -293,16 +383,58 @@ export default function Chatbot({ user }: ChatbotProps) {
       if (typeof window !== 'undefined') {
         // Store concern data in sessionStorage
         sessionStorage.setItem('chatbotConcernData', JSON.stringify(concernData))
-        router.push('/customer/dashboard?action=raiseConcern')
+        // Navigate to appropriate dashboard based on user role
+        if (user?.role?.toLowerCase() === 'customer') {
+          router.push('/customer/dashboard?action=raiseConcern')
+        } else if (user?.role?.toLowerCase() === 'worker') {
+          router.push('/worker/dashboard?action=raiseConcern')
+        }
       }
     }, 1500)
+  }
+
+  const showAdminStats = async () => {
+    try {
+      addBotMessage(t('chatbot.fetchingStats') || 'Fetching statistics...')
+      // Calculate stats from available data or use a simple message
+      const statsText = t('chatbot.adminStats')?.replace('{pending}', '?')
+        ?.replace('{active}', '?')
+        ?.replace('{workers}', '?')
+        ?.replace('{customers}', '?')
+        ?.replace('{concerns}', '?')
+        || `📊 Statistics:\n\n• Pending Requests: Check dashboard\n• Active Requests: Check dashboard\n• Total Workers: Check dashboard\n• Total Customers: Check dashboard\n• Pending Concerns: Check dashboard\n\nVisit your dashboard for detailed information.`
+      
+      addBotMessage(statsText)
+    } catch (error: any) {
+      addBotMessage(t('chatbot.statsError') || 'Could not fetch statistics. Please try again later.')
+    }
+  }
+
+  const showPendingRequests = () => {
+    addBotMessage(t('chatbot.navigatingToDashboard') || 'Taking you to pending requests...')
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        router.push('/admin/dashboard?tab=pending')
+      }
+    }, 1000)
+  }
+
+  const showManageWorkers = () => {
+    addBotMessage(t('chatbot.navigatingToDashboard') || 'Taking you to workers management...')
+    setTimeout(() => {
+      if (typeof window !== 'undefined') {
+        router.push('/admin/dashboard?tab=workers')
+      }
+    }, 1000)
   }
 
   const showHelp = () => {
     const helpText = user?.role?.toLowerCase() === 'customer'
       ? t('chatbot.helpCustomer') || 'As a customer, you can:\n\n1. Create work requests\n2. Track your requests\n3. Rate workers after completion\n4. Raise concerns if needed\n\nType "create request" to start a new request or "raise concern" for any issues.'
       : user?.role?.toLowerCase() === 'worker'
-      ? t('chatbot.helpWorker') || 'As a worker, you can:\n\n1. Browse available requests\n2. Apply for jobs\n3. Update your availability\n4. Track your work history\n\nVisit your dashboard to get started!'
+      ? t('chatbot.helpWorker') || 'As a worker, you can:\n\n1. Browse available requests\n2. Apply for jobs\n3. Update your availability\n4. Track your work history\n5. Raise concerns if needed\n\nVisit your dashboard to get started!'
+      : user?.role?.toLowerCase() === 'admin'
+      ? t('chatbot.helpAdmin') || 'As an admin, you can:\n\n1. Approve/reject customer requests\n2. Manage worker verifications\n3. Deploy workers to jobs\n4. Manage concerns and issues\n5. View statistics and reports\n6. Manage worker types and advertisements\n\nType "view stats" for statistics or "pending requests" to see pending items.'
       : t('chatbot.helpGeneral') || 'KaamKart connects customers with skilled workers.\n\n• Customers can post work requests\n• Workers can apply for jobs\n• Secure and reliable service\n\nSign up to get started!'
     
     addBotMessage(helpText)
@@ -383,15 +515,33 @@ export default function Chatbot({ user }: ChatbotProps) {
           }
         }
       } else if (lowerText.includes('concern') || lowerText.includes('issue') || lowerText.includes('problem') || lowerText.includes('चिंता')) {
-        if (user?.role?.toLowerCase() === 'customer') {
+        if (user?.role?.toLowerCase() === 'customer' || user?.role?.toLowerCase() === 'worker') {
           startConcernFlow()
         } else {
-          addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer to raise concerns.')
+          addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer or worker to raise concerns.')
           if (!user) {
             setTimeout(() => {
               addBotMessage(t('chatbot.loginPrompt') || 'Would you like to sign up or login? Type "sign up" or "login" to get started!')
             }, 1000)
           }
+        }
+      } else if (lowerText.includes('stats') || lowerText.includes('statistics') || lowerText.includes('आंकड़े')) {
+        if (user?.role?.toLowerCase() === 'admin') {
+          showAdminStats()
+        } else {
+          addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
+        }
+      } else if (lowerText.includes('pending') || lowerText.includes('लंबित')) {
+        if (user?.role?.toLowerCase() === 'admin') {
+          showPendingRequests()
+        } else {
+          addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
+        }
+      } else if (lowerText.includes('manage') && lowerText.includes('worker') || lowerText.includes('कर्मचारी')) {
+        if (user?.role?.toLowerCase() === 'admin') {
+          showManageWorkers()
+        } else {
+          addBotMessage(t('chatbot.adminOnly') || 'This feature is only available for admins.')
         }
       } else {
         addBotMessage(t('chatbot.defaultResponse') || 'I\'m here to help! You can ask me about:\n\n• Creating requests\n• Raising concerns\n• General help\n\nType "help" for more options or use the quick replies below.')
