@@ -748,50 +748,55 @@ export default function WorkerDashboard() {
               </button>
               <form onSubmit={handleUpdateProfile} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.name')}</label>
                   <input
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.email')}</label>
                   <input
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.phone')}</label>
                   <input
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Phone (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.secondaryPhone')}</label>
                   <input
                     type="tel"
                     value={profileData.secondaryPhone}
                     onChange={(e) => setProfileData({ ...profileData, secondaryPhone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    lang={language}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isUpdatingProfile}
                   className="w-full bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  lang={language}
                 >
-                  {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+                  {isUpdatingProfile ? t('worker.updating') : t('worker.updateProfile')}
                 </button>
               </form>
             </div>
@@ -814,10 +819,10 @@ export default function WorkerDashboard() {
               </button>
               <form onSubmit={handleSubmitRating} className="space-y-5">
                 <div>
-                  <p className="text-sm text-gray-600 mb-2">Customer: {selectedRequest.customer?.name}</p>
+                  <p className="text-sm text-gray-600 mb-2" lang={language}>{t('worker.customerLabel')} {selectedRequest.customer?.name}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Rating (1-5 stars)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('worker.ratingLabel')}</label>
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -830,16 +835,17 @@ export default function WorkerDashboard() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">Selected: {ratingData.rating} star{ratingData.rating !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-gray-600 mt-2" lang={language}>{t('worker.selectedRating')} {ratingData.rating} {t('worker.stars')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Comment (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.comment')}</label>
                   <textarea
                     value={ratingData.comment}
                     onChange={(e) => setRatingData({ ...ratingData, comment: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     rows={4}
-                    placeholder="Share your experience with this customer..."
+                    placeholder={t('worker.commentPlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <button
@@ -847,7 +853,7 @@ export default function WorkerDashboard() {
                   disabled={isSubmittingRating}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
                 >
-                  {isSubmittingRating ? t('common.loading') : t('worker.rateCustomer')}
+                  {isSubmittingRating ? t('worker.submitting') : t('worker.rateCustomer')}
                 </button>
               </form>
             </div>
@@ -858,8 +864,8 @@ export default function WorkerDashboard() {
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-3 md:p-4 mb-4 md:mb-6 animate-pulse">
             <div className="flex items-center gap-2 md:gap-3">
               <span className="text-xl md:text-2xl">⚠️</span>
-              <p className="text-xs md:text-sm lg:text-base text-yellow-800 font-medium">
-                You are currently unavailable. Toggle availability to receive new requests.
+              <p className="text-xs md:text-sm lg:text-base text-yellow-800 font-medium" lang={language}>
+                {t('worker.unavailableMessage')}
               </p>
             </div>
           </div>
@@ -876,8 +882,8 @@ export default function WorkerDashboard() {
                 {myConcerns.length === 0 ? (
                   <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
                     <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📢</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">No concerns raised yet</p>
-                    <p className="text-sm md:text-base text-gray-400">Click "Raise Concern" to submit a concern</p>
+                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noConcernsYet')}</p>
+                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.raiseConcernHint')}</p>
                   </div>
                 ) : (
                   myConcerns.map((concern: any) => (
@@ -885,7 +891,7 @@ export default function WorkerDashboard() {
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                         <div className="flex-1 w-full">
                           <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
-                            <h3 className="text-lg md:text-xl font-bold text-gray-900">Concern #{concern.id}</h3>
+                            <h3 className="text-lg md:text-xl font-bold text-gray-900" lang={language}>{t('worker.concernNumber')}{concern.id}</h3>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               concern.type === 'WORK_QUALITY' ? 'bg-blue-100 text-blue-800' :
                               concern.type === 'PAYMENT_ISSUE' ? 'bg-yellow-100 text-yellow-800' :
@@ -893,7 +899,7 @@ export default function WorkerDashboard() {
                               concern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
                               'bg-gray-100 text-gray-800'
                             }`}>
-                              {concern.type.replace(/_/g, ' ')}
+                              {t(`customer.${concern.type.toLowerCase()}`) || concern.type.replace(/_/g, ' ')}
                             </span>
                             <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                               concern.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -901,27 +907,27 @@ export default function WorkerDashboard() {
                               concern.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
                               concern.status === 'DISMISSED' ? 'bg-red-100 text-red-800' :
                               'bg-gray-100 text-gray-800'
-                            }`}>
-                              {concern.status.replace(/_/g, ' ')}
+                            }`} lang={language}>
+                              {t(`admin.concernStatus${concern.status.toLowerCase().replace(/_/g, '')}`) || concern.status.replace(/_/g, ' ')}
                             </span>
                           </div>
                           <div className="space-y-2 text-xs md:text-sm text-gray-600 mb-3 md:mb-4">
                             {concern.request && (
-                              <p><span className="font-semibold">Related Request:</span> {concern.request.workType} (ID: {concern.request.id})</p>
+                              <p lang={language}><span className="font-semibold">{t('admin.relatedRequest')}:</span> {concern.request.workType} ({t('admin.id')}: {concern.request.id})</p>
                             )}
-                            <p><span className="font-semibold">Created:</span> {new Date(concern.createdAt).toLocaleString()}</p>
+                            <p lang={language}><span className="font-semibold">{t('admin.created')}:</span> {new Date(concern.createdAt).toLocaleString()}</p>
                             {concern.resolvedAt && (
-                              <p><span className="font-semibold">Resolved:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
+                              <p lang={language}><span className="font-semibold">{t('admin.resolved')}:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
                             )}
                           </div>
                           <div className="bg-gray-50 rounded-lg p-3 md:p-4 mb-3 md:mb-4">
-                            <p className="font-semibold text-sm md:text-base text-gray-900 mb-2">Description:</p>
-                            <p className="text-xs md:text-sm lg:text-base text-gray-700">{concern.description}</p>
+                            <p className="font-semibold text-sm md:text-base text-gray-900 mb-2" lang={language}>{t('admin.description')}:</p>
+                            <p className="text-xs md:text-sm lg:text-base text-gray-700" lang={language}>{concern.description}</p>
                           </div>
                           
                           {/* Conversation Thread */}
                           <div className="mb-3 md:mb-4">
-                            <p className="font-semibold text-sm md:text-base text-gray-900 mb-2 md:mb-3">Conversation:</p>
+                            <p className="font-semibold text-sm md:text-base text-gray-900 mb-2 md:mb-3" lang={language}>{t('admin.conversation')}:</p>
                             {isLoadingMessages[concern.id] ? (
                               <div className="flex justify-center py-3 md:py-4">
                                 <div className="animate-spin rounded-full h-5 w-5 md:h-6 md:w-6 border-b-2 border-primary-600"></div>
@@ -963,20 +969,20 @@ export default function WorkerDashboard() {
                                 })}
                               </div>
                             ) : (
-                              <p className="text-gray-500 text-sm italic">No messages yet. Start the conversation by updating the concern.</p>
+                              <p className="text-gray-500 text-sm italic" lang={language}>{t('admin.noMessagesYet')}</p>
                             )}
                           </div>
                       <div className="mt-4 pt-4 border-t border-gray-200">
                         {concern.status === 'RESOLVED' ? (
                           <div className="bg-green-50 border-2 border-green-200 rounded-lg p-4">
-                            <p className="text-green-800 font-semibold flex items-center gap-2">
+                            <p className="text-green-800 font-semibold flex items-center gap-2" lang={language}>
                               <span>✓</span>
-                              This concern has been resolved and cannot be edited.
+                              {t('worker.concernResolved') || 'This concern has been resolved and cannot be edited.'}
                             </p>
                           </div>
                         ) : editingConcern && editingConcern.id === concern.id ? (
                           <>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Update Status:</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.updateStatus')}:</label>
                             <select
                               value={editingConcern.status === 'IN_REVIEW' ? 'PENDING' : editingConcern.status}
                               onChange={(e) => {
@@ -985,11 +991,12 @@ export default function WorkerDashboard() {
                                 }
                               }}
                               className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
+                              lang={language}
                             >
-                              <option value="PENDING">Pending</option>
-                              <option value="RESOLVED">Resolved</option>
+                              <option value="PENDING">{t('admin.concernStatuspending')}</option>
+                              <option value="RESOLVED">{t('admin.concernStatusresolved')}</option>
                             </select>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Message (Optional):</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.messagePlaceholder')}</label>
                             <textarea
                               value={editingConcern.message || ''}
                               onChange={(e) => {
@@ -999,7 +1006,8 @@ export default function WorkerDashboard() {
                               }}
                               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 mb-3"
                               rows={3}
-                              placeholder="Add a message or update about this concern (optional)..."
+                              placeholder={t('admin.messagePlaceholder')}
+                              lang={language}
                             />
                             <div className="flex gap-2">
                               <button

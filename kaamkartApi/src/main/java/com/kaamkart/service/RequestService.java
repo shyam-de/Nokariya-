@@ -377,25 +377,20 @@ public class RequestService {
         request.setCompletedAt(java.time.LocalDateTime.now());
         Request savedRequest = requestRepository.save(request);
         
-        // Make workers available again after work is completed (only if end date has passed)
-        java.time.LocalDate today = java.time.LocalDate.now();
-        if (request.getEndDate() != null && (request.getEndDate().isBefore(today) || request.getEndDate().isEqual(today))) {
-            if (request.getDeployedWorkers() != null) {
-                for (DeployedWorker dw : request.getDeployedWorkers()) {
-                    if (dw.getWorker() != null) {
-                        Worker workerProfile = workerRepository.findByUserId(dw.getWorker().getId()).orElse(null);
-                        if (workerProfile != null) {
-                            workerProfile.setAvailable(true);
-                            workerRepository.save(workerProfile);
-                            logger.info("Worker {} (ID: {}) set to available after work completion (end date: {})", 
-                                    dw.getWorker().getName(), dw.getWorker().getId(), request.getEndDate());
-                        }
+        // Make workers available again after work is completed
+        // Workers remain unavailable until work is marked as COMPLETED, regardless of end date
+        if (request.getDeployedWorkers() != null) {
+            for (DeployedWorker dw : request.getDeployedWorkers()) {
+                if (dw.getWorker() != null) {
+                    Worker workerProfile = workerRepository.findByUserId(dw.getWorker().getId()).orElse(null);
+                    if (workerProfile != null) {
+                        workerProfile.setAvailable(true);
+                        workerRepository.save(workerProfile);
+                        logger.info("Worker {} (ID: {}) set to available after work completion (request ID: {}, end date: {})", 
+                                dw.getWorker().getName(), dw.getWorker().getId(), request.getId(), request.getEndDate());
                     }
                 }
             }
-        } else {
-            logger.info("Work completed but end date ({}) hasn't passed yet. Workers will remain unavailable until end date.", 
-                    request.getEndDate());
         }
         
         return savedRequest;

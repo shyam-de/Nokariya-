@@ -65,6 +65,22 @@ public class WorkerService {
             throw new RuntimeException("Worker must be verified by admin before they can be set as available");
         }
 
+        // CRITICAL: If worker is trying to set themselves as available, check if they are currently deployed
+        // Deployed workers cannot manually set themselves as available - they must wait until work is completed
+        if (available) {
+            // Check if worker has any active deployments (work not completed)
+            List<DeployedWorker> deployments = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(worker.getUser());
+            for (DeployedWorker dw : deployments) {
+                if (dw.getRequest() != null) {
+                    // If work is not completed, worker cannot set themselves as available
+                    boolean workNotCompleted = dw.getRequest().getStatus() != com.kaamkart.model.Request.RequestStatus.COMPLETED;
+                    if (workNotCompleted) {
+                        throw new RuntimeException("Cannot set availability to true while deployed on active work. You will be automatically set as available once the work is completed.");
+                    }
+                }
+            }
+        }
+
         worker.setAvailable(available);
 
         // Notify via WebSocket
