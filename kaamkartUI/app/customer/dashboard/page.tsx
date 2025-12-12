@@ -757,13 +757,13 @@ export default function CustomerDashboard() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 {/* Section 1: Work Details */}
                 <div className="border-b-2 border-gray-200 pb-4">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>📝</span> Work Details
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2" lang={language}>
+                    <span>📝</span> {t('customer.workDetails')}
                   </h4>
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="workType" className="block text-sm font-medium text-gray-700 mb-1">
-                        Work Type <span className="text-red-500">*</span>
+                      <label htmlFor="workType" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.workType')} <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -771,8 +771,9 @@ export default function CustomerDashboard() {
                         value={formData.workType}
                         onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder="e.g., Wiring, Plumbing, Cleaning, Construction"
+                        placeholder={t('customer.workTypePlaceholder')}
                         required
+                        lang={language}
                       />
                     </div>
                   </div>
@@ -780,13 +781,14 @@ export default function CustomerDashboard() {
 
                 {/* Section 2: Worker Requirements */}
                 <div className="border-b-2 border-gray-200 pb-4">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>👷</span> Worker Requirements <span className="text-red-500">*</span>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2" lang={language}>
+                    <span>👷</span> {t('customer.workerRequirements')} <span className="text-red-500">*</span>
                   </h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
                     {formData.workerTypeRequirements.map((req, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-sm">
-                        <div className="flex-1">
+                      <div key={index} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-sm">
+                        <div className="flex-1 min-w-0">
+                          <label className="block text-xs text-gray-600 mb-1 sm:hidden" lang={language}>{t('customer.workerType')}</label>
                           <select
                             value={req.laborType || ''}
                             onChange={(e) => {
@@ -798,8 +800,9 @@ export default function CustomerDashboard() {
                               setFormData({ ...formData, workerTypeRequirements: updated })
                               console.log('Updated requirement:', updated[index])
                             }}
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
                             required
+                            lang={language}
                           >
                             <option value="">{t('customer.selectWorkerType')}</option>
                             {workerTypes
@@ -813,19 +816,27 @@ export default function CustomerDashboard() {
                               ))}
                           </select>
                         </div>
-                        <div className="w-24">
+                        <div className="w-full sm:w-24 flex-shrink-0">
+                          <label className="block text-xs text-gray-600 mb-1 sm:hidden" lang={language}>{t('customer.numberOfWorkers')}</label>
                           <input
                             type="number"
                             min="1"
-                            value={req.numberOfWorkers}
+                            max="999"
+                            value={req.numberOfWorkers || 1}
                             onChange={(e) => {
+                              const val = e.target.value === '' ? '' : parseInt(e.target.value)
+                              const numValue = val === '' ? 1 : (isNaN(val as number) ? 1 : Math.max(1, val as number))
                               const updated = [...formData.workerTypeRequirements]
-                              updated[index].numberOfWorkers = parseInt(e.target.value) || 1
+                              updated[index] = {
+                                ...updated[index],
+                                numberOfWorkers: numValue
+                              }
                               setFormData({ ...formData, workerTypeRequirements: updated })
                             }}
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                            placeholder="Count"
+                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                            placeholder={t('customer.numberOfWorkersPlaceholder')}
                             required
+                            lang={language}
                           />
                         </div>
                         <button
@@ -834,8 +845,9 @@ export default function CustomerDashboard() {
                             const updated = formData.workerTypeRequirements.filter((_, i) => i !== index)
                             setFormData({ ...formData, workerTypeRequirements: updated })
                           }}
-                          className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors"
-                          title="Remove"
+                          className="px-3 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors text-sm sm:text-base flex-shrink-0"
+                          title={t('customer.removeRequirement')}
+                          lang={language}
                         >
                           ✕
                         </button>
@@ -855,12 +867,12 @@ export default function CustomerDashboard() {
                     </button>
                   </div>
                   {formData.workerTypeRequirements.length === 0 && (
-                    <p className="text-xs text-red-500 mt-2">Please add at least one worker type requirement</p>
+                    <p className="text-xs text-red-500 mt-2" lang={language}>{t('customer.addRequirementError')}</p>
                   )}
                   {formData.workerTypeRequirements.length > 0 && (
                     <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm text-blue-800 font-semibold">
-                        Total Workers Required: {
+                      <p className="text-sm text-blue-800 font-semibold" lang={language}>
+                        {t('customer.totalWorkersRequired')}: {
                           formData.workerTypeRequirements.reduce((sum, req) => sum + (req.numberOfWorkers || 0), 0)
                         }
                       </p>
@@ -870,13 +882,13 @@ export default function CustomerDashboard() {
 
                 {/* Section 3: Schedule */}
                 <div className="border-b-2 border-gray-200 pb-4">
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>📅</span> Schedule <span className="text-red-500">*</span>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2" lang={language}>
+                    <span>📅</span> {t('customer.schedule')} <span className="text-red-500">*</span>
                   </h4>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1">
-                        Start Date
+                      <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.startDate')}
                       </label>
                       <input
                         type="date"
@@ -889,8 +901,8 @@ export default function CustomerDashboard() {
                       />
                     </div>
                     <div>
-                      <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1">
-                        End Date
+                      <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.endDate')}
                       </label>
                       <input
                         type="date"
@@ -904,14 +916,14 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
                   {formData.startDate && formData.endDate && new Date(formData.endDate) < new Date(formData.startDate) && (
-                    <p className="text-xs text-red-500 mt-2">⚠️ End date must be after start date</p>
+                    <p className="text-xs text-red-500 mt-2" lang={language}>⚠️ {t('customer.endDateError')}</p>
                   )}
                   {formData.startDate && formData.endDate && new Date(formData.endDate) >= new Date(formData.startDate) && (
                     <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        <span className="font-semibold">Duration:</span> {
+                      <p className="text-sm text-green-800" lang={language}>
+                        <span className="font-semibold">{t('customer.duration')}:</span> {
                           Math.ceil((new Date(formData.endDate).getTime() - new Date(formData.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1
-                        } day(s)
+                        } {t('customer.days')}
                       </p>
                     </div>
                   )}
@@ -919,8 +931,8 @@ export default function CustomerDashboard() {
 
                 {/* Section 4: Location */}
                 <div>
-                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>📍</span> Location <span className="text-red-500">*</span>
+                  <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2" lang={language}>
+                    <span>📍</span> {t('customer.location')} <span className="text-red-500">*</span>
                   </h4>
                   
                   {/* Current Location Toggle Button */}
@@ -936,12 +948,12 @@ export default function CustomerDashboard() {
                         }`}
                       >
                         <span>📍</span>
-                        {formData.location.latitude !== 0 && formData.location.longitude !== 0 
-                          ? 'Using Current Location' 
-                          : 'Use Current Location'}
+                        <span lang={language}>{formData.location.latitude !== 0 && formData.location.longitude !== 0 
+                          ? t('customer.usingCurrentLocation') 
+                          : t('customer.useCurrentLocation')}</span>
                       </button>
                       {formData.location.latitude !== 0 && formData.location.longitude !== 0 && (
-                        <span className="text-xs text-green-600 font-medium">✓ Location detected</span>
+                        <span className="text-xs text-green-600 font-medium" lang={language}>✓ {t('customer.locationDetected')}</span>
                       )}
                     </div>
                   </div>
@@ -949,8 +961,8 @@ export default function CustomerDashboard() {
                   {/* Address Fields */}
                   <div className="space-y-4">
                     <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Address
+                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.fullAddress')}
                       </label>
                       <input
                         type="text"
@@ -961,13 +973,14 @@ export default function CustomerDashboard() {
                           location: { ...formData.location, address: e.target.value }
                         })}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder="Enter complete address (e.g., House No, Street, Area, City, State)"
+                        placeholder={t('customer.addressPlaceholder')}
+                        lang={language}
                       />
                     </div>
                     
                     <div>
-                      <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-1">
-                        Landmark (Optional)
+                      <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.landmark')}
                       </label>
                       <input
                         type="text"
@@ -978,20 +991,21 @@ export default function CustomerDashboard() {
                           location: { ...formData.location, landmark: e.target.value }
                         })}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder="e.g., Near ABC Mall, Behind XYZ Building"
+                        placeholder={t('customer.landmarkPlaceholder')}
+                        lang={language}
                       />
                     </div>
 
                     {/* Only show address details if current location is NOT detected */}
                     {formData.location.latitude === 0 || formData.location.longitude === 0 ? (
                       <div>
-                        <p className="text-xs font-medium text-gray-700 mb-2">
-                          Address Details <span className="text-red-500">*</span>
+                        <p className="text-xs font-medium text-gray-700 mb-2" lang={language}>
+                          {t('customer.addressDetails')} <span className="text-red-500">*</span>
                         </p>
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label htmlFor="state" className="block text-xs font-medium text-gray-700 mb-1">
-                              State <span className="text-red-500">*</span>
+                            <label htmlFor="state" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.state')} <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="text"
@@ -1002,12 +1016,13 @@ export default function CustomerDashboard() {
                                 location: { ...formData.location, state: e.target.value }
                               })}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder="State"
+                              placeholder={t('customer.state')}
+                              lang={language}
                             />
                           </div>
                           <div>
-                            <label htmlFor="city" className="block text-xs font-medium text-gray-700 mb-1">
-                              City <span className="text-red-500">*</span>
+                            <label htmlFor="city" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.city')} <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="text"
@@ -1018,14 +1033,15 @@ export default function CustomerDashboard() {
                                 location: { ...formData.location, city: e.target.value }
                               })}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder="City"
+                              placeholder={t('customer.city')}
+                              lang={language}
                             />
                           </div>
                         </div>
                         <div className="grid grid-cols-2 gap-3 mt-3">
                           <div>
-                            <label htmlFor="pinCode" className="block text-xs font-medium text-gray-700 mb-1">
-                              Pin Code <span className="text-red-500">*</span>
+                            <label htmlFor="pinCode" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.pinCode')} <span className="text-red-500">*</span>
                             </label>
                             <input
                               type="text"
@@ -1036,12 +1052,13 @@ export default function CustomerDashboard() {
                                 location: { ...formData.location, pinCode: e.target.value }
                               })}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder="Pin Code"
+                              placeholder={t('customer.pinCode')}
+                              lang={language}
                             />
                           </div>
                           <div>
-                            <label htmlFor="area" className="block text-xs font-medium text-gray-700 mb-1">
-                              Area
+                            <label htmlFor="area" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.area')}
                             </label>
                             <input
                               type="text"
@@ -1052,7 +1069,8 @@ export default function CustomerDashboard() {
                                 location: { ...formData.location, area: e.target.value }
                               })}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder="Area/Locality"
+                              placeholder={t('customer.area')}
+                              lang={language}
                             />
                           </div>
                         </div>
