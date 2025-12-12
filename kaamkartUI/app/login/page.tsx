@@ -224,10 +224,19 @@ export default function Login() {
                       toast.error('Please enter your email')
                       return
                     }
+                    
+                    // Email validation for forgot password
+                    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+                    const trimmedEmail = forgotPasswordEmail.trim().toLowerCase()
+                    if (!emailRegex.test(trimmedEmail)) {
+                      toast.error('Please enter a valid email address')
+                      return
+                    }
+                    
                     setIsLoading(true)
                     try {
                       const response = await apiClient.post('/auth/forgot-password', {
-                        email: forgotPasswordEmail.trim().toLowerCase()
+                        email: trimmedEmail
                       })
                       toast.success(response.data.message || 'Password reset link sent!')
                       setShowForgotPassword(false)
