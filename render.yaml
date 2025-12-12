@@ -18,6 +18,8 @@ services:
         sync: false
       - key: PORT
         value: 8585
+      - key: SERVER_PORT
+        value: 8585  # Alternative for Spring Boot
       - key: CORS_ALLOWED_ORIGINS
         value: https://nokariya.onrender.com  # Frontend URL
       - key: WEBSOCKET_ALLOWED_ORIGINS
