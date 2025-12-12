@@ -268,9 +268,28 @@ export default function CustomerDashboard() {
     }
     
     // Validate all requirements have labor type selected
-    const invalidRequirements = formData.workerTypeRequirements.filter(req => !req.laborType || req.laborType === '')
+    const invalidRequirements = formData.workerTypeRequirements.filter(req => 
+      !req.laborType || 
+      req.laborType === '' || 
+      req.laborType.trim() === '' ||
+      req.laborType === 'Select Worker Type'
+    )
     if (invalidRequirements.length > 0) {
-      toast.error('Please select labor type for all requirements')
+      toast.error(`Please select worker type for requirement ${invalidRequirements.length > 1 ? 's' : ''} ${invalidRequirements.map((_, idx) => {
+        const actualIdx = formData.workerTypeRequirements.findIndex(r => r === invalidRequirements[idx])
+        return actualIdx + 1
+      }).join(', ')}`)
+      return
+    }
+    
+    // Validate all requirements have number of workers > 0
+    const invalidWorkerCounts = formData.workerTypeRequirements.filter(req => 
+      !req.numberOfWorkers || 
+      req.numberOfWorkers < 1 ||
+      isNaN(req.numberOfWorkers)
+    )
+    if (invalidWorkerCounts.length > 0) {
+      toast.error('Please enter a valid number of workers (at least 1) for all requirements')
       return
     }
     
@@ -750,11 +769,15 @@ export default function CustomerDashboard() {
                       <div key={index} className="flex items-center gap-3 p-3 bg-white rounded-lg border border-primary-200 shadow-sm">
                         <div className="flex-1">
                           <select
-                            value={req.laborType}
+                            value={req.laborType || ''}
                             onChange={(e) => {
                               const updated = [...formData.workerTypeRequirements]
-                              updated[index].laborType = e.target.value
+                              updated[index] = {
+                                ...updated[index],
+                                laborType: e.target.value
+                              }
                               setFormData({ ...formData, workerTypeRequirements: updated })
+                              console.log('Updated requirement:', updated[index])
                             }}
                             className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                             required
