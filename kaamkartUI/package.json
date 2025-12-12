@@ -10,6 +10,7 @@
     "export": "next export"
   },
   "dependencies": {
+    "@swc/helpers": "^0.5.17",
     "autoprefixer": "^10.4.16",
     "axios": "^1.13.2",
     "next": "^14.0.4",

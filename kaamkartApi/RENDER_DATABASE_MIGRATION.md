@@ -12,10 +12,26 @@ Run these SQL commands on your Render PostgreSQL database.
 ## How to Run Migration on Render
 
 ### Step 1: Access Your Database
+
+**Option A: Using Render Dashboard (if available)**
 1. Go to [Render Dashboard](https://dashboard.render.com)
 2. Navigate to your PostgreSQL database service
-3. Click on the database name
-4. Click on "Connect" or "Query" tab (or use the "Shell" option)
+3. Look for:
+   - "Connect" button
+   - "Query" or "SQL" tab
+   - "Shell" option
+   - "psql" or "Database" section
+
+**Option B: Using External Database Tool (Recommended)**
+Use a database client like:
+- **pgAdmin** (Desktop app)
+- **DBeaver** (Free, cross-platform)
+- **TablePlus** (Mac/Windows)
+- **Postico** (Mac)
+- **psql** command line tool
+
+**Option C: Using psql Command Line (if you have it installed)**
+Connect directly from your terminal:
 
 ### Step 2: Run These SQL Commands
 
@@ -80,15 +96,54 @@ ALTER TABLE concern_messages ADD COLUMN IF NOT EXISTS sent_by_system_user_id BIG
 ALTER TABLE concern_messages ADD COLUMN IF NOT EXISTS sent_by_name VARCHAR(255) NULL;
 ```
 
-## Alternative: Using psql Command Line
+## Option 1: Using pgAdmin or DBeaver (Easiest)
 
-If you have `psql` installed locally, you can connect directly:
+### Using DBeaver (Free, Recommended):
+1. Download DBeaver from https://dbeaver.io/download/
+2. Install and open DBeaver
+3. Click "New Database Connection" → Select "PostgreSQL"
+4. Enter connection details:
+   - **Host:** `dpg-d4ttu5pr0fns739f4s40-a`
+   - **Port:** `5432`
+   - **Database:** `kaamkart`
+   - **Username:** `kaamkart_user`
+   - **Password:** `u7B1yZpeSNCFzrsxv2ty8FYmMf4AjF7F`
+5. Click "Test Connection" → "Finish"
+6. Right-click on database → "SQL Editor" → "New SQL Script"
+7. Paste and run the migration SQL commands
+
+### Using pgAdmin:
+1. Download from https://www.pgadmin.org/download/
+2. Add new server with the same connection details above
+3. Open Query Tool and run the SQL commands
+
+## Option 2: Using psql Command Line
+
+If you have `psql` installed (comes with PostgreSQL), connect directly:
 
 ```bash
 psql "postgresql://kaamkart_user:u7B1yZpeSNCFzrsxv2ty8FYmMf4AjF7F@dpg-d4ttu5pr0fns739f4s40-a:5432/kaamkart"
 ```
 
+Or step by step:
+```bash
+psql -h dpg-d4ttu5pr0fns739f4s40-a -p 5432 -U kaamkart_user -d kaamkart
+# Enter password when prompted: u7B1yZpeSNCFzrsxv2ty8FYmMf4AjF7F
+```
+
 Then run the SQL commands above.
+
+## Option 3: Using Render Shell (if available)
+
+1. Go to Render Dashboard → Your Database
+2. Look for "Shell" or "Console" option
+3. If available, it will open a terminal where you can run `psql` commands
+
+## Option 4: Using Online SQL Editor
+
+Some online tools support PostgreSQL connections:
+- **Adminer** (can be deployed as a service)
+- **phpPgAdmin** (web-based)
 
 ## Notes
 - This migration is **safe** - it won't affect existing data
