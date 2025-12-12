@@ -36,7 +36,7 @@ interface Request {
 
 export default function AdminDashboard() {
   const router = useRouter()
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const [activeTab, setActiveTab] = useState<'pending' | 'active' | 'history' | 'concerns' | 'workers' | 'customers' | 'systemUsers' | 'successStories' | 'advertisements' | 'workerTypes'>('pending')
   const [requests, setRequests] = useState<Request[]>([])
   const [activeRequests, setActiveRequests] = useState<Request[]>([])
@@ -798,8 +798,9 @@ export default function AdminDashboard() {
                   router.push('/')
                 }}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                lang={language}
               >
-                Logout
+                {t('admin.logout')}
               </button>
             </div>
 
@@ -854,8 +855,8 @@ export default function AdminDashboard() {
         <div className="bg-white rounded-xl shadow-lg p-4 md:p-6 mb-4 md:mb-6 border-l-4 border-red-500">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
             <div>
-              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 md:mb-2">Admin Dashboard</h1>
-              <p className="text-sm md:text-base text-gray-600">Manage requests, users, and monitor platform activity</p>
+              <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 md:mb-2" lang={language}>{t('admin.title')}</h1>
+              <p className="text-sm md:text-base text-gray-600" lang={language}>{t('admin.subtitle')}</p>
             </div>
             <button
               onClick={() => {
@@ -869,7 +870,7 @@ export default function AdminDashboard() {
               className="px-4 py-2 md:px-6 md:py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg text-sm md:text-base font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2 w-full sm:w-auto justify-center"
             >
               <span className="text-lg md:text-xl">{showCreateUser ? '✕' : '+'}</span>
-              {showCreateUser ? 'Cancel' : 'Create User'}
+              <span lang={language}>{showCreateUser ? t('admin.cancel') : t('admin.createUser')}</span>
             </button>
           </div>
         </div>
@@ -1029,8 +1030,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">📋 </span>Pending <span className="hidden md:inline">Requests</span> ({requests.length})
+              <span className="hidden sm:inline">📋 </span>{t('admin.pendingRequests')} ({requests.length})
             </button>
             <button
               onClick={() => setActiveTab('active')}
@@ -1039,8 +1041,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">🚀 </span>Active <span className="hidden md:inline">Requests</span> ({activeRequests.length})
+              <span className="hidden sm:inline">🚀 </span>{t('admin.activeRequests')} ({activeRequests.length})
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -1049,8 +1052,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">📜 </span>All <span className="hidden md:inline">Request</span> ({allRequests.length})
+              <span className="hidden sm:inline">📜 </span>{t('admin.allRequests')} ({allRequests.length})
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -1059,8 +1063,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">📢 </span>Concerns ({concerns.filter((c: any) => c.status === 'PENDING').length})
+              <span className="hidden sm:inline">📢 </span>{t('admin.concerns')} ({concerns.filter((c: any) => c.status === 'PENDING').length})
             </button>
             <button
               onClick={() => setActiveTab('workers')}
@@ -1069,8 +1074,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">👷 </span>Workers ({workers.length})
+              <span className="hidden sm:inline">👷 </span>{t('admin.workers')} ({workers.length})
             </button>
             <button
               onClick={() => setActiveTab('customers')}
@@ -1079,8 +1085,9 @@ export default function AdminDashboard() {
                   ? 'bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">👥 </span>Customers ({customers.length})
+              <span className="hidden sm:inline">👥 </span>{t('admin.customers')} ({customers.length})
             </button>
             {(user?.superAdmin === true || user?.superAdmin === 'true') && (
               <>
@@ -1092,7 +1099,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">👨‍💼 </span>System <span className="hidden md:inline">Users</span> ({systemUsers.length})
+                  <span className="hidden sm:inline">👨‍💼 </span><span lang={language}>{t('admin.systemUsers')}</span> ({systemUsers.length})
                 </button>
                 <button
                   onClick={() => setActiveTab('successStories')}

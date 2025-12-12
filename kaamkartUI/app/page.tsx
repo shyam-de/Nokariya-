@@ -156,20 +156,20 @@ export default function Home() {
   const sliderItems: SliderItem[] = [
     {
       icon: '⚡',
-      title: 'Fast & Reliable Service',
-      description: 'Get connected with verified workers in minutes, not days',
+      title: language === 'hi' ? t('home.slider1Title') : 'Fast & Reliable Service',
+      description: language === 'hi' ? t('home.slider1Description') : 'Get connected with verified workers in minutes, not days',
       color: 'from-blue-500 to-cyan-500'
     },
     {
       icon: '✅',
-      title: 'Verified Workers Only',
-      description: 'All workers are verified by our admin team for quality assurance',
+      title: language === 'hi' ? t('home.slider2Title') : 'Verified Workers Only',
+      description: language === 'hi' ? t('home.slider2Description') : 'All workers are verified by our admin team for quality assurance',
       color: 'from-green-500 to-emerald-500'
     },
     {
       icon: '⭐',
-      title: 'Rated & Reviewed',
-      description: 'Rate and review workers to help others make informed decisions',
+      title: language === 'hi' ? t('home.slider3Title') : 'Rated & Reviewed',
+      description: language === 'hi' ? t('home.slider3Description') : 'Rate and review workers to help others make informed decisions',
       color: 'from-purple-500 to-pink-500'
     }
   ]
@@ -235,7 +235,7 @@ export default function Home() {
               <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
                 KaamKart
               </h1>
-              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline" lang={language}>{t('home.subtitle')}</span>
+              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline whitespace-nowrap" lang={language}>{t('home.subtitle')}</span>
             </div>
             
             {/* Desktop Navigation */}
@@ -468,8 +468,8 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-32 relative z-10">
         <div className="text-center">
           <div className="inline-block mb-6 animate-bounce-slow">
-            <span className="bg-gradient-to-r from-primary-100 to-indigo-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-2">
-              <span className="animate-pulse">🚀</span> Fast • <span className="animate-pulse">✅</span> Verified • <span className="animate-pulse">📍</span> Location-Based
+              <span className="bg-gradient-to-r from-primary-100 to-indigo-100 text-primary-700 px-4 py-2 rounded-full text-sm font-semibold inline-flex items-center gap-2" lang={language}>
+              <span className="animate-pulse">🚀</span> {t('home.badgeFast')} • <span className="animate-pulse">✅</span> {t('home.badgeVerified')} • <span className="animate-pulse">📍</span> {t('home.badgeLocation')}
             </span>
           </div>
           <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up" lang={language}>
@@ -606,8 +606,8 @@ export default function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              Why Choose KaamKart?
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6" lang={language}>
+              {t('home.whyChooseTitle')}
             </h2>
             <div className="space-y-6">
               <div className="flex items-start gap-4">
@@ -615,8 +615,8 @@ export default function Home() {
                   <span className="text-2xl">✅</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Verified Workers</h3>
-                  <p className="text-gray-600">All workers are verified by our admin team for quality and reliability</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2" lang={language}>{t('home.benefit1Title')}</h3>
+                  <p className="text-gray-600" lang={language}>{t('home.benefit1Description')}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -624,8 +624,8 @@ export default function Home() {
                   <span className="text-2xl">📍</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Location-Based Matching</h3>
-                  <p className="text-gray-600">Find workers near you for faster service and lower costs</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2" lang={language}>{t('home.benefit2Title')}</h3>
+                  <p className="text-gray-600" lang={language}>{t('home.benefit2Description')}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -633,8 +633,8 @@ export default function Home() {
                   <span className="text-2xl">⚡</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Instant Connection</h3>
-                  <p className="text-gray-600">Get connected with workers in minutes, not days</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2" lang={language}>{t('home.benefit3Title')}</h3>
+                  <p className="text-gray-600" lang={language}>{t('home.benefit3Description')}</p>
                 </div>
               </div>
               <div className="flex items-start gap-4">
@@ -642,8 +642,8 @@ export default function Home() {
                   <span className="text-2xl">⭐</span>
                 </div>
                 <div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">Rating System</h3>
-                  <p className="text-gray-600">Rate and review workers to help others make informed decisions</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2" lang={language}>{t('home.benefit4Title')}</h3>
+                  <p className="text-gray-600" lang={language}>{t('home.benefit4Description')}</p>
                 </div>
               </div>
             </div>
@@ -652,22 +652,22 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-r from-primary-400/10 via-transparent to-indigo-400/10 animate-gradient-shift"></div>
             <div className="text-center relative z-10">
               <div className="text-8xl mb-6 animate-bounce-slow">🎯</div>
-              <h3 className="text-3xl font-bold text-gray-900 mb-4">Trusted by Thousands</h3>
-              <p className="text-xl text-gray-600 mb-8">
-                Join our growing community of customers and workers
+              <h3 className="text-3xl font-bold text-gray-900 mb-4" lang={language}>{t('home.trustedTitle')}</h3>
+              <p className="text-xl text-gray-600 mb-8" lang={language}>
+                {t('home.trustedDescription')}
               </p>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div className="animate-count-up">
                   <div className="text-3xl font-bold text-primary-600 animate-pulse-slow">1000+</div>
-                  <div className="text-sm text-gray-600">Workers</div>
+                  <div className="text-sm text-gray-600" lang={language}>{t('home.workersCount')}</div>
                 </div>
                 <div className="animate-count-up animation-delay-200">
                   <div className="text-3xl font-bold text-indigo-600 animate-pulse-slow">500+</div>
-                  <div className="text-sm text-gray-600">Customers</div>
+                  <div className="text-sm text-gray-600" lang={language}>{t('home.customersCount')}</div>
                 </div>
                 <div className="animate-count-up animation-delay-400">
                   <div className="text-3xl font-bold text-purple-600 animate-pulse-slow">2000+</div>
-                  <div className="text-sm text-gray-600">Jobs Done</div>
+                  <div className="text-sm text-gray-600" lang={language}>{t('home.jobsDoneCount')}</div>
                 </div>
               </div>
             </div>
@@ -679,11 +679,11 @@ export default function Home() {
       {successStories.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
           <div className="text-center mb-16">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up">
-              Success Stories
+            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up" lang={language}>
+              {t('home.successStoriesTitle')}
             </h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
-              Real stories from our satisfied customers and workers
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200" lang={language}>
+              {t('home.successStoriesSubtitle')}
             </p>
           </div>
           <div className="relative">
@@ -755,11 +755,11 @@ export default function Home() {
                         <div className="pt-4 border-t border-gray-200">
                           {story.customerName ? (
                             <p className="text-sm text-gray-500">
-                              <span className="font-semibold">Customer:</span> {story.customerName}
+                              <span className="font-semibold" lang={language}>{t('home.customerLabel')}:</span> {story.customerName}
                             </p>
                           ) : (
                             <p className="text-sm text-gray-500">
-                              <span className="font-semibold">Worker:</span> {story.workerName}
+                              <span className="font-semibold" lang={language}>{t('home.workerLabel')}:</span> {story.workerName}
                             </p>
                           )}
                         </div>
