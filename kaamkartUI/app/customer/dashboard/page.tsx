@@ -268,17 +268,35 @@ export default function CustomerDashboard() {
     }
     
     // Validate all requirements have labor type selected
-    const invalidRequirements = formData.workerTypeRequirements.filter(req => 
-      !req.laborType || 
-      req.laborType === '' || 
-      req.laborType.trim() === '' ||
-      req.laborType === 'Select Worker Type'
-    )
+    console.log('Form data before validation:', formData.workerTypeRequirements)
+    const invalidRequirements = formData.workerTypeRequirements.filter((req, idx) => {
+      const isEmpty = !req.laborType || 
+                      req.laborType === '' || 
+                      req.laborType.trim() === '' ||
+                      req.laborType === 'Select Worker Type'
+      if (isEmpty) {
+        console.log(`Requirement ${idx + 1} is invalid:`, req)
+      }
+      return isEmpty
+    })
+    
     if (invalidRequirements.length > 0) {
-      toast.error(`Please select worker type for requirement ${invalidRequirements.length > 1 ? 's' : ''} ${invalidRequirements.map((_, idx) => {
+      const invalidIndices = invalidRequirements.map((_, idx) => {
         const actualIdx = formData.workerTypeRequirements.findIndex(r => r === invalidRequirements[idx])
         return actualIdx + 1
-      }).join(', ')}`)
+      })
+      toast.error(`Please select worker type for requirement${invalidIndices.length > 1 ? 's' : ''} ${invalidIndices.join(', ')}`)
+      return
+    }
+    
+    // Validate all requirements have number of workers > 0
+    const invalidWorkerCounts = formData.workerTypeRequirements.filter(req => 
+      !req.numberOfWorkers || 
+      req.numberOfWorkers < 1 ||
+      isNaN(req.numberOfWorkers)
+    )
+    if (invalidWorkerCounts.length > 0) {
+      toast.error('Please enter a valid number of workers (at least 1) for all requirements')
       return
     }
     
