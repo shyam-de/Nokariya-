@@ -324,7 +324,7 @@ export default function CustomerDashboard() {
       const token = localStorage.getItem('token')
       const requestData = {
         workerTypeRequirements: formData.workerTypeRequirements.map(req => ({
-          laborType: req.laborType.toUpperCase(),
+          workerType: req.laborType.toUpperCase(), // Backend expects 'workerType', not 'laborType'
           numberOfWorkers: req.numberOfWorkers
         })),
         workType: formData.workType,
