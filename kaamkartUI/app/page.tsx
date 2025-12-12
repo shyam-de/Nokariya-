@@ -988,6 +988,9 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      
+      {/* Chatbot */}
+      <Chatbot user={user} />
     </div>
   )
 }

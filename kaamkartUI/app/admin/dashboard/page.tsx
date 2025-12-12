@@ -8,6 +8,7 @@ import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import Chatbot from '@/components/Chatbot'
 
 interface Request {
   id: string
@@ -2967,6 +2968,9 @@ export default function AdminDashboard() {
           )}
         </div>
       )}
+      
+      {/* Chatbot - Always visible */}
+      <Chatbot user={user} />
     </div>
   )
 }

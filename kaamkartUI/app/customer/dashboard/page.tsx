@@ -1653,6 +1653,9 @@ export default function CustomerDashboard() {
           </>
         )}
       </div>
+      
+      {/* Chatbot */}
+      <Chatbot user={user} />
     </div>
   )
 }
