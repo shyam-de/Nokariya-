@@ -33,7 +33,7 @@
   },
   "login": {
     "title": "Login to KaamKart",
-    "subtitle": "Connect with Labor Workers",
+    "subtitle": "Connect with Workers",
     "emailPlaceholder": "Enter your email",
     "passwordPlaceholder": "Enter your password",
     "forgotPassword": "Forgot Password?",
@@ -241,7 +241,7 @@
   },
   "home": {
     "title": "KaamKart",
-    "subtitle": "Connect with Labor Workers",
+    "subtitle": "Connect with Workers",
     "getStarted": "Get Started",
     "login": "Login",
     "register": "Register",

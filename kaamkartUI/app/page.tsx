@@ -3,9 +3,12 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useLanguage } from '@/contexts/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function Home() {
   const router = useRouter()
+  const { language } = useLanguage()
   const [isLoaded, setIsLoaded] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [dismissedAds, setDismissedAds] = useState<Set<number>>(new Set())
@@ -232,11 +235,12 @@ export default function Home() {
               <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
                 KaamKart
               </h1>
-              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline">Your Trusted Labor Connection Platform</span>
+              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline">Your Trusted Worker Connection Platform</span>
             </div>
             
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-4">
+              <LanguageSwitcher />
               <Link
                 href="/login"
                 className="text-gray-700 hover:text-primary-600 font-medium transition-all duration-200 hover:scale-105"
@@ -251,25 +255,31 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Mobile Hamburger Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
-              aria-label="Toggle menu"
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
+            {/* Mobile Navigation - Language Switcher and Hamburger */}
+            <div className="lg:hidden flex items-center gap-2">
+              <LanguageSwitcher />
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200"
+                aria-label="Toggle menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  {mobileMenuOpen ? (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  ) : (
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  )}
+                </svg>
+              </button>
+            </div>
           </div>
 
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-4 space-y-2 animate-slide-down">
+              <div className="px-4 py-2">
+                <LanguageSwitcher />
+              </div>
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
@@ -554,7 +564,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Labor Types Section */}
+      {/* Worker Types Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up">

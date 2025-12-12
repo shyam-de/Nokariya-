@@ -778,10 +778,10 @@ export default function CustomerDashboard() {
                   </div>
                 </div>
 
-                {/* Section 2: Labor Requirements */}
+                {/* Section 2: Worker Requirements */}
                 <div className="border-b-2 border-gray-200 pb-4">
                   <h4 className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                    <span>👷</span> Labor Requirements <span className="text-red-500">*</span>
+                    <span>👷</span> Worker Requirements <span className="text-red-500">*</span>
                   </h4>
                   <div className="space-y-3 max-h-64 overflow-y-auto p-3 border-2 border-gray-300 rounded-lg bg-gray-50">
                     {formData.workerTypeRequirements.map((req, index) => (
@@ -855,7 +855,7 @@ export default function CustomerDashboard() {
                     </button>
                   </div>
                   {formData.workerTypeRequirements.length === 0 && (
-                    <p className="text-xs text-red-500 mt-2">Please add at least one labor type requirement</p>
+                    <p className="text-xs text-red-500 mt-2">Please add at least one worker type requirement</p>
                   )}
                   {formData.workerTypeRequirements.length > 0 && (
                     <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">

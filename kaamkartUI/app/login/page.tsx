@@ -186,13 +186,16 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
       <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md transform hover:scale-105 transition-all duration-300">
-        {/* Back to Home */}
-        <Link 
-          href="/"
-          className="text-primary-600 hover:text-primary-700 font-medium mb-4 inline-block transition-all duration-200 hover:scale-105 transform"
-        >
-          ← Back to Home
-        </Link>
+        {/* Language Switcher and Back to Home */}
+        <div className="flex justify-between items-center mb-4">
+          <Link 
+            href="/"
+            className="text-primary-600 hover:text-primary-700 font-medium inline-block transition-all duration-200 hover:scale-105 transform"
+          >
+            ← Back to Home
+          </Link>
+          <LanguageSwitcher />
+        </div>
 
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-primary-600 to-indigo-600 bg-clip-text text-transparent mb-2">
