@@ -897,7 +897,7 @@ export default function Home() {
                   className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
                   lang={language}
                 >
-                  🚀 {t('home.profile') || 'Go to Dashboard'}
+                  🚀 {t('home.goToDashboard') || 'Go to Dashboard'}
                 </Link>
               ) : user ? (
                 <Link
@@ -905,7 +905,7 @@ export default function Home() {
                   className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
                   lang={language}
                 >
-                  🚀 {t('home.profile') || 'Go to Dashboard'}
+                  🚀 {t('home.goToDashboard') || 'Go to Dashboard'}
                 </Link>
               ) : (
                 <Link
@@ -922,7 +922,7 @@ export default function Home() {
                   className="bg-transparent border-3 border-white text-white px-10 py-4 rounded-xl font-bold text-lg hover:bg-white hover:text-primary-600 transition-all duration-200 hover:scale-110 transform"
                   lang={language}
                 >
-                  🔑 {t('home.profile') || 'Go to Dashboard'}
+                  👤 {t('home.myAccount') || 'My Account'}
                 </Link>
               ) : (
                 <Link
