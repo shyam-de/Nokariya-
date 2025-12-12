@@ -123,8 +123,8 @@ fi
 
 # Step 10: Setup Nginx
 echo -e "\n${YELLOW}🌐 Step 10: Setting up Nginx...${NC}"
-if [ -f "/opt/kaamkart/nginx/kaamkart.in.conf" ]; then
-    cp /opt/kaamkart/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
+if [ -f "/opt/kaamkart/config/nginx/kaamkart.in.conf" ]; then
+    cp /opt/kaamkart/config/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
     ln -sf /etc/nginx/sites-available/kaamkart.in /etc/nginx/sites-enabled/
     rm -f /etc/nginx/sites-enabled/default
     nginx -t

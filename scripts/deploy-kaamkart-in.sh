@@ -140,8 +140,8 @@ echo -e "${GREEN}✓ Services configured${NC}"
 echo ""
 
 echo -e "${GREEN}Step 6: Configuring Nginx...${NC}"
-if [ -f $APP_DIR/nginx/kaamkart.in.conf ]; then
-    cp $APP_DIR/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
+if [ -f $APP_DIR/config/nginx/kaamkart.in.conf ]; then
+    cp $APP_DIR/config/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
     ln -sf /etc/nginx/sites-available/kaamkart.in /etc/nginx/sites-enabled/
     rm -f /etc/nginx/sites-enabled/default
     

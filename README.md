@@ -11,10 +11,10 @@ A platform connecting labor workers (electricians, plumbers, carpenters, etc.) w
 
 ```bash
 # On your production server, run:
-sudo bash QUICK_DEPLOY_KAAMKART_IN.sh
+sudo bash scripts/QUICK_DEPLOY_KAAMKART_IN.sh
 ```
 
-See [DEPLOY_KAAMKART_IN.md](./DEPLOY_KAAMKART_IN.md) for detailed instructions.
+See [docs/DEPLOY_KAAMKART_IN.md](./docs/DEPLOY_KAAMKART_IN.md) for detailed instructions.
 
 ## Features
 
@@ -47,21 +47,21 @@ See [DEPLOY_KAAMKART_IN.md](./DEPLOY_KAAMKART_IN.md) for detailed instructions.
 ## Quick Start (Local Development)
 
 ```bash
-./start-local.sh
+./scripts/start-local.sh
 ```
 
 This will start:
 - Backend on `http://localhost:8585`
 - Frontend on `http://localhost:3000`
 
-See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for details.
+See [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md) for details.
 
 ## Production Deployment
 
-- **General**: See [DEPLOYMENT.md](./DEPLOYMENT.md)
-- **DigitalOcean**: See [DEPLOY_DIGITALOCEAN.md](./DEPLOY_DIGITALOCEAN.md)
+- **General**: See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
+- **DigitalOcean**: See [docs/DEPLOY_DIGITALOCEAN.md](./docs/DEPLOY_DIGITALOCEAN.md)
 - **AWS**: See [aws/README.md](./aws/README.md) for AWS deployment options
-- **kaamkart.in**: See [DEPLOY_KAAMKART_IN.md](./DEPLOY_KAAMKART_IN.md) for domain-specific deployment
+- **kaamkart.in**: See [docs/DEPLOY_KAAMKART_IN.md](./docs/DEPLOY_KAAMKART_IN.md) for domain-specific deployment
 
 ### Quick Deployment Steps
 
@@ -94,35 +94,40 @@ See [LOCAL_SETUP.md](./LOCAL_SETUP.md) for details.
 
 ```bash
 # Build and run all services
-docker-compose up -d
+docker-compose -f config/docker-compose.yml up -d
 
 # View logs
-docker-compose logs -f
+docker-compose -f config/docker-compose.yml logs -f
 
 # Stop services
-docker-compose down
+docker-compose -f config/docker-compose.yml down
 ```
 
 ## Project Structure
 
 ```
 kaamkart/
-├── kaamkartUI/              # Next.js frontend
+├── kaamkartUI/              # Next.js frontend (UI)
 │   ├── app/                # Next.js app directory
 │   ├── Dockerfile          # Frontend Docker image
 │   └── deploy.sh          # Frontend deployment script
-├── kaamkartApi/            # Spring Boot backend
+├── kaamkartApi/            # Spring Boot backend (API)
 │   ├── src/
 │   ├── Dockerfile         # Backend Docker image
 │   ├── deploy.sh         # Backend deployment script
 │   └── kaamkart-api.service  # Systemd service file
-├── nginx/                  # Nginx configurations
-│   └── kaamkart.in.conf  # Production Nginx config
-├── scripts/                # Deployment scripts
+├── docs/                   # Documentation
+│   ├── DEPLOYMENT.md      # Complete deployment guide
+│   ├── LOCAL_SETUP.md     # Local development setup
+│   └── ...                # Other documentation files
+├── scripts/                # Deployment and utility scripts
+│   ├── start-local.sh     # Start local development
 │   ├── setup-server.sh    # Initial server setup
 │   └── backup-database.sh # Database backup script
-├── docker-compose.yml     # Docker Compose configuration
-└── DEPLOYMENT.md          # Complete deployment guide
+├── config/                 # Configuration files
+│   ├── nginx/             # Nginx configurations
+│   └── docker-compose.yml # Docker Compose configuration
+└── aws/                    # AWS deployment configurations
 ```
 
 ## API Endpoints
@@ -195,6 +200,6 @@ ISC
 
 ## Support
 
-For deployment issues, see [DEPLOYMENT.md](./DEPLOYMENT.md) or check logs:
+For deployment issues, see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) or check logs:
 - Backend: `sudo journalctl -u kaamkart-api -f`
 - Nginx: `sudo tail -f /var/log/nginx/error.log`

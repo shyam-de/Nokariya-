@@ -124,7 +124,7 @@ pm2 startup
 
 # Step 9: Configure Nginx
 echo "🌐 Configuring Nginx..."
-cp $APP_DIR/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
+cp $APP_DIR/config/nginx/kaamkart.in.conf /etc/nginx/sites-available/kaamkart.in
 ln -sf /etc/nginx/sites-available/kaamkart.in /etc/nginx/sites-enabled/
 rm -f /etc/nginx/sites-enabled/default
 
