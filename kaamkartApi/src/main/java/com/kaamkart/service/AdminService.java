@@ -283,6 +283,16 @@ public class AdminService {
                 continue;
             }
             
+            // CRITICAL: Skip if worker is not available
+            // Workers who are deployed or unavailable should not receive notifications
+            if (worker.getAvailable() == null || !worker.getAvailable()) {
+                skippedBlockedCount++;
+                logger.warn("🚫 BLOCKING NOTIFICATION to worker {} (ID: {}, Email: {}) - worker is unavailable. " +
+                        "Worker must be available to receive notifications.", 
+                        worker.getUser().getName(), workerUserId, workerEmail);
+                continue;
+            }
+            
             // Skip if worker is blocked
             if (worker.getUser().getBlocked() != null && worker.getUser().getBlocked()) {
                 skippedBlockedCount++;
@@ -442,7 +452,15 @@ public class AdminService {
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
-                // 2. Check if worker is deployed (final check using native query - most reliable)
+                // 2. Verify worker is still available (double-check)
+                if (worker.getAvailable() == null || !worker.getAvailable()) {
+                    skippedBlockedCount++;
+                    logger.error("🚫 FINAL AVAILABILITY CHECK: Worker {} (Email: {}) is NOT available - BLOCKING NOTIFICATION!", 
+                            worker.getUser().getName(), workerEmail);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                // 3. Check if worker is deployed (final check using native query - most reliable)
                 Integer finalNativeCheckResult = deployedWorkerRepository.hasActiveDeployment(workerUserId);
                 boolean finalNativeCheck = finalNativeCheckResult != null && finalNativeCheckResult > 0;
                 if (finalNativeCheck) {
@@ -452,7 +470,7 @@ public class AdminService {
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
-                // 3. Also check using JPA (backup check)
+                // 4. Also check using JPA (backup check)
                 List<DeployedWorker> finalDeploymentCheck = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(worker.getUser());
                 boolean hasActiveDeployment = false;
                 for (DeployedWorker dw : finalDeploymentCheck) {
@@ -606,6 +624,9 @@ public class AdminService {
             Worker worker = new Worker();
             worker.setUser(user);
             worker.setWorkerTypes(workerTypes);
+            // New workers are not verified by default, so set them as unavailable
+            worker.setVerified(false);
+            worker.setAvailable(false);
             // Note: Aadhaar number can be added later via profile update
             if (location != null) {
                 Location currentLocation = new Location();
@@ -798,7 +819,23 @@ public class AdminService {
         Worker worker = workerRepository.findById(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker not found"));
         
-        worker.setVerified(worker.getVerified() == null || !worker.getVerified());
+        boolean newVerifiedStatus = worker.getVerified() == null || !worker.getVerified();
+        worker.setVerified(newVerifiedStatus);
+        
+        // If worker is verified, set them as available (if not already set)
+        // If worker is not verified, set them as unavailable
+        if (newVerifiedStatus) {
+            // Worker is now verified - make them available
+            worker.setAvailable(true);
+            logger.info("Worker {} (ID: {}) verified and set to available", 
+                    worker.getUser().getName(), workerId);
+        } else {
+            // Worker is now unverified - make them unavailable
+            worker.setAvailable(false);
+            logger.info("Worker {} (ID: {}) unverified and set to unavailable", 
+                    worker.getUser().getName(), workerId);
+        }
+        
         return workerRepository.save(worker);
     }
 
@@ -1264,6 +1301,16 @@ public class AdminService {
                     deployedWorker.setRequest(request);
                     deployedWorker.setWorker(workerUser);
                     request.getDeployedWorkers().add(deployedWorker);
+                    
+                    // Set worker as unavailable when deployed
+                    Worker workerProfile = workerRepository.findByUserId(userId).orElse(null);
+                    if (workerProfile != null) {
+                        workerProfile.setAvailable(false);
+                        workerRepository.save(workerProfile);
+                        logger.info("Worker {} (ID: {}) set to unavailable after deployment", 
+                                workerUser.getName(), userId);
+                    }
+                    
                     deployed++;
                 }
             }

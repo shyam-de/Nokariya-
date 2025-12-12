@@ -60,6 +60,11 @@ public class WorkerService {
         Worker worker = workerRepository.findByUserId(userId)
                 .orElseThrow(() -> new RuntimeException("Worker profile not found"));
 
+        // If worker is not verified, they cannot be set to available
+        if (available && (worker.getVerified() == null || !worker.getVerified())) {
+            throw new RuntimeException("Worker must be verified by admin before they can be set as available");
+        }
+
         worker.setAvailable(available);
 
         // Notify via WebSocket

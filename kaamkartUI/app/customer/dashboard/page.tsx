@@ -7,6 +7,7 @@ import { apiClient, API_URL } from '@/lib/api'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import Chatbot from '@/components/Chatbot'
 
 interface Request {
   id: string
