@@ -649,21 +649,33 @@ export default function AdminDashboard() {
       const payload: any = {
         status: status
       }
-      // Only include adminResponse if it's not empty - this will be added as a message
+      // Only include adminResponse if it's not empty
+      // For system users, this is saved in concern entity
+      // For regular admins, this will also be added as a message
       if (adminResponse && adminResponse.trim()) {
         payload.adminResponse = adminResponse.trim()
       }
       
-      await axios.post(`${API_URL}/admin/concerns/${concernId}/update-status`, payload, {
+      const response = await axios.post(`${API_URL}/admin/concerns/${concernId}/update-status`, payload, {
         headers: { Authorization: `Bearer ${token}` }
       })
+      
       toast.success('Concern status updated successfully!')
-      setSelectedConcern(null)
+      
+      // Update the selected concern with the response data
+      if (response.data && response.data.concern) {
+        setSelectedConcern(response.data.concern)
+      }
+      
+      // Refresh concerns list
+      fetchConcerns()
+      
+      // Refresh messages for this concern (if it's a regular admin, message might have been added)
+      fetchConcernMessages(concernId)
+      
+      // Clear form fields
       setAdminResponse('')
       setNewMessage('')
-      fetchConcerns()
-      // Refresh messages for this concern
-      fetchConcernMessages(concernId)
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update concern status')
     } finally {
@@ -676,6 +688,13 @@ export default function AdminDashboard() {
       toast.error('Please enter a message')
       return
     }
+    
+    // Check if user is a system user (negative ID) - they cannot add messages
+    if (user && user.id && user.id < 0) {
+      toast.error('System admins cannot add messages to concern thread. Use admin response field when updating status.')
+      return
+    }
+    
     setIsUpdatingConcern(true)
     try {
       const token = localStorage.getItem('token')
@@ -687,6 +706,16 @@ export default function AdminDashboard() {
       toast.success('Message added successfully!')
       setNewMessage('')
       fetchConcernMessages(concernId)
+      // Refresh the selected concern to show new message
+      if (selectedConcern) {
+        const concernsResponse = await axios.get(`${API_URL}/admin/concerns`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const updatedConcern = concernsResponse.data.find((c: any) => c.id === selectedConcern.id)
+        if (updatedConcern) {
+          setSelectedConcern(updatedConcern)
+        }
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to add message')
     } finally {
@@ -2163,24 +2192,33 @@ export default function AdminDashboard() {
                   <p className="text-gray-500 text-sm italic mb-4">No messages yet.</p>
                 )}
                 
-                {/* Add Message Section */}
-                <div className="border-t border-gray-200 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
-                  <textarea
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
-                    rows={3}
-                    placeholder="Type your message here..."
-                  />
-                  <button
-                    onClick={() => handleAddMessage(selectedConcern.id)}
-                    disabled={isUpdatingConcern || !newMessage.trim()}
-                    className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
-                  >
-                    {isUpdatingConcern ? 'Adding...' : 'Add Message'}
-                  </button>
-                </div>
+                {/* Add Message Section - Only show for regular admins, not system users */}
+                {user && user.id && user.id > 0 && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
+                    <textarea
+                      value={newMessage}
+                      onChange={(e) => setNewMessage(e.target.value)}
+                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
+                      rows={3}
+                      placeholder="Type your message here..."
+                    />
+                    <button
+                      onClick={() => handleAddMessage(selectedConcern.id)}
+                      disabled={isUpdatingConcern || !newMessage.trim()}
+                      className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                    >
+                      {isUpdatingConcern ? 'Adding...' : 'Add Message'}
+                    </button>
+                  </div>
+                )}
+                {user && user.id && user.id < 0 && (
+                  <div className="border-t border-gray-200 pt-4">
+                    <p className="text-sm text-gray-500 italic">
+                      System admins cannot add messages to the conversation thread. Use the "Admin Response" field when updating status.
+                    </p>
+                  </div>
+                )}
               </div>
               
               <div>

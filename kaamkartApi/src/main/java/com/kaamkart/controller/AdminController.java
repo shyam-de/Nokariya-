@@ -325,7 +325,18 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(Map.of("message", "Message is required"));
                 }
                 
+                // Check if it's a system user (negative ID) - they cannot add messages to thread
+                if (adminId < 0) {
+                    return ResponseEntity.badRequest().body(Map.of(
+                            "message", "System users cannot add messages to concern thread. Use admin response field when updating status."
+                    ));
+                }
+                
                 ConcernMessage concernMessage = concernService.addMessageToConcern(concernId, adminId, message);
+                
+                if (concernMessage == null) {
+                    return ResponseEntity.badRequest().body(Map.of("message", "Failed to add message"));
+                }
                 
                 return ResponseEntity.ok(Map.of(
                         "message", "Message added successfully",
