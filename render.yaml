@@ -41,7 +41,7 @@ services:
     plan: starter  # or free, starter, standard, pro
 
 databases:
-  # MySQL Database
+  # PostgreSQL Database
   - name: kaamkart-db
     databaseName: kaamkart
     user: kaamkart_user
