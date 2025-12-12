@@ -50,7 +50,6 @@ export default function AdminDashboard() {
   const [isLoadingCustomers, setIsLoadingCustomers] = useState(false)
   const [isLoadingSystemUsers, setIsLoadingSystemUsers] = useState(false)
   const [selectedConcern, setSelectedConcern] = useState<any | null>(null)
-  const [adminResponse, setAdminResponse] = useState('')
   const [isUpdatingConcern, setIsUpdatingConcern] = useState(false)
   const [concernMessages, setConcernMessages] = useState<{[key: string]: any[]}>({})
   const [isLoadingMessages, setIsLoadingMessages] = useState<{[key: string]: boolean}>({})
@@ -641,12 +640,6 @@ export default function AdminDashboard() {
       const payload: any = {
         status: status
       }
-      // Only include adminResponse if it's not empty
-      // For system users, this is saved in concern entity
-      // For regular admins, this will also be added as a message
-      if (adminResponse && adminResponse.trim()) {
-        payload.adminResponse = adminResponse.trim()
-      }
       
       const response = await apiClient.post(`/admin/concerns/${concernId}/update-status`, payload)
       
@@ -660,14 +653,13 @@ export default function AdminDashboard() {
       // Refresh concerns list
       fetchConcerns()
       
-      // Refresh messages for this concern (if it's a regular admin, message might have been added)
+      // Refresh messages for this concern
       fetchConcernMessages(concernId)
       
       // Clear form fields
-      setAdminResponse('')
       setNewMessage('')
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update concern status')
+      toast.error(error.message || error.response?.data?.message || 'Failed to update concern status')
     } finally {
       setIsUpdatingConcern(false)
     }
@@ -1356,7 +1348,6 @@ export default function AdminDashboard() {
                             // Find the updated concern from the fresh response
                             const updatedConcern = response.data.find((c: any) => c.id === concern.id) || concern
                             setSelectedConcern(updatedConcern)
-                            setAdminResponse(updatedConcern.adminResponse || '')
                             // Also update the concerns list
                             const activeConcerns = response.data.filter((c: any) => c.status !== 'RESOLVED')
                             setConcerns(activeConcerns)
@@ -1364,7 +1355,6 @@ export default function AdminDashboard() {
                             console.error('Error refreshing concern:', error)
                             // Fallback to current concern if refresh fails
                             setSelectedConcern(concern)
-                            setAdminResponse(concern.adminResponse || '')
                           }
                         }}
                         className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
@@ -2081,7 +2071,6 @@ export default function AdminDashboard() {
             <button
               onClick={() => {
                 setSelectedConcern(null)
-                setAdminResponse('')
               }}
               className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
             >
@@ -2177,53 +2166,24 @@ export default function AdminDashboard() {
                   <p className="text-gray-500 text-sm italic mb-4">No messages yet.</p>
                 )}
                 
-                {/* Add Message Section - Only show for regular admins, not system users */}
-                {user && user.id && user.id > 0 && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
-                    <textarea
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
-                      rows={3}
-                      placeholder="Type your message here..."
-                    />
-                    <button
-                      onClick={() => handleAddMessage(selectedConcern.id)}
-                      disabled={isUpdatingConcern || !newMessage.trim()}
-                      className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
-                    >
-                      {isUpdatingConcern ? 'Adding...' : 'Add Message'}
-                    </button>
-                  </div>
-                )}
-                {user && user.id && user.id < 0 && (
-                  <div className="border-t border-gray-200 pt-4">
-                    <p className="text-sm text-gray-500 italic">
-                      System admins cannot add messages to the conversation thread. Use the "Admin Response" field when updating status.
-                    </p>
-                  </div>
-                )}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Admin Response {user && user.id && user.id < 0 ? '(Required for system admins)' : '(Optional - will be added as message)'}:
-                </label>
-                <textarea
-                  value={adminResponse}
-                  onChange={(e) => setAdminResponse(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  rows={3}
-                  placeholder={user && user.id && user.id < 0 
-                    ? "Enter your response to this concern... (This will be saved in the concern)" 
-                    : "Enter your response to this concern... (This will be added as a message when updating status)"}
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  {user && user.id && user.id < 0 
-                    ? "System admins: Response will be saved in the concern. Regular admins can also add messages separately above." 
-                    : "This will be added as a message when you update the status"}
-                </p>
+                {/* Add Message Section - Available for all admins (system and regular) */}
+                <div className="border-t border-gray-200 pt-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
+                  <textarea
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
+                    rows={3}
+                    placeholder="Type your message here..."
+                  />
+                  <button
+                    onClick={() => handleAddMessage(selectedConcern.id)}
+                    disabled={isUpdatingConcern || !newMessage.trim()}
+                    className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  >
+                    {isUpdatingConcern ? 'Adding...' : 'Add Message'}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="space-y-3">
