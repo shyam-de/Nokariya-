@@ -75,7 +75,8 @@ export default function Login() {
         
         // Phone validation (basic - should be at least 10 digits)
         const phoneRegex = /^[0-9]{10,15}$/
-        const cleanedPhone = formData.phone.replace(/\D/g, '') // Remove non-digits
+        // Clean phone numbers (remove non-digits) - used for both validation and data
+        const cleanedPhone = formData.phone.replace(/\D/g, '')
         if (!phoneRegex.test(cleanedPhone)) {
           toast.error('Please enter a valid phone number (10-15 digits)')
           setIsLoading(false)
@@ -83,13 +84,11 @@ export default function Login() {
         }
         
         // Secondary phone validation (if provided)
-        if (formData.secondaryPhone) {
-          const cleanedSecondaryPhone = formData.secondaryPhone.replace(/\D/g, '')
-          if (!phoneRegex.test(cleanedSecondaryPhone)) {
-            toast.error('Please enter a valid secondary phone number (10-15 digits)')
-            setIsLoading(false)
-            return
-          }
+        const cleanedSecondaryPhone = formData.secondaryPhone ? formData.secondaryPhone.replace(/\D/g, '') : null
+        if (formData.secondaryPhone && cleanedSecondaryPhone && !phoneRegex.test(cleanedSecondaryPhone)) {
+          toast.error('Please enter a valid secondary phone number (10-15 digits)')
+          setIsLoading(false)
+          return
         }
         
         if (formData.password.length < 6) {
@@ -111,9 +110,6 @@ export default function Login() {
         }
         
         // Convert to uppercase for API enum
-        // Clean phone numbers (remove non-digits)
-        const cleanedPhone = formData.phone.replace(/\D/g, '')
-        const cleanedSecondaryPhone = formData.secondaryPhone ? formData.secondaryPhone.replace(/\D/g, '') : null
         
         data = {
           name: formData.name.trim(),

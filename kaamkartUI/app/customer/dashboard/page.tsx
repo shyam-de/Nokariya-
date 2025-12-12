@@ -300,17 +300,6 @@ export default function CustomerDashboard() {
       return
     }
     
-    // Validate all requirements have number of workers > 0
-    const invalidWorkerCounts = formData.workerTypeRequirements.filter(req => 
-      !req.numberOfWorkers || 
-      req.numberOfWorkers < 1 ||
-      isNaN(req.numberOfWorkers)
-    )
-    if (invalidWorkerCounts.length > 0) {
-      toast.error('Please enter a valid number of workers (at least 1) for all requirements')
-      return
-    }
-    
     if (!formData.startDate || !formData.endDate) {
       toast.error('Please select start and end dates')
       return
