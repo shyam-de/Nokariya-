@@ -639,7 +639,6 @@ export default function AdminDashboard() {
   const handleUpdateConcernStatus = async (concernId: string, status: string) => {
     setIsUpdatingConcern(true)
     try {
-      const token = localStorage.getItem('token')
       const payload: any = {
         status: status
       }
@@ -650,9 +649,7 @@ export default function AdminDashboard() {
         payload.adminResponse = adminResponse.trim()
       }
       
-      const response = await axios.post(`${API_URL}/admin/concerns/${concernId}/update-status`, payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await apiClient.post(`/admin/concerns/${concernId}/update-status`, payload)
       
       toast.success('Concern status updated successfully!')
       
