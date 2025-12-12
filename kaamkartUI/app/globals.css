@@ -16,6 +16,12 @@ body {
       rgb(var(--background-end-rgb))
     )
     rgb(var(--background-start-rgb));
+  font-family: var(--font-inter), var(--font-devanagari), sans-serif;
+}
+
+/* Hindi font support */
+[lang="hi"] {
+  font-family: var(--font-devanagari), var(--font-inter), sans-serif;
 }
 
 @layer utilities {

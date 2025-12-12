@@ -5,9 +5,12 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function Login() {
   const router = useRouter()
+  const { t, language } = useLanguage()
   const [isLogin, setIsLogin] = useState(true)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
@@ -47,7 +50,7 @@ export default function Login() {
       let data: any
       if (isLogin) {
         if (!formData.email || !formData.password) {
-          toast.error('Email and password are required')
+          toast.error(t('login.emailRequired') + ' ' + t('login.passwordRequired'))
           setIsLoading(false)
           return
         }
@@ -59,7 +62,7 @@ export default function Login() {
       } else {
         // Validation for registration
         if (!formData.name || !formData.email || !formData.phone || !formData.password) {
-          toast.error('Please fill all required fields')
+          toast.error(t('login.nameRequired') + ', ' + t('login.emailRequired') + ', ' + t('login.phoneRequired') + ', ' + t('login.passwordRequired'))
           setIsLoading(false)
           return
         }
@@ -68,7 +71,7 @@ export default function Login() {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
         const trimmedEmail = formData.email.trim().toLowerCase()
         if (!emailRegex.test(trimmedEmail)) {
-          toast.error('Please enter a valid email address')
+          toast.error(t('login.invalidEmail'))
           setIsLoading(false)
           return
         }
@@ -78,7 +81,7 @@ export default function Login() {
         // Clean phone numbers (remove non-digits) - used for both validation and data
         const cleanedPhone = formData.phone.replace(/\D/g, '')
         if (!phoneRegex.test(cleanedPhone)) {
-          toast.error('Please enter a valid phone number (10-15 digits)')
+          toast.error(t('login.invalidPhone'))
           setIsLoading(false)
           return
         }
@@ -86,25 +89,25 @@ export default function Login() {
         // Secondary phone validation (if provided)
         const cleanedSecondaryPhone = formData.secondaryPhone ? formData.secondaryPhone.replace(/\D/g, '') : null
         if (formData.secondaryPhone && cleanedSecondaryPhone && !phoneRegex.test(cleanedSecondaryPhone)) {
-          toast.error('Please enter a valid secondary phone number (10-15 digits)')
+          toast.error(t('login.invalidPhone'))
           setIsLoading(false)
           return
         }
         
         if (formData.password.length < 6) {
-          toast.error('Password must be at least 6 characters long')
+          toast.error(t('login.passwordRequired'))
           setIsLoading(false)
           return
         }
         
         if (formData.password !== formData.confirmPassword) {
-          toast.error('Passwords do not match')
+          toast.error(t('login.passwordMismatch'))
           setIsLoading(false)
           return
         }
         
         if (formData.role === 'worker' && formData.workerTypes.length === 0) {
-          toast.error('Please select a worker type')
+          toast.error(t('login.selectWorkerTypes'))
           setIsLoading(false)
           return
         }
@@ -128,14 +131,14 @@ export default function Login() {
       console.log('Response received:', response.data)
       
       if (!response.data.token) {
-        toast.error('No token received from server')
+        toast.error(t('common.error'))
         return
       }
       
       localStorage.setItem('token', response.data.token)
       localStorage.setItem('user', JSON.stringify(response.data.user))
       
-      toast.success(isLogin ? 'Login successful!' : 'Registration successful!')
+      toast.success(isLogin ? t('login.loginSuccess') : t('login.registerSuccess'))
       
       const userRole = response.data.user.role?.toLowerCase() || response.data.user.role
       if (userRole === 'customer' || userRole === 'CUSTOMER') {
@@ -203,15 +206,15 @@ export default function Login() {
         {showForgotPassword ? (
           <div className="space-y-4">
             <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 space-y-3">
-              <h3 className="font-semibold text-gray-800">Forgot Password?</h3>
-              <p className="text-sm text-gray-600">Enter your email address and we'll send you a link to reset your password.</p>
+              <h3 className="font-semibold text-gray-800" lang={language}>{t('forgotPassword.title')}</h3>
+              <p className="text-sm text-gray-600" lang={language}>{t('forgotPassword.subtitle')}</p>
               <input
                 type="email"
                 value={forgotPasswordEmail}
                 onChange={(e) => setForgotPasswordEmail(e.target.value)}
-                placeholder="Enter your email (e.g., user@example.com)"
+                placeholder={t('forgotPassword.emailPlaceholder')}
                 pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                title="Please enter a valid email address"
+                title={t('login.invalidEmail')}
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
               />
               <div className="flex gap-2">
@@ -248,7 +251,7 @@ export default function Login() {
                   disabled={isLoading}
                   className="flex-1 bg-primary-600 text-white py-3 rounded-lg font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  {isLoading ? t('common.loading') : t('forgotPassword.sendResetLink')}
                 </button>
                 <button
                   type="button"
@@ -258,7 +261,7 @@ export default function Login() {
                   }}
                   className="px-4 py-3 border-2 border-gray-300 rounded-lg font-medium hover:bg-gray-50"
                 >
-                  Cancel
+                  {t('common.cancel')}
                 </button>
               </div>
             </div>
@@ -268,8 +271,8 @@ export default function Login() {
           {!isLogin && (
             <>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Name
+                <label className="block text-sm font-medium text-gray-700" lang={language}>
+                  {t('common.name')}
                 </label>
                 <input
                   type="text"
@@ -277,12 +280,12 @@ export default function Login() {
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                  placeholder="Enter your full name"
+                  placeholder={t('common.name')}
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Phone
+                <label className="block text-sm font-medium text-gray-700" lang={language}>
+                  {t('common.phone')}
                 </label>
                 <input
                   type="tel"
@@ -290,12 +293,12 @@ export default function Login() {
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                  placeholder="Enter your phone number"
+                  placeholder={t('common.phone')}
                 />
               </div>
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">
-                  Secondary Phone (Optional)
+                <label className="block text-sm font-medium text-gray-700" lang={language}>
+                  {t('common.secondaryPhone')} ({t('common.cancel')})
                 </label>
                 <input
                   type="tel"
@@ -311,8 +314,8 @@ export default function Login() {
           )}
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Email
+            <label className="block text-sm font-medium text-gray-700" lang={language}>
+              {t('common.email')}
             </label>
             <input
               type="email"
@@ -320,15 +323,15 @@ export default function Login() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-              placeholder="Enter your email (e.g., user@example.com)"
+              placeholder={t('login.emailPlaceholder')}
               pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-              title="Please enter a valid email address"
+              title={t('login.invalidEmail')}
             />
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">
-              Password
+            <label className="block text-sm font-medium text-gray-700" lang={language}>
+              {t('common.password')}
             </label>
             <div className="relative">
               <input
@@ -337,7 +340,7 @@ export default function Login() {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                placeholder="Enter your password"
+                placeholder={t('login.passwordPlaceholder')}
               />
               <button
                 type="button"
@@ -361,8 +364,8 @@ export default function Login() {
 
           {!isLogin && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Confirm Password <span className="text-red-500">*</span>
+              <label className="block text-sm font-medium text-gray-700" lang={language}>
+                {t('login.confirmPassword')} <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -371,7 +374,7 @@ export default function Login() {
                   value={formData.confirmPassword}
                   onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                   className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                  placeholder="Confirm your password"
+                  placeholder={t('login.confirmPassword')}
                 />
                 <button
                   type="button"
@@ -392,15 +395,15 @@ export default function Login() {
                 </button>
               </div>
               {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                <p className="text-xs text-red-500">Passwords do not match</p>
+                <p className="text-xs text-red-500" lang={language}>{t('login.passwordMismatch')}</p>
               )}
             </div>
           )}
 
           {!isLogin && (
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                I am a
+              <label className="block text-sm font-medium text-gray-700" lang={language}>
+                {t('login.role')}
               </label>
               <div className="flex gap-4 flex-wrap">
                 <label className="flex items-center cursor-pointer group">
@@ -411,7 +414,7 @@ export default function Login() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value, workerTypes: [], password: '', confirmPassword: '' })}
                     className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
                   />
-                  <span className="group-hover:text-primary-600 transition-colors">Customer</span>
+                  <span className="group-hover:text-primary-600 transition-colors" lang={language}>{t('login.customer')}</span>
                 </label>
                 <label className="flex items-center cursor-pointer group">
                   <input
@@ -421,7 +424,7 @@ export default function Login() {
                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                     className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
                   />
-                  <span className="group-hover:text-primary-600 transition-colors">Worker</span>
+                  <span className="group-hover:text-primary-600 transition-colors" lang={language}>{t('login.worker')}</span>
                 </label>
               </div>
             </div>
@@ -429,11 +432,11 @@ export default function Login() {
 
           {!isLogin && formData.role === 'worker' && (
             <div className="space-y-2 p-4 bg-primary-50 rounded-lg border-2 border-primary-200">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Worker Type <span className="text-red-500">*</span> (Select one)
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                  {t('login.selectWorkerTypes')} <span className="text-red-500">*</span>
                 </label>
               {workerTypes.length === 0 ? (
-                <p className="text-sm text-gray-500">Loading worker types...</p>
+                <p className="text-sm text-gray-500" lang={language}>{t('common.loading')}</p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {workerTypes
@@ -473,7 +476,7 @@ export default function Login() {
                 Processing...
               </span>
             ) : (
-              isLogin ? 'Login' : 'Register'
+              isLogin ? t('common.login') : t('common.register')
             )}
           </button>
         </form>
@@ -486,15 +489,17 @@ export default function Login() {
                 <button
                   onClick={() => setShowForgotPassword(true)}
                   className="block w-full mb-3 text-sm text-primary-600 hover:text-primary-700 font-medium transition-all duration-200"
+                  lang={language}
                 >
-                  Forgot Password?
+                  {t('login.forgotPassword')}
                 </button>
               )}
               <button
                 onClick={() => setIsLogin(!isLogin)}
                 className="text-primary-600 hover:text-primary-700 font-medium transition-all duration-200 hover:scale-105 transform"
+                lang={language}
               >
-                {isLogin ? "Don't have an account? Register" : 'Already have an account? Login'}
+                {isLogin ? t('login.noAccount') + ' ' + t('login.registerNow') : t('login.haveAccount') + ' ' + t('login.loginNow')}
               </button>
             </>
           )}
