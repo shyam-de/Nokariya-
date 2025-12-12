@@ -47,18 +47,39 @@ apiClient.interceptors.response.use(
 
     // Handle 401 Unauthorized - token expired or invalid
     if (error.response.status === 401) {
-      // Clear invalid token
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
-        // Redirect to login if not already there
-        if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-          window.location.href = '/login'
+      // Don't redirect or clear session if this is a login/auth endpoint
+      // These endpoints return 401 for invalid credentials, not expired sessions
+      const requestUrl = error.config?.url || ''
+      const isAuthEndpoint = requestUrl.includes('/auth/login') || 
+                             requestUrl.includes('/auth/register') ||
+                             requestUrl.includes('/auth/forgot-password') ||
+                             requestUrl.includes('/auth/reset-password')
+      
+      if (!isAuthEndpoint) {
+        // This is a session expiration - clear token and redirect
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token')
+          localStorage.removeItem('user')
+          // Redirect to login if not already there
+          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
+            window.location.href = '/login'
+          }
         }
+        return Promise.reject({
+          message: 'Session expired. Please login again.',
+          status: 401,
+        })
       }
+      // For auth endpoints, return the actual error message from the server
+      // Don't redirect or clear session - let the login page handle the error
+      const errorMessage = 
+        (error.response.data as any)?.message || 
+        'Invalid credentials. Please try again.'
+      
       return Promise.reject({
-        message: 'Session expired. Please login again.',
+        message: errorMessage,
         status: 401,
+        data: error.response.data,
       })
     }
 
