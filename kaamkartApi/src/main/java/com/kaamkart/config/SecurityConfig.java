@@ -42,12 +42,17 @@ public class SecurityConfig {
         List<String> origins = Arrays.asList(allowedOrigins.split(","));
         origins.forEach(origin -> {
             String trimmedOrigin = origin.trim();
-            // Use exact origin when credentials are enabled
+            // In Spring Boot 3.x, use addAllowedOriginPattern for credentials support
+            // or addAllowedOrigin for exact match
+            if (trimmedOrigin.endsWith("/")) {
+                trimmedOrigin = trimmedOrigin.substring(0, trimmedOrigin.length() - 1);
+            }
             configuration.addAllowedOrigin(trimmedOrigin);
         });
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
         configuration.setAllowCredentials(true);
+        configuration.setMaxAge(3600L); // Cache preflight for 1 hour
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;

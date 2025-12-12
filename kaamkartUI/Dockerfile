@@ -9,6 +9,9 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED 1
+# NEXT_PUBLIC_* variables must be available at build time
+# Render will set this as an environment variable during build
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL:-https://nokariya-zo4u.onrender.com/api}
 RUN npm run build
 
 FROM node:18-alpine AS runner
