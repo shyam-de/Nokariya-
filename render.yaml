@@ -1,0 +1,45 @@
+services:
+  # Backend API Service
+  - type: web
+    name: kaamkart-api
+    runtime: docker
+    dockerfilePath: ./kaamkartApi/Dockerfile
+    dockerContext: ./kaamkartApi
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: SPRING_DATASOURCE_URL
+        sync: false  # Set in Render dashboard
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: PORT
+        value: 8585
+    healthCheckPath: /api/health
+    plan: starter  # or free, starter, standard, pro
+
+  # Frontend UI Service
+  - type: web
+    name: kaamkart-ui
+    runtime: docker
+    dockerfilePath: ./kaamkartUI/Dockerfile
+    dockerContext: ./kaamkartUI
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEXT_PUBLIC_API_URL
+        sync: false  # Set to your API service URL
+      - key: PORT
+        value: 3000
+    plan: starter  # or free, starter, standard, pro
+
+databases:
+  # MySQL Database
+  - name: kaamkart-db
+    databaseName: kaamkart
+    user: kaamkart_user
+    plan: starter  # or free, starter, standard, pro
+

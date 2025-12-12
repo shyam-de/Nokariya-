@@ -2,19 +2,18 @@
 
 A platform connecting labor workers (electricians, plumbers, carpenters, etc.) with customers who need their services.
 
-## 🌐 Production Deployment
+## 🌐 Production Deployment on Render
 
-**Live Site**: [kaamkart.in](https://kaamkart.in)  
-**API**: [api.kaamkart.in](https://api.kaamkart.in)
+Deploy KaamKart easily on Render platform. See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for detailed instructions.
 
-### Quick Deploy to kaamkart.in
+### Quick Deploy
 
-```bash
-# On your production server, run:
-sudo bash scripts/QUICK_DEPLOY_KAAMKART_IN.sh
-```
+1. **Push your code to GitHub**
+2. **Connect to Render** and use the `render.yaml` blueprint
+3. **Configure environment variables** in Render dashboard
+4. **Deploy!**
 
-See [docs/DEPLOY_KAAMKART_IN.md](./docs/DEPLOY_KAAMKART_IN.md) for detailed instructions.
+For step-by-step instructions, see [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md).
 
 ## Features
 
@@ -25,6 +24,8 @@ See [docs/DEPLOY_KAAMKART_IN.md](./docs/DEPLOY_KAAMKART_IN.md) for detailed inst
 - **Worker Confirmation**: Workers can confirm availability for requests
 - **Admin Dashboard**: Super admins can manage requests, users, success stories, and advertisements
 - **Success Stories & Advertisements**: Dynamic content management for homepage
+- **Password Reset**: Forgot password and reset password functionality
+- **API Logging & Metrics**: Comprehensive logging and monitoring
 
 ## Tech Stack
 
@@ -56,78 +57,24 @@ This will start:
 
 See [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md) for details.
 
-## Production Deployment
-
-- **General**: See [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md)
-- **DigitalOcean**: See [docs/DEPLOY_DIGITALOCEAN.md](./docs/DEPLOY_DIGITALOCEAN.md)
-- **AWS**: See [aws/README.md](./aws/README.md) for AWS deployment options
-- **kaamkart.in**: See [docs/DEPLOY_KAAMKART_IN.md](./docs/DEPLOY_KAAMKART_IN.md) for domain-specific deployment
-
-### Quick Deployment Steps
-
-1. **Server Setup**
-   ```bash
-   sudo bash scripts/setup-server.sh
-   ```
-
-2. **Database Setup**
-   ```bash
-   mysql -u root -p < kaamkartApi/kaamkart-database.sql
-   ```
-
-3. **Configure Environment**
-   - Backend: Edit `/etc/systemd/system/kaamkart-api.service`
-   - Frontend: Create `.env.production` in `kaamkartUI/`
-
-4. **Deploy**
-   ```bash
-   cd kaamkartApi && ./deploy.sh
-   cd ../kaamkartUI && ./deploy.sh
-   ```
-
-5. **SSL Certificates**
-   ```bash
-   sudo certbot --nginx -d kaamkart.in -d www.kaamkart.in -d api.kaamkart.in
-   ```
-
-## Docker Deployment
-
-```bash
-# Build and run all services
-docker-compose -f config/docker-compose.yml up -d
-
-# View logs
-docker-compose -f config/docker-compose.yml logs -f
-
-# Stop services
-docker-compose -f config/docker-compose.yml down
-```
-
 ## Project Structure
 
 ```
 kaamkart/
 ├── kaamkartUI/              # Next.js frontend (UI)
 │   ├── app/                # Next.js app directory
-│   ├── Dockerfile          # Frontend Docker image
-│   └── deploy.sh          # Frontend deployment script
+│   └── Dockerfile          # Frontend Docker image
 ├── kaamkartApi/            # Spring Boot backend (API)
 │   ├── src/
 │   ├── Dockerfile         # Backend Docker image
-│   ├── deploy.sh         # Backend deployment script
-│   └── kaamkart-api.service  # Systemd service file
+│   └── kaamkart-database.sql  # Database schema
 ├── docs/                   # Documentation
-│   ├── DEPLOYMENT.md      # Complete deployment guide
+│   ├── RENDER_DEPLOYMENT.md  # Render deployment guide
 │   ├── LOCAL_SETUP.md     # Local development setup
-│   └── ...                # Other documentation files
-├── scripts/                # Deployment and utility scripts
-│   ├── start-local.sh     # Start local development
-│   ├── setup-server.sh    # Initial server setup
-│   └── backup-database.sh # Database backup script
-├── config/                 # Configuration files
-│   ├── nginx/             # Nginx configurations
-│   └── docker-compose.yml # Docker Compose configuration
-└── aws/                    # AWS deployment configurations
+│   └── LOGGING_AND_METRICS.md  # Logging documentation
+├── scripts/                # Utility scripts
+│   └── start-local.sh     # Start local development
+└── render.yaml            # Render deployment configuration
 ```
 
 ## API Endpoints
@@ -140,6 +87,8 @@ kaamkart/
 ### Authentication
 - `POST /api/auth/register` - Register new user
 - `POST /api/auth/login` - Login user
+- `POST /api/auth/forgot-password` - Request password reset
+- `POST /api/auth/reset-password` - Reset password with token
 
 ### Requests
 - `POST /api/requests` - Create new request
@@ -152,6 +101,9 @@ kaamkart/
 - `GET /api/admin/requests/pending` - Get pending requests
 - `POST /api/admin/requests/{id}/approve` - Approve request
 - `POST /api/admin/requests/{id}/deploy` - Deploy workers
+- `GET /api/admin/metrics/summary` - Get application metrics
+- `GET /api/admin/metrics/errors` - Get error statistics
+- `GET /api/admin/metrics/logs` - Get API logs
 
 ## Database
 
@@ -160,36 +112,37 @@ The database schema is optimized for millions of users with comprehensive indexi
 
 ## Environment Variables
 
-### Backend
-See `kaamkartApi/.env.production.example`
+### Backend (Render)
 
-### Frontend
-See `kaamkartUI/.env.production.example`
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `SPRING_PROFILES_ACTIVE` | Spring profile | Yes (set to `prod`) |
+| `SPRING_DATASOURCE_URL` | Database connection URL | Yes |
+| `SPRING_DATASOURCE_USERNAME` | Database username | Yes |
+| `SPRING_DATASOURCE_PASSWORD` | Database password | Yes |
+| `JWT_SECRET` | JWT signing secret | Yes |
+| `PORT` | Server port | Yes (8585) |
+
+### Frontend (Render)
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `NODE_ENV` | Node environment | Yes (set to `production`) |
+| `NEXT_PUBLIC_API_URL` | Backend API URL | Yes |
+| `PORT` | Server port | Yes (3000) |
 
 ## Monitoring
 
-- Health Check: `https://api.kaamkart.in/api/health`
-- Readiness: `https://api.kaamkart.in/api/health/ready`
-- Liveness: `https://api.kaamkart.in/api/health/live`
-
-## Backup
-
-Database backups are automated via cron:
-```bash
-# Manual backup
-./scripts/backup-database.sh
-
-# Automated (add to crontab)
-0 2 * * * /path/to/backup-database.sh
-```
+- Health Check: `https://your-api-url.onrender.com/api/health`
+- Metrics: `https://your-api-url.onrender.com/api/admin/metrics/summary` (admin only)
+- View logs in Render dashboard
 
 ## Security
 
 - JWT authentication
 - BCrypt password hashing
 - CORS protection
-- Rate limiting (Nginx)
-- SSL/TLS encryption
+- SSL/TLS encryption (automatic on Render)
 - Security headers
 - SQL injection protection (JPA)
 - XSS protection
@@ -200,6 +153,7 @@ ISC
 
 ## Support
 
-For deployment issues, see [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) or check logs:
-- Backend: `sudo journalctl -u kaamkart-api -f`
-- Nginx: `sudo tail -f /var/log/nginx/error.log`
+For deployment issues:
+- Render: See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md)
+- Local Development: See [docs/LOCAL_SETUP.md](./docs/LOCAL_SETUP.md)
+- Logging & Metrics: See [docs/LOGGING_AND_METRICS.md](./docs/LOGGING_AND_METRICS.md)
