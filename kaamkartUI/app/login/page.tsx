@@ -64,6 +64,34 @@ export default function Login() {
           return
         }
         
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+        const trimmedEmail = formData.email.trim().toLowerCase()
+        if (!emailRegex.test(trimmedEmail)) {
+          toast.error('Please enter a valid email address')
+          setIsLoading(false)
+          return
+        }
+        
+        // Phone validation (basic - should be at least 10 digits)
+        const phoneRegex = /^[0-9]{10,15}$/
+        const cleanedPhone = formData.phone.replace(/\D/g, '') // Remove non-digits
+        if (!phoneRegex.test(cleanedPhone)) {
+          toast.error('Please enter a valid phone number (10-15 digits)')
+          setIsLoading(false)
+          return
+        }
+        
+        // Secondary phone validation (if provided)
+        if (formData.secondaryPhone) {
+          const cleanedSecondaryPhone = formData.secondaryPhone.replace(/\D/g, '')
+          if (!phoneRegex.test(cleanedSecondaryPhone)) {
+            toast.error('Please enter a valid secondary phone number (10-15 digits)')
+            setIsLoading(false)
+            return
+          }
+        }
+        
         if (formData.password.length < 6) {
           toast.error('Password must be at least 6 characters long')
           setIsLoading(false)
@@ -83,11 +111,15 @@ export default function Login() {
         }
         
         // Convert to uppercase for API enum
+        // Clean phone numbers (remove non-digits)
+        const cleanedPhone = formData.phone.replace(/\D/g, '')
+        const cleanedSecondaryPhone = formData.secondaryPhone ? formData.secondaryPhone.replace(/\D/g, '') : null
+        
         data = {
-          name: formData.name,
-          email: formData.email.trim().toLowerCase(),
-          phone: formData.phone,
-          secondaryPhone: formData.secondaryPhone || null,
+          name: formData.name.trim(),
+          email: trimmedEmail,
+          phone: cleanedPhone,
+          secondaryPhone: cleanedSecondaryPhone,
           password: formData.password,
           role: formData.role.toUpperCase(),
           workerTypes: formData.workerTypes.map(type => type.toUpperCase())
@@ -263,7 +295,9 @@ export default function Login() {
                   value={formData.secondaryPhone}
                   onChange={(e) => setFormData({ ...formData, secondaryPhone: e.target.value })}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-                  placeholder="Enter secondary phone number (optional)"
+                  placeholder="Enter secondary phone number (optional, 10-15 digits)"
+                  pattern="[0-9]{10,15}"
+                  title="Please enter a valid phone number (10-15 digits)"
                 />
               </div>
             </>
@@ -279,7 +313,9 @@ export default function Login() {
               value={formData.email}
               onChange={(e) => setFormData({ ...formData, email: e.target.value })}
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
-              placeholder="Enter your email"
+              placeholder="Enter your email (e.g., user@example.com)"
+              pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+              title="Please enter a valid email address"
             />
           </div>
 
