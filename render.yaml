@@ -3,7 +3,7 @@ services:
   - type: web
     name: kaamkart-api
     runtime: docker
-    dockerfilePath: ./kaamkartApi/Dockerfile
+    dockerfilePath: Dockerfile
     dockerContext: ./kaamkartApi
     envVars:
       - key: SPRING_PROFILES_ACTIVE
@@ -25,7 +25,7 @@ services:
   - type: web
     name: kaamkart-ui
     runtime: docker
-    dockerfilePath: ./kaamkartUI/Dockerfile
+    dockerfilePath: Dockerfile
     dockerContext: ./kaamkartUI
     envVars:
       - key: NODE_ENV
