@@ -24,6 +24,8 @@ services:
         value: https://nokariya.onrender.com  # Frontend URL
       - key: WEBSOCKET_ALLOWED_ORIGINS
         value: https://nokariya.onrender.com  # Frontend URL
+      - key: HIBERNATE_DDL_AUTO
+        value: update  # Use 'update' for first deployment, then 'validate' after schema is created
     healthCheckPath: /api/health
     plan: starter  # or free, starter, standard, pro
 
