@@ -292,9 +292,11 @@ export default function Home() {
                   </Link>
                   <button
                     onClick={() => {
-                      localStorage.removeItem('token')
-                      localStorage.removeItem('user')
-                      window.location.href = '/'
+                      if (typeof window !== 'undefined') {
+                        localStorage.removeItem('token')
+                        localStorage.removeItem('user')
+                        window.location.href = '/'
+                      }
                     }}
                     className="text-gray-700 hover:text-red-600 font-medium transition-all duration-200 hover:scale-105"
                     lang={language}
