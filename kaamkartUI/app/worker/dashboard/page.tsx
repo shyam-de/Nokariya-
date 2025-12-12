@@ -225,7 +225,7 @@ export default function WorkerDashboard() {
       setRequests(response.data)
     } catch (error) {
       console.error('Error fetching requests:', error)
-      toast.error('Failed to fetch requests')
+      toast.error(t('worker.error'))
     } finally {
       setIsLoading(false)
     }
@@ -279,7 +279,7 @@ export default function WorkerDashboard() {
       })
     } catch (error) {
       console.error('Error fetching concerns:', error)
-      toast.error('Failed to fetch concerns')
+      toast.error(t('worker.error'))
     } finally {
       setIsLoadingConcerns(false)
     }
@@ -310,10 +310,10 @@ export default function WorkerDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         }
       )
-      toast.success('Request confirmed! 🎉')
+      toast.success(t('worker.applicationSubmitted'))
       fetchAvailableRequests()
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to confirm request')
+      toast.error(error.response?.data?.message || t('worker.applicationError'))
     }
   }
 
@@ -414,7 +414,7 @@ export default function WorkerDashboard() {
         }, {
           headers: { Authorization: `Bearer ${token}` }
         })
-      toast.success('Rating submitted successfully!')
+      toast.success(t('worker.ratingSubmitted'))
       setShowRatingModal(false)
       if (selectedRequest) {
         setRatedRequests(new Set(Array.from(ratedRequests).concat(selectedRequest.id)))
@@ -424,7 +424,7 @@ export default function WorkerDashboard() {
       fetchWorkHistory()
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to submit rating')
+      toast.error(error.response?.data?.message || t('worker.error'))
     } finally {
       setIsSubmittingRating(false)
     }
@@ -526,12 +526,14 @@ export default function WorkerDashboard() {
             
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-4">
+              <LanguageSwitcher />
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>⚙️</span>
-                Profile
+                {t('worker.profile')}
               </button>
               <button
                 onClick={() => {
@@ -539,9 +541,10 @@ export default function WorkerDashboard() {
                   setShowConcernModal(true)
                 }}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>📢</span>
-                Raise Concern
+                {t('worker.raiseConcern')}
               </button>
               <button
                 onClick={toggleAvailability}
@@ -613,7 +616,7 @@ export default function WorkerDashboard() {
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 flex items-center gap-2"
               >
                 <span>⚙️</span>
-                Profile
+                {t('worker.profile')}
               </button>
               <button
                 onClick={() => {
@@ -622,9 +625,10 @@ export default function WorkerDashboard() {
                   setMobileMenuOpen(false)
                 }}
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>📢</span>
-                Raise Concern
+                {t('worker.raiseConcern')}
               </button>
               <button
                 onClick={() => {
@@ -703,7 +707,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">🔔 </span>Available <span className="hidden md:inline">Requests</span> ({requests.length})
+              <span className="hidden sm:inline">🔔 </span>{t('worker.availableRequests')} ({requests.length})
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -713,7 +717,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">📜 </span>Work <span className="hidden md:inline">History</span> ({workHistory.length})
+              <span className="hidden sm:inline">📜 </span>{t('worker.workHistory')} ({workHistory.length})
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -723,7 +727,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">📢 </span>My <span className="hidden md:inline">Concerns</span> ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
+              <span className="hidden sm:inline">📢 </span>{t('worker.concerns')} ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
             </button>
           </div>
         </div>
@@ -732,7 +736,7 @@ export default function WorkerDashboard() {
         {showProfileModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('worker.updateProfile')}</h3>
               <button
                 onClick={() => setShowProfileModal(false)}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
@@ -840,7 +844,7 @@ export default function WorkerDashboard() {
                   disabled={isSubmittingRating}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
                 >
-                  {isSubmittingRating ? 'Submitting...' : 'Submit Rating'}
+                  {isSubmittingRating ? t('common.loading') : t('worker.rateCustomer')}
                 </button>
               </form>
             </div>
@@ -1011,11 +1015,11 @@ export default function WorkerDashboard() {
                                     await axios.put(`${API_URL}/concerns/${concern.id}/status`, payload, {
                                       headers: { Authorization: `Bearer ${token}` }
                                     })
-                                    toast.success('Concern updated successfully!')
+                                    toast.success(t('worker.concernStatusUpdated'))
                                     setEditingConcern(null)
                                     fetchMyConcerns()
                                   } catch (error: any) {
-                                    toast.error(error.response?.data?.message || 'Failed to update concern')
+                                    toast.error(error.response?.data?.message || t('worker.error'))
                                   } finally {
                                     setIsUpdatingConcernStatus(false)
                                   }
@@ -1023,14 +1027,14 @@ export default function WorkerDashboard() {
                                 disabled={isUpdatingConcernStatus}
                                 className="flex-1 bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
                               >
-                                {isUpdatingConcernStatus ? 'Saving...' : 'Save'}
+                                {isUpdatingConcernStatus ? t('common.loading') : t('common.save')}
                               </button>
                               <button
                                 onClick={() => setEditingConcern(null)}
                                 disabled={isUpdatingConcernStatus}
                                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all disabled:opacity-50"
                               >
-                                Cancel
+                                {t('common.cancel')}
                               </button>
                             </div>
                             <p className="text-xs text-gray-500 mt-2">You can update the status (Pending/Resolved) and optionally add a message</p>
@@ -1044,7 +1048,7 @@ export default function WorkerDashboard() {
                             })}
                             className="w-full bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform"
                           >
-                            Update Concern
+                            {t('worker.updateConcernStatus')}
                           </button>
                         )}
                       </div>
@@ -1121,7 +1125,7 @@ export default function WorkerDashboard() {
                           }}
                           className="w-full mt-3 md:mt-4 bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2 md:py-2.5 rounded-lg text-sm md:text-base font-semibold hover:shadow-lg transition-all"
                         >
-                          ⭐ Rate Customer
+                          ⭐ {t('worker.rateCustomer')}
                         </button>
                       )}
                       {work.status === 'COMPLETED' && ratedRequests.has(work.requestId) && (
@@ -1139,8 +1143,8 @@ export default function WorkerDashboard() {
                 {requests.length === 0 ? (
                   <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
                     <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📭</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">No available requests at the moment</p>
-                    <p className="text-sm md:text-base text-gray-400">Check back later or make sure you're available!</p>
+                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noRequests')}</p>
+                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.available')}</p>
                   </div>
                 ) : (
                   requests.map((request) => (
@@ -1201,7 +1205,7 @@ export default function WorkerDashboard() {
                           className="w-full py-2 md:py-3 rounded-lg text-sm md:text-base font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:bg-gray-300 disabled:cursor-not-allowed disabled:transform-none disabled:hover:shadow-none flex items-center justify-center gap-2 bg-gradient-to-r from-primary-600 to-indigo-600 text-white"
                         >
                           <span>✓</span>
-                          Confirm Request
+                          {t('worker.apply')}
                         </button>
                       </div>
                     ))
@@ -1215,7 +1219,7 @@ export default function WorkerDashboard() {
         {showConcernModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-4 md:p-6 lg:p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Raise a Concern</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6" lang={language}>{t('worker.raiseConcern')}</h3>
               <button
                 onClick={() => {
                   setShowConcernModal(false)
