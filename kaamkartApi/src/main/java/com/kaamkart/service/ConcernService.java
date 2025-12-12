@@ -4,10 +4,12 @@ import com.kaamkart.dto.CreateConcernDto;
 import com.kaamkart.model.Concern;
 import com.kaamkart.model.ConcernMessage;
 import com.kaamkart.model.Request;
+import com.kaamkart.model.SystemUser;
 import com.kaamkart.model.User;
 import com.kaamkart.repository.ConcernMessageRepository;
 import com.kaamkart.repository.ConcernRepository;
 import com.kaamkart.repository.RequestRepository;
+import com.kaamkart.repository.SystemUserRepository;
 import com.kaamkart.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,9 @@ public class ConcernService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private SystemUserRepository systemUserRepository;
 
     @Autowired
     private RequestRepository requestRepository;
@@ -128,26 +133,33 @@ public class ConcernService {
         Concern concern = concernRepository.findById(concernId)
                 .orElseThrow(() -> new RuntimeException("Concern not found"));
 
-        // Handle system users (negative IDs) - they are stored in SystemUser table, not User table
-        // For system users, we skip adding to message thread since adminResponse is already saved in concern
-        if (userId < 0) {
-            // System user - adminResponse is already saved in the concern entity
-            // Return null to indicate message was not added to thread
-            // The adminResponse field in Concern already contains the message
-            return null;
-        }
-
-        User sentBy = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
         if (message == null || message.trim().isEmpty()) {
             throw new RuntimeException("Message cannot be empty");
         }
 
         ConcernMessage concernMessage = new ConcernMessage();
         concernMessage.setConcern(concern);
-        concernMessage.setSentBy(sentBy);
         concernMessage.setMessage(message);
+
+        // Handle system users (negative IDs) - they are stored in SystemUser table, not User table
+        if (userId < 0) {
+            // System user - get from SystemUser table
+            Long systemUserId = Math.abs(userId);
+            SystemUser systemUser = systemUserRepository.findById(systemUserId)
+                    .orElseThrow(() -> new RuntimeException("System user not found"));
+            
+            concernMessage.setSentBy(null); // No User reference for system users
+            concernMessage.setSentBySystemUserId(userId); // Store negative ID to identify as system user
+            concernMessage.setSentByName(systemUser.getName());
+        } else {
+            // Regular user - get from User table
+            User sentBy = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            concernMessage.setSentBy(sentBy);
+            concernMessage.setSentBySystemUserId(null);
+            concernMessage.setSentByName(sentBy.getName());
+        }
 
         return concernMessageRepository.save(concernMessage);
     }

@@ -26,8 +26,14 @@ public class ConcernMessage {
     private Concern concern;
 
     @ManyToOne
-    @JoinColumn(name = "sent_by_id", nullable = false)
+    @JoinColumn(name = "sent_by_id", nullable = true)
     private User sentBy; // The user who sent the message (can be customer, worker, or admin)
+    
+    @Column(name = "sent_by_system_user_id", nullable = true)
+    private Long sentBySystemUserId; // System user ID if message is from a system admin (negative ID)
+    
+    @Column(name = "sent_by_name", nullable = true, length = 255)
+    private String sentByName; // Name of the sender (for system users or when user is deleted)
 
     @Column(nullable = false, length = 1000)
     private String message;

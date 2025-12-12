@@ -277,11 +277,13 @@ CREATE INDEX IF NOT EXISTS idx_concerns_resolved_at ON concerns(resolved_at);
 CREATE TABLE IF NOT EXISTS concern_messages (
     id BIGSERIAL PRIMARY KEY,
     concern_id BIGINT NOT NULL,
-    sent_by_id BIGINT NOT NULL,
+    sent_by_id BIGINT NULL,
+    sent_by_system_user_id BIGINT NULL,
+    sent_by_name VARCHAR(255) NULL,
     message VARCHAR(1000) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (concern_id) REFERENCES concerns(id) ON DELETE CASCADE,
-    FOREIGN KEY (sent_by_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (sent_by_id) REFERENCES users(id) ON DELETE SET NULL
 );
 
 CREATE INDEX IF NOT EXISTS idx_concern_messages_concern_id ON concern_messages(concern_id);

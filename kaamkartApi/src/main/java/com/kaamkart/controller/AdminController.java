@@ -291,12 +291,9 @@ public class AdminController {
                 Concern concern = concernService.updateConcernStatus(concernId, status, adminResponse);
                 
                 // If admin provided a response, add it as a message to the conversation
-                // Note: System users (negative IDs) cannot add messages to thread, but adminResponse is already saved in concern
+                // Both system users and regular admins can now add messages
                 if (adminResponse != null && !adminResponse.trim().isEmpty()) {
                     Long adminId = getUserIdFromAuthentication(authentication);
-                    // Only add message if it's a regular user (positive ID), not a system user
-                    // System users (negative IDs) return null from addMessageToConcern, which is fine
-                    // The adminResponse is already saved in the concern entity
                     concernService.addMessageToConcern(concernId, adminId, adminResponse);
                 }
                 
@@ -325,18 +322,8 @@ public class AdminController {
                     return ResponseEntity.badRequest().body(Map.of("message", "Message is required"));
                 }
                 
-                // Check if it's a system user (negative ID) - they cannot add messages to thread
-                if (adminId < 0) {
-                    return ResponseEntity.badRequest().body(Map.of(
-                            "message", "System users cannot add messages to concern thread. Use admin response field when updating status."
-                    ));
-                }
-                
+                // System users and regular admins can both add messages now
                 ConcernMessage concernMessage = concernService.addMessageToConcern(concernId, adminId, message);
-                
-                if (concernMessage == null) {
-                    return ResponseEntity.badRequest().body(Map.of("message", "Failed to add message"));
-                }
                 
                 return ResponseEntity.ok(Map.of(
                         "message", "Message added successfully",
