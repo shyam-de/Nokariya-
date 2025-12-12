@@ -2,7 +2,12 @@
 
 A platform connecting labor workers (electricians, plumbers, carpenters, etc.) with customers who need their services.
 
-## 🌐 Production Deployment on Render
+## 🌐 Production Deployment
+
+**Live Site**: [https://nokariya.onrender.com](https://nokariya.onrender.com)  
+**API**: [https://nokariya-zo4u.onrender.com](https://nokariya-zo4u.onrender.com)
+
+## 🚀 Deploy on Render
 
 Deploy KaamKart easily on Render platform. See [docs/RENDER_DEPLOYMENT.md](./docs/RENDER_DEPLOYMENT.md) for detailed instructions.
 

@@ -19,9 +19,9 @@ services:
       - key: PORT
         value: 8585
       - key: CORS_ALLOWED_ORIGINS
-        sync: false  # Set to your frontend URL, e.g., https://your-frontend.onrender.com
+        value: https://nokariya.onrender.com  # Frontend URL
       - key: WEBSOCKET_ALLOWED_ORIGINS
-        sync: false  # Set to your frontend URL, e.g., https://your-frontend.onrender.com
+        value: https://nokariya.onrender.com  # Frontend URL
     healthCheckPath: /api/health
     plan: starter  # or free, starter, standard, pro
 
@@ -35,7 +35,7 @@ services:
       - key: NODE_ENV
         value: production
       - key: NEXT_PUBLIC_API_URL
-        sync: false  # Set to your API service URL, e.g., https://nokariya-zo4u.onrender.com/api
+        value: https://nokariya-zo4u.onrender.com/api  # Backend API URL
       - key: PORT
         value: 3000
     plan: starter  # or free, starter, standard, pro
