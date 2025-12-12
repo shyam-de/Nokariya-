@@ -9,11 +9,11 @@ services:
       - key: SPRING_PROFILES_ACTIVE
         value: prod
       - key: SPRING_DATASOURCE_URL
-        sync: false  # Set in Render dashboard
+        value: jdbc:postgresql://dpg-d4ttu5pr0fns739f4s40-a:5432/kaamkart
       - key: SPRING_DATASOURCE_USERNAME
-        sync: false
+        value: kaamkart_user
       - key: SPRING_DATASOURCE_PASSWORD
-        sync: false
+        value: u7B1yZpeSNCFzrsxv2ty8FYmMf4AjF7F
       - key: JWT_SECRET
         sync: false
       - key: PORT
@@ -40,10 +40,11 @@ services:
         value: 3000
     plan: starter  # or free, starter, standard, pro
 
-databases:
-  # PostgreSQL Database
-  - name: kaamkart-db
-    databaseName: kaamkart
-    user: kaamkart_user
-    plan: starter  # or free, starter, standard, pro
+# Database is already created externally
+# Connection details:
+# Host: dpg-d4ttu5pr0fns739f4s40-a
+# Port: 5432
+# Database: kaamkart
+# User: kaamkart_user
+# Password: u7B1yZpeSNCFzrsxv2ty8FYmMf4AjF7F
 
