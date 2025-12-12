@@ -124,6 +124,14 @@ This guide will help you deploy KaamKart on Render platform.
 
 ## Troubleshooting
 
+### Docker Build Timeout Errors
+
+If you see errors like `failed to resolve source metadata` or `i/o timeout`:
+- **This is usually a temporary network issue on Render's infrastructure**
+- **Solution**: Simply retry the deployment (wait 2-3 minutes between retries)
+- The error occurs when Render tries to pull Docker base images
+- If it persists after multiple retries, check Render's status page
+
 ### Backend Issues
 
 - Check logs in Render dashboard
