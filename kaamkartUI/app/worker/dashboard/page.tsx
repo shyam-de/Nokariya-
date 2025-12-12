@@ -682,8 +682,8 @@ export default function WorkerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4 md:mb-6">
           <div>
-            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 md:mb-2">Worker Dashboard</h2>
-            <p className="text-sm md:text-base text-gray-600">Find work opportunities and manage your profile</p>
+            <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-900 mb-1 md:mb-2" lang={language}>{t('worker.title')}</h2>
+            <p className="text-sm md:text-base text-gray-600" lang={language}>{t('worker.availableRequests')}</p>
           </div>
           {activeTab === 'available' && (
             <button
@@ -799,7 +799,7 @@ export default function WorkerDashboard() {
         {showRatingModal && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-4 md:p-6 lg:p-8 w-full max-w-lg relative">
-              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6">Rate Customer</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6" lang={language}>{t('worker.rateCustomer')}</h3>
               <button
                 onClick={() => {
                   setShowRatingModal(false)
