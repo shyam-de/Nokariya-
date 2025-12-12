@@ -891,7 +891,7 @@ export default function Home() {
               Join thousands of customers and workers already using KaamKart to connect and get work done
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {user && user.role === 'customer' ? (
+              {user && user.role?.toLowerCase() === 'customer' ? (
                 <Link
                   href="/customer/dashboard"
                   className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
@@ -901,7 +901,7 @@ export default function Home() {
                 </Link>
               ) : user ? (
                 <Link
-                  href={user.role === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
+                  href={user.role?.toLowerCase() === 'worker' ? '/worker/dashboard' : '/admin/dashboard'}
                   className="bg-white text-primary-600 px-10 py-4 rounded-xl font-bold text-lg hover:bg-gray-100 transition-all duration-200 hover:scale-110 transform shadow-2xl"
                   lang={language}
                 >
