@@ -608,6 +608,9 @@ export default function WorkerDashboard() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-4 space-y-2 animate-slide-down">
+              <div className="px-4 py-2">
+                <LanguageSwitcher />
+              </div>
               <button
                 onClick={() => {
                   setShowProfileModal(true)

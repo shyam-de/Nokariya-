@@ -562,10 +562,12 @@ export default function CustomerDashboard() {
       'REJECTED': { bg: 'bg-red-100', text: 'text-red-800', icon: '🚫' }
     }
     const config = statusConfig[status] || statusConfig['PENDING']
+    const statusKey = `status${status.toLowerCase().replace(/_/g, '')}`
+    const statusText = t(`customer.${statusKey}`) || status.replace(/_/g, ' ')
     return (
-      <span className={`px-4 py-2 rounded-full text-sm font-medium ${config.bg} ${config.text} flex items-center gap-2`}>
+      <span className={`px-4 py-2 rounded-full text-sm font-medium ${config.bg} ${config.text} flex items-center gap-2`} lang={language}>
         <span>{config.icon}</span>
-        {status.replace(/_/g, ' ')}
+        {statusText}
       </span>
     )
   }
@@ -646,6 +648,9 @@ export default function CustomerDashboard() {
           {/* Mobile Menu */}
           {mobileMenuOpen && (
             <div className="lg:hidden border-t border-gray-200 py-4 space-y-2 animate-slide-down">
+              <div className="px-4 py-2">
+                <LanguageSwitcher />
+              </div>
               <button
                 onClick={() => {
                   setShowProfileModal(true)
@@ -1103,50 +1108,55 @@ export default function CustomerDashboard() {
               </button>
               <form onSubmit={handleUpdateProfile} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.name')}</label>
                   <input
                     type="text"
                     value={profileData.name}
                     onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.email')}</label>
                   <input
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.phone')}</label>
                   <input
                     type="tel"
                     value={profileData.phone}
                     onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Secondary Phone (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.secondaryPhone')}</label>
                   <input
                     type="tel"
                     value={profileData.secondaryPhone}
                     onChange={(e) => setProfileData({ ...profileData, secondaryPhone: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    lang={language}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isUpdatingProfile}
                   className="w-full bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  lang={language}
                 >
-                  {isUpdatingProfile ? 'Updating...' : 'Update Profile'}
+                  {isUpdatingProfile ? t('customer.updating') : t('customer.updateProfile')}
                 </button>
               </form>
             </div>
@@ -1157,7 +1167,7 @@ export default function CustomerDashboard() {
         {showRatingModal && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Rate Workers</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('customer.rateWorkers')}</h3>
               <button
                 onClick={() => {
                   setShowRatingModal(false)
@@ -1169,7 +1179,7 @@ export default function CustomerDashboard() {
               </button>
               <form onSubmit={handleSubmitRating} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Rating (1-5 stars)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('customer.ratingLabel')}</label>
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
@@ -1182,24 +1192,26 @@ export default function CustomerDashboard() {
                       </button>
                     ))}
                   </div>
-                  <p className="text-sm text-gray-600 mt-2">Selected: {ratingData.rating} star{ratingData.rating !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-gray-600 mt-2" lang={language}>{t('customer.selectedRating')}: {ratingData.rating} {t('customer.stars')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Comment (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.comment')}</label>
                   <textarea
                     value={ratingData.comment}
                     onChange={(e) => setRatingData({ ...ratingData, comment: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     rows={4}
-                    placeholder="Share your experience..."
+                    placeholder={t('customer.commentPlaceholder')}
+                    lang={language}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isSubmittingRating}
                   className="w-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  lang={language}
                 >
-                  {isSubmittingRating ? 'Submitting...' : 'Submit Rating'}
+                  {isSubmittingRating ? t('customer.submitting') : t('customer.submitRating')}
                 </button>
               </form>
             </div>
@@ -1210,7 +1222,7 @@ export default function CustomerDashboard() {
         {showConcernModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Raise a Concern</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('customer.raiseConcern')}</h3>
               <button
                 onClick={() => {
                   setShowConcernModal(false)
@@ -1228,54 +1240,58 @@ export default function CustomerDashboard() {
               </button>
               <form onSubmit={handleSubmitConcern} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Concern Type <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.concernType')} <span className="text-red-500">*</span></label>
                   <select
                     value={concernData.type}
                     onChange={(e) => setConcernData({ ...concernData, type: e.target.value as any })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   >
-                    <option value="WORK_QUALITY">Work Quality</option>
-                    <option value="PAYMENT_ISSUE">Payment Issue</option>
-                    <option value="BEHAVIOR">Behavior</option>
-                    <option value="SAFETY">Safety</option>
-                    <option value="OTHER">Other</option>
+                    <option value="WORK_QUALITY">{t('customer.workQuality')}</option>
+                    <option value="PAYMENT_ISSUE">{t('customer.paymentIssue')}</option>
+                    <option value="BEHAVIOR">{t('customer.behavior')}</option>
+                    <option value="SAFETY">{t('customer.safety')}</option>
+                    <option value="OTHER">{t('customer.other')}</option>
                   </select>
                 </div>
                 {requests.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Related Request (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.relatedRequest')}</label>
                     <select
                       value={concernData.requestId}
                       onChange={(e) => setConcernData({ ...concernData, requestId: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      lang={language}
                     >
-                      <option value="">None</option>
+                      <option value="">{t('customer.none')}</option>
                       {requests.map((req) => (
                         <option key={req.id} value={req.id}>
-                          {req.workType} - {req.status}
+                          {req.workType} - {t(`customer.status${req.status.toLowerCase().replace(/_/g, '')}`) || req.status}
                         </option>
                       ))}
                     </select>
                   </div>
                 )}
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.description')} <span className="text-red-500">*</span></label>
                   <textarea
                     value={concernData.description}
                     onChange={(e) => setConcernData({ ...concernData, description: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     rows={6}
-                    placeholder="Please describe your concern in detail..."
+                    placeholder={t('customer.concernDescriptionPlaceholder')}
                     required
+                    lang={language}
                   />
                 </div>
                 <button
                   type="submit"
                   disabled={isSubmittingConcern}
                   className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                  lang={language}
                 >
-                  {isSubmittingConcern ? t('common.loading') : t('customer.raiseConcern')}
+                  {isSubmittingConcern ? t('customer.submitting') : t('customer.submitConcern')}
                 </button>
               </form>
             </div>
