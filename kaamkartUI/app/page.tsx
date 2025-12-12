@@ -304,7 +304,7 @@ export default function Home() {
       </nav>
 
       {/* Top Slider Banner - Below Navbar */}
-      <div className="relative z-40 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 text-white overflow-hidden">
+      <div className="relative z-30 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 text-white overflow-hidden mt-0">
         <div className="relative h-12 md:h-14 flex items-center">
           {/* Slider Container */}
           <div className="flex w-full h-full relative">
@@ -380,7 +380,7 @@ export default function Home() {
         const currentAd = visibleAds[currentAdIndex % visibleAds.length]
         
         return (
-          <div className="relative z-40 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 border-b border-yellow-200">
+          <div className="relative z-20 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 border-b border-yellow-200">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
               <div className="relative flex items-center justify-center">
                 <div
