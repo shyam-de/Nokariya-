@@ -295,15 +295,9 @@ public class AdminController {
                 if (adminResponse != null && !adminResponse.trim().isEmpty()) {
                     Long adminId = getUserIdFromAuthentication(authentication);
                     // Only add message if it's a regular user (positive ID), not a system user
-                    if (adminId > 0) {
-                        try {
-                            concernService.addMessageToConcern(concernId, adminId, adminResponse);
-                        } catch (Exception e) {
-                            // If message addition fails, it's okay - adminResponse is already saved in concern
-                            logger.warn("Could not add message to concern thread: {}", e.getMessage());
-                        }
-                    }
-                    // For system users (adminId < 0), adminResponse is already saved in concern entity
+                    // System users (negative IDs) return null from addMessageToConcern, which is fine
+                    // The adminResponse is already saved in the concern entity
+                    concernService.addMessageToConcern(concernId, adminId, adminResponse);
                 }
                 
                 return ResponseEntity.ok(Map.of(

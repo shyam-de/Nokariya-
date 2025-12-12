@@ -132,9 +132,9 @@ public class ConcernService {
         // For system users, we skip adding to message thread since adminResponse is already saved in concern
         if (userId < 0) {
             // System user - adminResponse is already saved in the concern entity
-            // Return null or throw exception to indicate message was not added to thread
+            // Return null to indicate message was not added to thread
             // The adminResponse field in Concern already contains the message
-            throw new RuntimeException("System users cannot add messages to concern thread. Admin response is saved in concern.");
+            return null;
         }
 
         User sentBy = userRepository.findById(userId)
