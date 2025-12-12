@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import axios from 'axios'
 import toast from 'react-hot-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { apiClient } from '@/lib/api'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
@@ -78,6 +81,7 @@ interface User {
 
 export default function WorkerDashboard() {
   const router = useRouter()
+  const { t, language } = useLanguage()
   const [requests, setRequests] = useState<Request[]>([])
   const [workHistory, setWorkHistory] = useState<WorkHistory[]>([])
   const [available, setAvailable] = useState(true)

@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
 import toast from 'react-hot-toast'
+import { useLanguage } from '@/contexts/LanguageContext'
+import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 interface Request {
   id: string
@@ -50,6 +52,7 @@ interface User {
 
 export default function CustomerDashboard() {
   const router = useRouter()
+  const { t, language } = useLanguage()
   const [activeTab, setActiveTab] = useState<'requests' | 'concerns'>('requests')
   const [showRequestForm, setShowRequestForm] = useState(false)
   const [showProfileModal, setShowProfileModal] = useState(false)
@@ -203,7 +206,7 @@ export default function CustomerDashboard() {
     try {
       const token = localStorage.getItem('token')
       if (!token) {
-        toast.error('No authentication token found. Please login again.')
+        toast.error(t('common.error'))
         router.push('/login')
         return
       }
@@ -263,7 +266,7 @@ export default function CustomerDashboard() {
     e.preventDefault()
     
     if (formData.workerTypeRequirements.length === 0) {
-      toast.error('Please add at least one labor type requirement')
+      toast.error(t('customer.addRequirement'))
       return
     }
     
@@ -285,7 +288,7 @@ export default function CustomerDashboard() {
         const actualIdx = formData.workerTypeRequirements.findIndex(r => r === invalidRequirements[idx])
         return actualIdx + 1
       })
-      toast.error(`Please select worker type for requirement${invalidIndices.length > 1 ? 's' : ''} ${invalidIndices.join(', ')}`)
+      toast.error(t('customer.selectWorkerType'))
       return
     }
     
@@ -296,7 +299,7 @@ export default function CustomerDashboard() {
       isNaN(req.numberOfWorkers)
     )
     if (invalidWorkerCounts.length > 0) {
-      toast.error('Please enter a valid number of workers (at least 1) for all requirements')
+      toast.error(t('customer.numberOfWorkers'))
       return
     }
     
@@ -349,7 +352,7 @@ export default function CustomerDashboard() {
         }
       })
       console.log('Request created successfully:', response.data)
-      toast.success('Request created! It is now pending admin approval.')
+      toast.success(t('customer.requestCreated'))
       setShowRequestForm(false)
       setFormData({
         workerTypeRequirements: [],
@@ -402,7 +405,7 @@ export default function CustomerDashboard() {
       const token = localStorage.getItem('token')
       const response = await apiClient.put('/profile', profileData, {
       })
-      toast.success('Profile updated successfully!')
+      toast.success(t('customer.profileUpdated'))
       setShowProfileModal(false)
       fetchProfile()
       // Update user in localStorage
@@ -410,7 +413,7 @@ export default function CustomerDashboard() {
       localStorage.setItem('user', JSON.stringify(updatedUser))
       setUser(updatedUser)
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to update profile')
+      toast.error(error.response?.data?.message || t('customer.profileError'))
     } finally {
       setIsUpdatingProfile(false)
     }
@@ -421,7 +424,7 @@ export default function CustomerDashboard() {
       const token = localStorage.getItem('token')
       await apiClient.post(`/requests/${requestId}/complete`, {}, {
       })
-      toast.success('Request marked as completed!')
+      toast.success(t('dashboard.completed'))
       fetchRequests()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to complete request')
@@ -501,7 +504,7 @@ export default function CustomerDashboard() {
         fetchMyConcerns()
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to submit concern')
+      toast.error(error.response?.data?.message || t('customer.concernError'))
     } finally {
       setIsSubmittingConcern(false)
     }
@@ -520,7 +523,7 @@ export default function CustomerDashboard() {
       })
     } catch (error) {
       console.error('Error fetching concerns:', error)
-      toast.error('Failed to fetch concerns')
+      toast.error(t('customer.error'))
     } finally {
       setIsLoadingConcerns(false)
     }
@@ -578,12 +581,14 @@ export default function CustomerDashboard() {
             
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-4">
+              <LanguageSwitcher />
               <button
                 onClick={() => setShowProfileModal(true)}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>⚙️</span>
-                Profile
+                {t('customer.profile')}
               </button>
               <button
                 onClick={() => {
@@ -591,9 +596,10 @@ export default function CustomerDashboard() {
                   setShowConcernModal(true)
                 }}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>📢</span>
-                Raise Concern
+                {t('customer.raiseConcern')}
               </button>
               <div className="flex items-center gap-3 bg-primary-50 px-4 py-2 rounded-full">
                 <div className="flex items-center gap-2">
@@ -615,8 +621,9 @@ export default function CustomerDashboard() {
               <button
                 onClick={handleLogout}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                lang={language}
               >
-                Logout
+                {t('customer.logout')}
               </button>
             </div>
 
@@ -647,7 +654,7 @@ export default function CustomerDashboard() {
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 flex items-center gap-2"
               >
                 <span>⚙️</span>
-                Profile
+                {t('customer.profile')}
               </button>
               <button
                 onClick={() => {
@@ -656,9 +663,10 @@ export default function CustomerDashboard() {
                   setMobileMenuOpen(false)
                 }}
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200 flex items-center gap-2"
+                lang={language}
               >
                 <span>📢</span>
-                Raise Concern
+                {t('customer.raiseConcern')}
               </button>
               <div className="px-4 py-3 bg-primary-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
@@ -680,8 +688,9 @@ export default function CustomerDashboard() {
               <button
                 onClick={handleLogout}
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
+                lang={language}
               >
-                Logout
+                {t('customer.logout')}
               </button>
             </div>
           )}
@@ -691,16 +700,17 @@ export default function CustomerDashboard() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-2">Customer Dashboard</h2>
-            <p className="text-gray-600">Manage your labor requests and track their status</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-2" lang={language}>{t('customer.title')}</h2>
+            <p className="text-gray-600" lang={language}>{t('dashboard.welcome')}</p>
           </div>
           {activeTab === 'requests' && (
             <button
               onClick={() => setShowRequestForm(true)}
               className="px-6 py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2"
+              lang={language}
             >
               <span className="text-xl">+</span>
-              Create New Request
+              {t('customer.createRequest')}
             </button>
           )}
         </div>
@@ -715,8 +725,9 @@ export default function CustomerDashboard() {
                   ? 'bg-gradient-to-r from-primary-600 to-indigo-600 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">📋 </span>My <span className="hidden md:inline">Requests</span> ({requests.length})
+              <span className="hidden sm:inline">📋 </span>{t('customer.myRequests')} ({requests.length})
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -725,8 +736,9 @@ export default function CustomerDashboard() {
                   ? 'bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-md'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
+              lang={language}
             >
-              <span className="hidden sm:inline">📢 </span>My <span className="hidden md:inline">Concerns</span> ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
+              <span className="hidden sm:inline">📢 </span>{t('customer.concerns')} ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
             </button>
           </div>
         </div>
@@ -735,7 +747,7 @@ export default function CustomerDashboard() {
         {showRequestForm && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Create New Request</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('customer.createRequest')}</h3>
               <button
                 onClick={() => setShowRequestForm(false)}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
@@ -789,7 +801,7 @@ export default function CustomerDashboard() {
                             className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                             required
                           >
-                            <option value="">Select Worker Type</option>
+                            <option value="">{t('customer.selectWorkerType')}</option>
                             {workerTypes
                               .filter(lt => lt.isActive)
                               .filter(lt => !formData.workerTypeRequirements.some((r, i) => i !== index && r.laborType === lt.name))
@@ -839,7 +851,7 @@ export default function CustomerDashboard() {
                       }}
                       className="w-full px-4 py-2 bg-primary-100 text-primary-700 rounded-lg hover:bg-primary-200 transition-colors font-medium border-2 border-dashed border-primary-300"
                     >
-                      + Add Labor Type
+                      + {t('customer.addRequirement')}
                     </button>
                   </div>
                   {formData.workerTypeRequirements.length === 0 && (
@@ -1053,7 +1065,7 @@ export default function CustomerDashboard() {
                   disabled={isSubmitting}
                   className="w-full bg-gradient-to-r from-primary-600 to-indigo-600 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
-                  {isSubmitting ? 'Creating Request...' : 'Submit Request'}
+                  {isSubmitting ? t('common.loading') : t('common.submit')}
                 </button>
               </form>
             </div>
@@ -1064,7 +1076,7 @@ export default function CustomerDashboard() {
         {showProfileModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Edit Profile</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('customer.updateProfile')}</h3>
               <button
                 onClick={() => setShowProfileModal(false)}
                 className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
@@ -1245,7 +1257,7 @@ export default function CustomerDashboard() {
                   disabled={isSubmittingConcern}
                   className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-3 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
                 >
-                  {isSubmittingConcern ? 'Submitting...' : 'Submit Concern'}
+                  {isSubmittingConcern ? t('common.loading') : t('customer.raiseConcern')}
                 </button>
               </form>
             </div>
@@ -1261,8 +1273,8 @@ export default function CustomerDashboard() {
             ) : myConcerns.length === 0 ? (
               <div className="bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
                 <div className="text-6xl mb-4">📢</div>
-                <p className="text-xl text-gray-500 mb-2">No concerns raised yet</p>
-                <p className="text-gray-400">Click "Raise Concern" to submit a concern</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('customer.noConcerns')}</p>
+                <p className="text-gray-400" lang={language}>{t('customer.raiseConcern')}</p>
               </div>
             ) : (
               myConcerns.map((concern: any) => (
@@ -1457,8 +1469,8 @@ export default function CustomerDashboard() {
                 {requests.length === 0 ? (
                   <div className="col-span-full bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
                     <div className="text-6xl mb-4">📝</div>
-                    <p className="text-xl text-gray-500 mb-2">No requests created yet</p>
-                    <p className="text-gray-400">Click "Create New Request" to get started!</p>
+                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('customer.noRequests')}</p>
+                <p className="text-gray-400" lang={language}>{t('customer.createRequest')}</p>
                   </div>
                 ) : (
                   requests.map((request) => (
@@ -1509,7 +1521,7 @@ export default function CustomerDashboard() {
                       onClick={() => handleCompleteRequest(request.id)}
                       className="w-full mt-4 bg-green-500 text-white py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors"
                     >
-                      Mark as Completed
+                      {t('dashboard.completed')}
                     </button>
                   )}
 
@@ -1523,7 +1535,7 @@ export default function CustomerDashboard() {
                           }}
                           className="flex-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-white py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
                         >
-                          ⭐ Rate Workers
+                          ⭐ {t('customer.rateWorkers')}
                         </button>
                       ) : (
                         <div className="flex-1 bg-green-50 border-2 border-green-200 text-green-800 py-2 rounded-lg font-semibold text-center">
@@ -1541,7 +1553,7 @@ export default function CustomerDashboard() {
                         }}
                         className="flex-1 bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
                       >
-                        📢 Concern
+                        📢 {t('customer.concerns')}
                       </button>
                     </div>
                   )}
@@ -1557,7 +1569,7 @@ export default function CustomerDashboard() {
                       }}
                       className="w-full mt-4 bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-lg transition-all"
                     >
-                      📢 Raise Concern
+                      📢 {t('customer.raiseConcern')}
                     </button>
                   )}
 
@@ -1565,7 +1577,7 @@ export default function CustomerDashboard() {
                     <div className="mt-4 pt-4 border-t border-green-200">
                       <p className="text-sm font-semibold text-green-700 mb-2 flex items-center gap-2">
                         <span>🚀</span>
-                        Deployed Workers ({request.deployedWorkers.length})
+                        {t('dashboard.workers')} ({request.deployedWorkers.length})
                       </p>
                       <div className="space-y-2">
                         {request.deployedWorkers.map((dw: any, idx: number) => {
