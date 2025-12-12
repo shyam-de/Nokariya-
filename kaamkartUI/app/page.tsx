@@ -57,6 +57,7 @@ export default function Home() {
   }, [router])
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
+  // Using fetch for public endpoints to avoid axios overhead
 
   // Advertisement data - fetched from API
   const [advertisements, setAdvertisements] = useState<Array<{

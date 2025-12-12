@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import axios from 'axios'
+import { apiClient, API_URL } from '@/lib/api'
 import toast from 'react-hot-toast'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
 interface Request {
   id: string
@@ -135,7 +133,7 @@ export default function CustomerDashboard() {
 
   const fetchLaborTypes = async () => {
     try {
-      const response = await axios.get(`${API_URL}/public/worker-types`)
+      const response = await apiClient.get('/public/worker-types')
       setLaborTypes(response.data)
     } catch (error) {
       console.error('Error fetching labor types:', error)
@@ -150,10 +148,7 @@ export default function CustomerDashboard() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_URL}/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
+      const response = await apiClient.get('/profile')
       setProfile(response.data)
       setProfileData({
         name: response.data.name,
@@ -214,7 +209,7 @@ export default function CustomerDashboard() {
       }
       
       try {
-        await axios.get(`${API_URL}/auth/health`, { timeout: 5000 })
+        await apiClient.get('/auth/health', { timeout: 5000 })
       } catch (healthError: any) {
         if (healthError.code === 'ECONNREFUSED' || healthError.code === 'ERR_NETWORK') {
           toast.error('Cannot connect to server. Please check if API is running on port 8585.')
@@ -222,7 +217,7 @@ export default function CustomerDashboard() {
         return
       }
       
-      const response = await axios.get(`${API_URL}/requests/my-requests`, {
+      const response = await apiClient.get('/requests/my-requests', {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -236,7 +231,7 @@ export default function CustomerDashboard() {
       for (const request of response.data) {
         if (request.status === 'COMPLETED') {
           try {
-            const ratingCheck = await axios.get(`${API_URL}/ratings/check/${request.id}`, {
+            const ratingCheck = await apiClient.get(`/ratings/check/${request.id}`, {
               headers: { Authorization: `Bearer ${token}` }
             })
             if (ratingCheck.data.hasRated) {
@@ -322,7 +317,7 @@ export default function CustomerDashboard() {
         }
       }
       console.log('Sending request data:', JSON.stringify(requestData, null, 2))
-      const response = await axios.post(`${API_URL}/requests`, requestData, {
+      const response = await apiClient.post('/requests', requestData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -380,7 +375,7 @@ export default function CustomerDashboard() {
     setIsUpdatingProfile(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.put(`${API_URL}/profile`, profileData, {
+      const response = await apiClient.put('/profile', profileData, {
         headers: { Authorization: `Bearer ${token}` }
       })
       toast.success('Profile updated successfully!')
@@ -400,7 +395,7 @@ export default function CustomerDashboard() {
   const handleCompleteRequest = async (requestId: string) => {
     try {
       const token = localStorage.getItem('token')
-      await axios.post(`${API_URL}/requests/${requestId}/complete`, {}, {
+      await apiClient.post(`/requests/${requestId}/complete`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
       toast.success('Request marked as completed!')
@@ -423,7 +418,7 @@ export default function CustomerDashboard() {
       for (const dw of deployedWorkers) {
         const workerId = dw.worker?.id || dw.workerId
         if (workerId) {
-          await axios.post(`${API_URL}/ratings`, {
+          await apiClient.post('/ratings', {
             requestId: selectedRequest.id,
             ratedUserId: workerId,
             rating: ratingData.rating,
@@ -467,7 +462,7 @@ export default function CustomerDashboard() {
         data.relatedToUserId = parseInt(concernData.relatedToUserId)
       }
       
-      await axios.post(`${API_URL}/concerns`, data, {
+      await apiClient.post('/concerns', data, {
         headers: { Authorization: `Bearer ${token}` }
       })
       
@@ -495,7 +490,7 @@ export default function CustomerDashboard() {
     setIsLoadingConcerns(true)
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_URL}/concerns/my-concerns`, {
+      const response = await apiClient.get('/concerns/my-concerns', {
         headers: { Authorization: `Bearer ${token}` }
       })
       setMyConcerns(response.data)
@@ -515,7 +510,7 @@ export default function CustomerDashboard() {
     setIsLoadingMessages({ ...isLoadingMessages, [concernId]: true })
     try {
       const token = localStorage.getItem('token')
-      const response = await axios.get(`${API_URL}/concerns/${concernId}/messages`, {
+      const response = await apiClient.get(`/concerns/${concernId}/messages`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
@@ -1381,7 +1376,7 @@ export default function CustomerDashboard() {
                                     if (editingConcern.message && editingConcern.message.trim()) {
                                       payload.message = editingConcern.message.trim()
                                     }
-                                    await axios.put(`${API_URL}/concerns/${concern.id}/status`, payload, {
+                                    await apiClient.put(`/concerns/${concern.id}/status`, payload, {
                                       headers: { Authorization: `Bearer ${token}` }
                                     })
                                     toast.success('Concern updated successfully!')

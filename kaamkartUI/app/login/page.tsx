@@ -3,10 +3,8 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import axios from 'axios'
+import { apiClient, API_URL } from '@/lib/api'
 import toast from 'react-hot-toast'
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
 export default function Login() {
   const router = useRouter()
@@ -32,7 +30,7 @@ export default function Login() {
     // Fetch active labor types
     const fetchLaborTypes = async () => {
       try {
-        const response = await axios.get(`${API_URL}/public/worker-types`)
+        const response = await apiClient.get('/public/worker-types')
         setLaborTypes(response.data)
       } catch (error) {
         console.error('Error fetching labor types:', error)
@@ -97,11 +95,7 @@ export default function Login() {
       }
 
       console.log('Sending request to:', `${API_URL}${endpoint}`)
-      const response = await axios.post(`${API_URL}${endpoint}`, data, {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      })
+      const response = await apiClient.post(endpoint, data)
       
       console.log('Response received:', response.data)
       
@@ -200,7 +194,7 @@ export default function Login() {
                     }
                     setIsLoading(true)
                     try {
-                      const response = await axios.post(`${API_URL}/auth/forgot-password`, {
+                      const response = await apiClient.post('/auth/forgot-password', {
                         email: forgotPasswordEmail.trim().toLowerCase()
                       })
                       toast.success(response.data.message || 'Password reset link sent!')
