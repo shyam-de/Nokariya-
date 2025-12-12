@@ -241,13 +241,29 @@
   },
   "home": {
     "title": "KaamKart",
-    "subtitle": "Connect with Workers",
+    "subtitle": "Your Trusted Worker Connection Platform",
     "getStarted": "Get Started",
     "login": "Login",
     "register": "Register",
     "features": "Features",
     "about": "About",
-    "contact": "Contact"
+    "contact": "Contact",
+    "heroTitle": "Find Skilled Workers",
+    "heroSubtitle": "Near You Instantly",
+    "heroDescription": "Connect with verified electricians, plumbers, carpenters, drivers, and more",
+    "heroSubDescription": "Post your requirement, get matched with nearby workers, and get your work done quickly and efficiently",
+    "findWorkersNow": "Find Workers Now",
+    "joinAsWorker": "Join as Worker",
+    "howItWorksTitle": "How It Works",
+    "howItWorksSubtitle": "Simple, fast, and reliable - Get connected with workers in just 3 easy steps",
+    "step1Title": "Post Your Request",
+    "step1Description": "Tell us what type of worker you need, how many, and where. Our smart system will find the perfect matches near you.",
+    "step2Title": "Workers Get Notified",
+    "step2Description": "Available workers in your area receive instant notifications. They can confirm their availability right away.",
+    "step3Title": "Workers Deployed",
+    "step3Description": "Once confirmed, workers are deployed to your location. Track progress and get your work completed efficiently.",
+    "workerTypesTitle": "All Types of Workers Available",
+    "workerTypesSubtitle": "From electricians to cooks, we have verified workers for every need"
   }
 }
 

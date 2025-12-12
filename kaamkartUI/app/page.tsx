@@ -8,7 +8,7 @@ import LanguageSwitcher from '@/components/LanguageSwitcher'
 
 export default function Home() {
   const router = useRouter()
-  const { language } = useLanguage()
+  const { language, t } = useLanguage()
   const [isLoaded, setIsLoaded] = useState(false)
   const [currentSlide, setCurrentSlide] = useState(0)
   const [dismissedAds, setDismissedAds] = useState<Set<number>>(new Set())
@@ -235,7 +235,7 @@ export default function Home() {
               <h1 className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate">
                 KaamKart
               </h1>
-              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline">Your Trusted Worker Connection Platform</span>
+              <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline" lang={language}>{t('home.subtitle')}</span>
             </div>
             
             {/* Desktop Navigation */}
@@ -244,14 +244,16 @@ export default function Home() {
               <Link
                 href="/login"
                 className="text-gray-700 hover:text-primary-600 font-medium transition-all duration-200 hover:scale-105"
+                lang={language}
               >
-                Login
+                {t('home.login')}
               </Link>
               <Link
                 href="/login"
                 className="bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-6 py-2 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
+                lang={language}
               >
-                Get Started
+                {t('home.getStarted')}
               </Link>
             </div>
 
@@ -284,15 +286,17 @@ export default function Home() {
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
+                lang={language}
               >
-                Login
+                {t('home.login')}
               </Link>
               <Link
                 href="/login"
                 onClick={() => setMobileMenuOpen(false)}
                 className="block w-full px-4 py-3 text-center bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold hover:shadow-lg transition-all duration-200"
+                lang={language}
               >
-                Get Started
+                {t('home.getStarted')}
               </Link>
             </div>
           )}
@@ -468,33 +472,35 @@ export default function Home() {
               <span className="animate-pulse">🚀</span> Fast • <span className="animate-pulse">✅</span> Verified • <span className="animate-pulse">📍</span> Location-Based
             </span>
           </div>
-          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up">
-            Find Skilled Workers
+          <h1 className="text-5xl md:text-7xl font-bold text-gray-900 mb-6 leading-tight animate-fade-in-up" lang={language}>
+            {t('home.heroTitle')}
             <span className="block text-transparent bg-clip-text bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 mt-2 animate-gradient">
-              Near You Instantly
+              {t('home.heroSubtitle')}
             </span>
           </h1>
-          <p className="text-xl md:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed">
-            Connect with verified electricians, plumbers, carpenters, drivers, and more
+          <p className="text-xl md:text-2xl text-gray-600 mb-4 max-w-3xl mx-auto leading-relaxed" lang={language}>
+            {t('home.heroDescription')}
           </p>
-          <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto">
-            Post your requirement, get matched with nearby workers, and get your work done quickly and efficiently
+          <p className="text-lg text-gray-500 mb-10 max-w-2xl mx-auto" lang={language}>
+            {t('home.heroSubDescription')}
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-slide-up delay-200">
             <Link
               href="/login"
               className="group bg-gradient-to-r from-primary-600 to-indigo-600 text-white px-10 py-4 rounded-xl font-semibold text-lg hover:shadow-2xl transition-all duration-300 hover:scale-105 transform relative overflow-hidden w-full sm:w-auto"
+              lang={language}
             >
               <span className="relative z-10 flex items-center justify-center gap-2">
-                <span>🔍 Find Workers Now</span>
+                <span>🔍 {t('home.findWorkersNow')}</span>
               </span>
               <div className="absolute inset-0 bg-gradient-to-r from-indigo-600 to-primary-600 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
             </Link>
             <Link
               href="/login"
               className="bg-white text-primary-600 px-10 py-4 rounded-xl font-semibold text-lg border-2 border-primary-600 hover:bg-primary-50 transition-all duration-300 hover:scale-105 transform shadow-lg hover:shadow-xl w-full sm:w-auto"
+              lang={language}
             >
-              👷 Join as Worker
+              👷 {t('home.joinAsWorker')}
             </Link>
           </div>
         </div>
@@ -503,11 +509,11 @@ export default function Home() {
       {/* How It Works Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 bg-white/50 rounded-3xl mx-4 mb-20 relative z-10 backdrop-blur-sm">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up">
-            How It Works
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up" lang={language}>
+            {t('home.howItWorksTitle')}
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
-            Simple, fast, and reliable - Get connected with workers in just 3 easy steps
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200" lang={language}>
+            {t('home.howItWorksSubtitle')}
           </p>
         </div>
         <div className="grid md:grid-cols-3 gap-8 lg:gap-12">
@@ -520,11 +526,11 @@ export default function Home() {
             <div className="bg-primary-600 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-lg">
               1
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-primary-600 transition-colors">
-              Post Your Request
+            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-primary-600 transition-colors" lang={language}>
+              {t('home.step1Title')}
             </h3>
-            <p className="text-gray-600 leading-relaxed">
-              Tell us what type of worker you need, how many, and where. Our smart system will find the perfect matches near you.
+            <p className="text-gray-600 leading-relaxed" lang={language}>
+              {t('home.step1Description')}
             </p>
           </div>
 
@@ -537,11 +543,11 @@ export default function Home() {
             <div className="bg-yellow-500 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-lg">
               2
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-yellow-600 transition-colors">
-              Workers Get Notified
+            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-yellow-600 transition-colors" lang={language}>
+              {t('home.step2Title')}
             </h3>
-            <p className="text-gray-600 leading-relaxed">
-              Available workers in your area receive instant notifications. They can confirm their availability right away.
+            <p className="text-gray-600 leading-relaxed" lang={language}>
+              {t('home.step2Description')}
             </p>
           </div>
 
@@ -554,11 +560,11 @@ export default function Home() {
             <div className="bg-green-500 text-white w-10 h-10 rounded-full flex items-center justify-center mx-auto mb-4 font-bold text-lg">
               3
             </div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-green-600 transition-colors">
-              Workers Deployed
+            <h3 className="text-2xl font-bold text-gray-900 mb-4 group-hover:text-green-600 transition-colors" lang={language}>
+              {t('home.step3Title')}
             </h3>
-            <p className="text-gray-600 leading-relaxed">
-              Once confirmed, workers are deployed to your location. Track progress and get your work completed efficiently.
+            <p className="text-gray-600 leading-relaxed" lang={language}>
+              {t('home.step3Description')}
             </p>
           </div>
         </div>
@@ -567,11 +573,11 @@ export default function Home() {
       {/* Worker Types Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 relative z-10">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up">
-            All Types of Workers Available
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 animate-fade-in-up" lang={language}>
+            {t('home.workerTypesTitle')}
           </h2>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200">
-            From electricians to cooks, we have verified workers for every need
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto animate-fade-in-up animation-delay-200" lang={language}>
+            {t('home.workerTypesSubtitle')}
           </p>
         </div>
         <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-6">
