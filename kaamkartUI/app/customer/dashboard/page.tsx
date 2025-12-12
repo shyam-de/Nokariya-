@@ -232,7 +232,6 @@ export default function CustomerDashboard() {
         if (request.status === 'COMPLETED') {
           try {
             const ratingCheck = await apiClient.get(`/ratings/check/${request.id}`, {
-              headers: { Authorization: `Bearer ${token}` }
             })
             if (ratingCheck.data.hasRated) {
               ratedSet.add(request.id)
@@ -1377,7 +1376,6 @@ export default function CustomerDashboard() {
                                       payload.message = editingConcern.message.trim()
                                     }
                                     await apiClient.put(`/concerns/${concern.id}/status`, payload, {
-                                      headers: { Authorization: `Bearer ${token}` }
                                     })
                                     toast.success('Concern updated successfully!')
                                     setEditingConcern(null)
