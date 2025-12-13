@@ -1595,11 +1595,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noWorkersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {workers.map((worker: any) => (
                   <div
                     key={worker.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
                       worker.blocked ? 'border-red-500' : worker.verified ? 'border-green-500' : 'border-yellow-500'
                     }`}
                   >
@@ -1772,11 +1772,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noCustomersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {customers.map((customer: any) => (
                   <div
                     key={customer.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
                       customer.blocked ? 'border-red-500' : 'border-purple-500'
                     }`}
                   >
@@ -1897,11 +1897,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noSystemUsersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {systemUsers.map((systemUser: any) => (
                   <div
                     key={systemUser.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
                       systemUser.blocked ? 'border-red-500' : systemUser.superAdmin ? 'border-purple-500' : 'border-blue-500'
                     }`}
                   >

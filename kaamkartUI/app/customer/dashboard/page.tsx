@@ -924,7 +924,7 @@ export default function CustomerDashboard() {
           {activeTab === 'requests' && (
             <button
               onClick={() => setShowRequestForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2 whitespace-nowrap"
               lang={language}
             >
               <span className="text-xl">+</span>
