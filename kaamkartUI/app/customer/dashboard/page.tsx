@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Chatbot from '@/components/Chatbot'
+import { logger } from '@/lib/logger'
 
 interface Request {
   id: string
@@ -184,7 +185,7 @@ export default function CustomerDashboard() {
             // Remove action from URL
             window.history.replaceState({}, '', '/customer/dashboard')
           } catch (error) {
-            console.error('Error parsing chatbot data:', error)
+            logger.error('Error parsing chatbot data:', error)
           }
         }
       } else if (action === 'raiseConcern') {
@@ -202,7 +203,7 @@ export default function CustomerDashboard() {
             sessionStorage.removeItem('chatbotConcernData')
             window.history.replaceState({}, '', '/customer/dashboard')
           } catch (error) {
-            console.error('Error parsing chatbot concern data:', error)
+            logger.error('Error parsing chatbot concern data:', error)
           }
         }
       }
@@ -215,7 +216,7 @@ export default function CustomerDashboard() {
       const response = await apiClient.get('/public/worker-types')
       setLaborTypes(response.data)
     } catch (error) {
-      console.error('Error fetching labor types:', error)
+      logger.error('Error fetching labor types:', error)
     }
   }
 
@@ -237,7 +238,7 @@ export default function CustomerDashboard() {
         location: response.data.location || { latitude: 0, longitude: 0, address: '' }
       })
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      logger.error('Error fetching profile:', error)
     }
   }
 
@@ -281,7 +282,7 @@ export default function CustomerDashboard() {
         }
       }
     } catch (error) {
-      console.error('Reverse geocoding error:', error)
+      logger.error('Reverse geocoding error:', error)
       // Still set coordinates even if reverse geocoding fails
       setFormData({
         ...formData,
@@ -382,7 +383,7 @@ export default function CustomerDashboard() {
             }
           } catch (error) {
             // Ignore errors for rating check
-            console.error('Error checking rating:', error)
+            logger.error('Error checking rating:', error)
           }
         }
       }
@@ -574,9 +575,9 @@ export default function CustomerDashboard() {
       })
       fetchRequests()
     } catch (error: any) {
-      console.error('Error creating request:', error)
-      console.error('Error response:', error.response)
-      console.error('Error response data:', error.response?.data)
+      logger.error('Error creating request:', error)
+      logger.error('Error response:', error.response)
+      logger.error('Error response data:', error.response?.data)
       
       let errorMessage = 'Failed to create request'
       
@@ -732,7 +733,7 @@ export default function CustomerDashboard() {
         fetchConcernMessages(concern.id)
       })
     } catch (error) {
-      console.error('Error fetching concerns:', error)
+      logger.error('Error fetching concerns:', error)
       toast.error(t('customer.error'))
       setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
@@ -748,7 +749,7 @@ export default function CustomerDashboard() {
       })
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      logger.error('Error fetching messages:', error)
     } finally {
       setIsLoadingMessages({ ...isLoadingMessages, [concernId]: false })
     }
@@ -1247,7 +1248,7 @@ export default function CustomerDashboard() {
                                         toast.error(t('customer.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
                                       }
                                     } catch (error) {
-                                      console.error('Error fetching location from pin code:', error)
+                                      logger.error('Error fetching location from pin code:', error)
                                       toast.error(t('customer.pinCodeError') || 'Error detecting location from Pin Code. Please try again.')
                                     }
                                   }

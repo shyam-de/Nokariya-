@@ -66,8 +66,18 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         logger.error("Unexpected error occurred: {}", ex.getMessage(), ex);
         Map<String, Object> error = new HashMap<>();
-        error.put("message", ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred");
+        // Sanitize error message - don't expose internal details in production
+        String errorMessage = ex.getMessage() != null ? ex.getMessage() : "An unexpected error occurred";
+        // Remove stack trace details if present
+        if (errorMessage.contains("\n") || errorMessage.contains("at ")) {
+            errorMessage = "An unexpected error occurred. Please try again later.";
+        }
+        error.put("message", errorMessage);
         error.put("error", ex.getClass().getSimpleName());
+        // Only include detailed error info in development
+        if (logger.isDebugEnabled()) {
+            error.put("details", ex.getMessage());
+        }
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 }

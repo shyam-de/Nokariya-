@@ -163,7 +163,7 @@ export default function WorkerDashboard() {
       setUser(userObj)
     } catch (error) {
       // Invalid user data, clear and redirect
-      console.error('Error parsing user data:', error)
+      logger.error('Error parsing user data:', error)
       SessionStorage.clear()
       router.push('/')
       return
@@ -215,7 +215,7 @@ export default function WorkerDashboard() {
             window.history.replaceState({}, '', '/worker/dashboard')
             toast.success(t('chatbot.concernFormOpened') || 'Concern form opened with your details!')
           } catch (e) {
-            console.error('Error parsing chatbot data:', e)
+            logger.error('Error parsing chatbot data:', e)
           }
         }
       }
@@ -237,7 +237,7 @@ export default function WorkerDashboard() {
         location: response.data.location || { latitude: 0, longitude: 0, address: '' }
       })
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      logger.error('Error fetching profile:', error)
     }
   }
 
@@ -256,7 +256,7 @@ export default function WorkerDashboard() {
         }
       )
     } catch (error) {
-      console.error('Error updating location:', error)
+      logger.error('Error updating location:', error)
     }
   }
 
@@ -268,7 +268,7 @@ export default function WorkerDashboard() {
       })
       setAvailable(response.data.available)
     } catch (error) {
-      console.error('Error fetching profile:', error)
+      logger.error('Error fetching profile:', error)
     }
   }
 
@@ -282,7 +282,7 @@ export default function WorkerDashboard() {
       setRequests(response.data)
       setDataLoaded(prev => ({ ...prev, requests: true }))
     } catch (error) {
-      console.error('Error fetching requests:', error)
+      logger.error('Error fetching requests:', error)
       toast.error(t('worker.error'))
       setDataLoaded(prev => ({ ...prev, requests: true }))
     } finally {
@@ -317,13 +317,13 @@ export default function WorkerDashboard() {
             }
           } catch (error) {
             // Ignore errors for rating check
-            console.error('Error checking rating:', error)
+            logger.error('Error checking rating:', error)
           }
         }
       }
       setRatedRequests(ratedSet)
     } catch (error) {
-      console.error('Error fetching work history:', error)
+      logger.error('Error fetching work history:', error)
     } finally {
       setIsLoadingHistory(false)
     }
@@ -371,7 +371,7 @@ export default function WorkerDashboard() {
         fetchConcernMessages(concern.id)
       })
     } catch (error) {
-      console.error('Error fetching concerns:', error)
+      logger.error('Error fetching concerns:', error)
       toast.error(t('worker.error'))
       setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
@@ -388,7 +388,7 @@ export default function WorkerDashboard() {
       })
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      logger.error('Error fetching messages:', error)
     } finally {
       setIsLoadingMessages({ ...isLoadingMessages, [concernId]: false })
     }

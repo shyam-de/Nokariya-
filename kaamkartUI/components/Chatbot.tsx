@@ -948,7 +948,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                   }
                 }
               } catch (error) {
-                console.error('Error fetching location from pin code:', error)
+                logger.error('Error fetching location from pin code:', error)
               }
             }
           } else {
@@ -968,7 +968,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                   }
                   }
                 } catch (error) {
-                  console.error('Error fetching location from pin code:', error)
+                  logger.error('Error fetching location from pin code:', error)
                 }
               }
             }
