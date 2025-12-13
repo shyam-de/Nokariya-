@@ -216,7 +216,22 @@
     "noCustomersFound": "No customers found",
     "systemUsersAdmins": "System Users (Admins)",
     "allSystemUsers": "All System Users",
-    "noSystemUsersFound": "No system users found"
+    "noSystemUsersFound": "No system users found",
+    "workerTypeManagement": "Worker Type Management",
+    "addWorkerType": "Add Worker Type",
+    "updateWorkerType": "Update Worker Type",
+    "workerTypeNameCode": "Name (Code) *",
+    "workerTypeNameCodeHelp": "Uppercase code (cannot be changed after creation)",
+    "workerTypeDisplayName": "Display Name",
+    "workerTypeIcon": "Icon (Emoji)",
+    "workerTypeDisplayOrder": "Display Order",
+    "workerTypeDescription": "Description",
+    "workerTypeActive": "Active (Show in registration and requests)",
+    "workerTypeCode": "Code",
+    "noWorkerTypesFound": "No worker types found. Create your first worker type!",
+    "inactive": "Inactive",
+    "deactivate": "Deactivate",
+    "activate": "Activate"
   },
   "customer": {
     "title": "Customer Dashboard",

@@ -2825,7 +2825,7 @@ export default function AdminDashboard() {
       {activeTab === 'workerTypes' && (user?.superAdmin === true || user?.superAdmin === 'true') && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">🔧 Worker Type Management</h2>
+            <h2 className="text-2xl font-bold text-gray-800" lang={language}>🔧 {t('admin.workerTypeManagement')}</h2>
             <button
               onClick={() => {
                 setEditingWorkerType(null)
@@ -2841,64 +2841,69 @@ export default function AdminDashboard() {
               }}
               className="bg-purple-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-purple-600 transition-colors"
             >
-              + Add Worker Type
+              + {t('admin.addWorkerType')}
             </button>
           </div>
 
           {showWorkerTypeForm && (
             <div className="mb-6 bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
-              <h3 className="text-xl font-bold mb-4">{editingWorkerType ? 'Edit' : 'Add'} Worker Type</h3>
+              <h3 className="text-xl font-bold mb-4" lang={language}>{editingWorkerType ? t('admin.editWorkerType') : t('admin.addWorkerType')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Name (Code) *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.workerTypeNameCode')}</label>
                   <input
                     type="text"
                     value={workerTypeFormData.name}
                     onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, name: e.target.value.toUpperCase() })}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     placeholder="e.g., ELECTRICIAN"
                     disabled={!!editingWorkerType}
+                    lang={language}
                   />
-                  <p className="text-xs text-gray-500 mt-1">Uppercase code (cannot be changed after creation)</p>
+                  <p className="text-xs text-gray-500 mt-1" lang={language}>{t('admin.workerTypeNameCodeHelp')}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Name</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.workerTypeDisplayName')}</label>
                   <input
                     type="text"
                     value={workerTypeFormData.displayName}
                     onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, displayName: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     placeholder="e.g., Electrician"
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Icon (Emoji)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.workerTypeIcon')}</label>
                   <input
                     type="text"
                     value={workerTypeFormData.icon}
                     onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, icon: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     placeholder="e.g., ⚡"
                     maxLength={10}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Display Order</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.workerTypeDisplayOrder')}</label>
                   <input
                     type="number"
                     value={workerTypeFormData.displayOrder}
                     onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, displayOrder: parseInt(e.target.value) || 0 })}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    lang={language}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.workerTypeDescription')}</label>
                   <textarea
                     value={workerTypeFormData.description}
                     onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, description: e.target.value })}
-                    className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
+                    className="w-full px-3 sm:px-4 py-2 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                     rows={3}
                     placeholder="e.g., Electrical repairs, installations & maintenance"
+                    lang={language}
                   />
                 </div>
                 <div className="md:col-span-2">
@@ -2909,7 +2914,7 @@ export default function AdminDashboard() {
                       onChange={(e) => setWorkerTypeFormData({ ...workerTypeFormData, isActive: e.target.checked })}
                       className="w-5 h-5"
                     />
-                    <span className="text-sm font-medium text-gray-700">Active (Show in registration and requests)</span>
+                    <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.workerTypeActive')}</span>
                   </label>
                 </div>
               </div>
@@ -2917,8 +2922,9 @@ export default function AdminDashboard() {
                 <button
                   onClick={editingWorkerType ? handleUpdateWorkerType : handleCreateWorkerType}
                   className="flex-1 bg-purple-500 text-white py-2 rounded-lg font-semibold hover:bg-purple-600 transition-colors"
+                  lang={language}
                 >
-                  {editingWorkerType ? 'Update' : 'Create'} Worker Type
+                  {editingWorkerType ? t('admin.updateWorkerType') : t('admin.createWorkerType')}
                 </button>
                 <button
                   onClick={() => {
@@ -2934,8 +2940,9 @@ export default function AdminDashboard() {
                     })
                   }}
                   className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                  lang={language}
                 >
-                  Cancel
+                  {t('admin.cancel')}
                 </button>
               </div>
             </div>
@@ -2950,7 +2957,7 @@ export default function AdminDashboard() {
             <div className="space-y-4">
               {workerTypes.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
-                  <p>No worker types found. Create your first worker type!</p>
+                  <p lang={language}>{t('admin.noWorkerTypesFound')}</p>
                 </div>
               ) : (
                 workerTypes.map((lt) => (
@@ -2959,20 +2966,20 @@ export default function AdminDashboard() {
                       <div className="flex items-center gap-3">
                         <span className="text-3xl">{lt.icon || '🔧'}</span>
                         <div>
-                          <h3 className="text-lg font-bold text-gray-800">
+                          <h3 className="text-lg font-bold text-gray-800" lang={language}>
                             {lt.displayName || lt.name}
                           </h3>
-                          <p className="text-sm text-gray-500">Code: {lt.name}</p>
+                          <p className="text-sm text-gray-500" lang={language}>{t('admin.workerTypeCode')}: {lt.name}</p>
                           {lt.description && (
-                            <p className="text-gray-600 mt-1">{lt.description}</p>
+                            <p className="text-gray-600 mt-1" lang={language}>{lt.description}</p>
                           )}
                         </div>
                       </div>
                       <div className="flex flex-col items-end gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${lt.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}>
-                          {lt.isActive ? 'Active' : 'Inactive'}
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${lt.isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`} lang={language}>
+                          {lt.isActive ? t('admin.active') : t('admin.inactive')}
                         </span>
-                        <span className="text-xs text-gray-500">Order: {lt.displayOrder}</span>
+                        <span className="text-xs text-gray-500" lang={language}>{t('admin.order')}: {lt.displayOrder}</span>
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4">
@@ -2990,20 +2997,23 @@ export default function AdminDashboard() {
                           setShowWorkerTypeForm(true)
                         }}
                         className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                        lang={language}
                       >
-                        Edit
+                        {t('admin.editWorkerType')}
                       </button>
                       <button
                         onClick={() => handleToggleWorkerTypeActive(lt.id)}
                         className="flex-1 bg-yellow-500 text-white py-2 rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
+                        lang={language}
                       >
-                        {lt.isActive ? 'Deactivate' : 'Activate'}
+                        {lt.isActive ? t('admin.deactivate') : t('admin.activate')}
                       </button>
                       <button
                         onClick={() => handleDeleteWorkerType(lt.id)}
                         className="flex-1 bg-red-500 text-white py-2 rounded-lg font-semibold hover:bg-red-600 transition-colors"
+                        lang={language}
                       >
-                        Delete
+                        {t('admin.deleteWorkerType')}
                       </button>
                     </div>
                   </div>
