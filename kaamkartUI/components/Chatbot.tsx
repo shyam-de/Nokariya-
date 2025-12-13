@@ -41,6 +41,8 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const [currentFlow, setCurrentFlow] = useState<FlowType>('none')
   const [requestData, setRequestData] = useState<any>({})
   const [concernData, setConcernData] = useState<any>({})
+  const [conversationContext, setConversationContext] = useState<string[]>([])
+  const [retryCount, setRetryCount] = useState<{[key: string]: number}>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -79,7 +81,133 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     setTimeout(() => {
       addMessage(text, 'bot')
       setIsTyping(false)
+      // Add to conversation context
+      setConversationContext(prev => [...prev.slice(-4), `bot: ${text}`])
     }, delay)
+  }
+
+  // Natural language date parser
+  const parseNaturalDate = (input: string): string | null => {
+    const lower = input.toLowerCase().trim()
+    const today = new Date()
+    const tomorrow = new Date(today)
+    tomorrow.setDate(tomorrow.getDate() + 1)
+    const nextWeek = new Date(today)
+    nextWeek.setDate(nextWeek.getDate() + 7)
+    
+    // Handle relative dates
+    if (lower.includes('today') || lower.includes('अभी') || lower.includes('आज')) {
+      return formatDate(today)
+    }
+    if (lower.includes('tomorrow') || lower.includes('कल')) {
+      return formatDate(tomorrow)
+    }
+    if (lower.includes('next week') || lower.includes('अगले सप्ताह')) {
+      return formatDate(nextWeek)
+    }
+    
+    // Try to parse YYYY-MM-DD format
+    const dateMatch = input.match(/(\d{4})-(\d{1,2})-(\d{1,2})/)
+    if (dateMatch) {
+      const year = parseInt(dateMatch[1])
+      const month = parseInt(dateMatch[2])
+      const day = parseInt(dateMatch[3])
+      const date = new Date(year, month - 1, day)
+      if (!isNaN(date.getTime())) {
+        return formatDate(date)
+      }
+    }
+    
+    // Try DD/MM/YYYY or DD-MM-YYYY
+    const altDateMatch = input.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/)
+    if (altDateMatch) {
+      const day = parseInt(altDateMatch[1])
+      const month = parseInt(altDateMatch[2])
+      const year = parseInt(altDateMatch[3])
+      const date = new Date(year, month - 1, day)
+      if (!isNaN(date.getTime())) {
+        return formatDate(date)
+      }
+    }
+    
+    return null
+  }
+
+  const formatDate = (date: Date): string => {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+
+  // Intelligent intent detection
+  const detectIntent = (text: string): string => {
+    const lower = text.toLowerCase()
+    
+    // Greetings
+    if (lower.match(/\b(hi|hello|hey|namaste|namaskar|good morning|good afternoon|good evening)\b/)) {
+      return 'greeting'
+    }
+    
+    // Request creation
+    if (lower.match(/\b(create|new|post|need|want|require|looking for|find|book|hire|get)\b.*\b(request|work|job|service|worker|help|assistant|person)\b/)) {
+      return 'create_request'
+    }
+    
+    // Concern raising
+    if (lower.match(/\b(concern|issue|problem|complaint|report|wrong|bad|not good|disappointed|unhappy)\b/)) {
+      return 'raise_concern'
+    }
+    
+    // Status check
+    if (lower.match(/\b(status|update|progress|where|what|how|when)\b.*\b(request|work|job|application)\b/)) {
+      return 'check_status'
+    }
+    
+    // Help
+    if (lower.match(/\b(help|how|what|explain|guide|tutorial|assist|support)\b/)) {
+      return 'help'
+    }
+    
+    // About
+    if (lower.match(/\b(what|about|tell|explain|information|info)\b.*\b(kaamkart|platform|service|company)\b/)) {
+      return 'about'
+    }
+    
+    // Cancel/Stop
+    if (lower.match(/\b(cancel|stop|no|nevermind|forget|ignore|skip)\b/)) {
+      return 'cancel'
+    }
+    
+    // Confirmation
+    if (lower.match(/\b(yes|yeah|yep|sure|ok|okay|confirm|proceed|continue|go ahead|हाँ|ठीक)\b/)) {
+      return 'confirm'
+    }
+    
+    return 'unknown'
+  }
+
+  // Generate empathetic response
+  const getEmpatheticResponse = (situation: string): string => {
+    const responses: {[key: string]: string[]} = {
+      error: [
+        "I understand that can be frustrating. Let me help you with that.",
+        "No worries! Let's try a different approach.",
+        "That's okay, let me guide you through this step by step."
+      ],
+      success: [
+        "Great! That's perfect.",
+        "Excellent! Moving forward.",
+        "Perfect! Let's continue."
+      ],
+      confusion: [
+        "I see you might be unsure. Let me clarify that for you.",
+        "No problem! Let me explain that better.",
+        "I understand the confusion. Here's what I meant..."
+      ]
+    }
+    const options = responses[situation] || responses.error
+    return options[Math.floor(Math.random() * options.length)]
   }
 
   const showQuickReplies = () => {
@@ -206,7 +334,16 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const startRequestFlow = () => {
     setCurrentFlow('request')
     setRequestData({})
-    addBotMessage(t('chatbot.requestFlowStart') || 'Great! Let\'s create a request. What type of work do you need? (e.g., Plumbing, Electrical, Cleaning, Construction)')
+    setRetryCount({})
+    const greetings = [
+      "Great! I'd be happy to help you create a request. What type of work do you need?",
+      "Perfect! Let's get started. What kind of work are you looking for?",
+      "Awesome! To help you find the right workers, what type of work do you need done?"
+    ]
+    const examples = language === 'hi' 
+      ? "उदाहरण: प्लंबिंग, इलेक्ट्रिकल, क्लीनिंग, कंस्ट्रक्शन"
+      : "For example: Plumbing, Electrical, Cleaning, Construction, Painting, etc."
+    addBotMessage(`${greetings[Math.floor(Math.random() * greetings.length)]}\n\n${examples}`)
   }
 
   const startConcernFlow = () => {
@@ -220,8 +357,17 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     
     switch (step) {
       case 'workType':
+        if (userInput.trim().length < 2) {
+          addBotMessage(getEmpatheticResponse('confusion') + " Could you please provide more details about the type of work? For example: 'plumbing', 'electrical work', 'house cleaning', etc.")
+          return
+        }
         setRequestData({ ...requestData, workType: userInput })
-        addBotMessage(t('chatbot.requestFlowWorkerTypes') || 'What type of workers do you need? (e.g., Plumber, Electrician, Cleaner). You can mention multiple types separated by commas.')
+        const workerTypePrompts = [
+          "Got it! What type of workers do you need for this work?",
+          "Perfect! Now, which workers would you like?",
+          "Great! What kind of workers are you looking for?"
+        ]
+        addBotMessage(`${workerTypePrompts[Math.floor(Math.random() * workerTypePrompts.length)]}\n\nYou can mention multiple types like: "Plumber, Electrician" or just one type.`)
         break
 
       case 'workerTypes':
@@ -231,28 +377,105 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         break
 
       case 'workerCount':
-        // Parse worker counts
+        // Parse worker counts more intelligently
+        const countMatch = userInput.match(/(\d+)\s*([a-zA-Z\s]+)/g)
+        if (!countMatch && !userInput.match(/\d+/)) {
+          addBotMessage(getEmpatheticResponse('confusion') + " I need to know how many workers you need. For example: '2 plumbers' or '1 electrician and 2 cleaners'. Could you provide that?")
+          return
+        }
         setRequestData({ ...requestData, workerCountText: userInput })
-        addBotMessage(t('chatbot.requestFlowDates') || 'When do you need the work done?\n\nPlease provide:\n- Start date (YYYY-MM-DD format, e.g., 2024-12-20)\n- End date (YYYY-MM-DD format, e.g., 2024-12-25)\n\nFormat: StartDate, EndDate')
+        const datePrompts = [
+          "Perfect! When do you need this work done?",
+          "Great! What are your preferred dates?",
+          "Excellent! When would you like the work to start and end?"
+        ]
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nYou can say:\n• "Today to tomorrow"\n• "2024-12-20 to 2024-12-25"\n• "Next week"\n• Or any date format you prefer!`)
         break
 
       case 'dates':
-        const dates = userInput.split(',').map(d => d.trim())
-        if (dates.length === 2) {
-          setRequestData({ ...requestData, startDate: dates[0], endDate: dates[1] })
-          addBotMessage(t('chatbot.requestFlowLocation') || 'Please provide your location. You can either:\n1. Type "use current location" to use your GPS location\n2. Type your address (State, City, Pin Code, Area)')
+        // Try natural language parsing first
+        let startDate: string | null = null
+        let endDate: string | null = null
+        
+        // Try to parse natural language dates
+        const naturalStart = parseNaturalDate(userInput)
+        if (naturalStart) {
+          startDate = naturalStart
+          // Default end date to 7 days after start
+          const end = new Date(naturalStart)
+          end.setDate(end.getDate() + 7)
+          endDate = formatDate(end)
         } else {
-          addBotMessage(t('chatbot.requestFlowDatesError') || 'Please provide both start and end dates in format: YYYY-MM-DD, YYYY-MM-DD\n\nExample: 2024-12-20, 2024-12-25')
+          // Try comma-separated dates
+          const dates = userInput.split(',').map(d => d.trim())
+          if (dates.length >= 2) {
+            startDate = parseNaturalDate(dates[0]) || dates[0]
+            endDate = parseNaturalDate(dates[1]) || dates[1]
+          } else if (dates.length === 1) {
+            startDate = parseNaturalDate(dates[0]) || dates[0]
+            // If only one date provided, ask for end date
+            if (startDate && !endDate) {
+              addBotMessage(getEmpatheticResponse('confusion') + ` I see you mentioned ${startDate} as the start date. When would you like the work to end?`)
+              return
+            }
+          } else {
+            // Try to extract dates from the text
+            const datePattern = /(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/g
+            const foundDates = userInput.match(datePattern)
+            if (foundDates && foundDates.length >= 2) {
+              startDate = parseNaturalDate(foundDates[0]) || foundDates[0]
+              endDate = parseNaturalDate(foundDates[1]) || foundDates[1]
+            } else if (foundDates && foundDates.length === 1) {
+              startDate = parseNaturalDate(foundDates[0]) || foundDates[0]
+              addBotMessage(getEmpatheticResponse('confusion') + ` I found a start date: ${startDate}. When would you like the work to end?`)
+              return
+            }
+          }
+        }
+        
+        if (startDate && endDate) {
+          // Validate dates
+          const start = new Date(startDate)
+          const end = new Date(endDate)
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            addBotMessage(getEmpatheticResponse('error') + " I couldn't understand those dates. Could you try again? For example: '2024-12-20 to 2024-12-25' or 'today to tomorrow'")
+            return
+          }
+          if (end < start) {
+            addBotMessage(getEmpatheticResponse('confusion') + " It looks like the end date is before the start date. Could you check and provide the correct dates?")
+            return
+          }
+          
+          setRequestData({ ...requestData, startDate, endDate })
+          const locationPrompts = [
+            "Perfect! Now, where do you need the work done?",
+            "Great! What's the location for this work?",
+            "Excellent! Where should the workers come?"
+          ]
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nYou can:\n• Type "use current location" or "my location" for GPS\n• Or type your address`)
+        } else {
+          const stepKey = 'dates'
+          const count = (retryCount[stepKey] || 0) + 1
+          setRetryCount({ ...retryCount, [stepKey]: count })
+          
+          if (count === 1) {
+            addBotMessage(getEmpatheticResponse('confusion') + " I need both a start date and end date. You can say:\n• '2024-12-20 to 2024-12-25'\n• 'Today to tomorrow'\n• 'Next week'\n\nWhat dates work for you?")
+          } else {
+            addBotMessage("Let me help you with the format. Please provide dates like:\n• Start: 2024-12-20, End: 2024-12-25\n• Or: 'today to next week'\n\nWhat are your preferred dates?")
+          }
         }
         break
 
       case 'location':
-        if (userInput.toLowerCase().includes('current') || userInput.toLowerCase().includes('gps') || userInput.toLowerCase().includes('location')) {
+        const lowerLocation = userInput.toLowerCase()
+        if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here')) {
           setRequestData({ ...requestData, useCurrentLocation: true, optionalFieldsAsked: false })
-          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- State (e.g., "Maharashtra")\n- City (e.g., "Mumbai")\n- Pin Code (e.g., "400001")\n\nOr type "skip" to proceed without optional details')
+          addBotMessage("Perfect! I'll use your current location. Would you like to add any additional details to help workers find you easily?\n\nOptional details:\n• Landmark (e.g., 'Near City Mall')\n• Area (e.g., 'Downtown')\n• State, City, Pin Code\n\nOr just type 'skip' to continue!")
+        } else if (userInput.trim().length < 5) {
+          addBotMessage(getEmpatheticResponse('confusion') + " That seems too short for an address. Could you provide a bit more detail? For example: '123 Main Street, Mumbai' or type 'use current location' for GPS.")
         } else {
           setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
-          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- State (e.g., "Maharashtra")\n- City (e.g., "Mumbai")\n- Pin Code (e.g., "400001")\n\nOr type "skip" to proceed without optional details')
+          addBotMessage("Great! I've noted your location. Would you like to add any additional details to help workers find you?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area, State, City, Pin Code\n\nOr type 'skip' to proceed!")
         }
         break
 
@@ -529,21 +752,80 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     }, 2000)
   }
 
+  const checkRequestStatus = async () => {
+    if (!user || user.role?.toLowerCase() !== 'customer') {
+      addBotMessage("To check your request status, you need to be logged in as a customer. Would you like to login?")
+      return
+    }
+
+    try {
+      addBotMessage("Let me check your requests for you...")
+      const response = await apiClient.get('/requests/my-requests')
+      const requests = response.data || []
+      
+      if (requests.length === 0) {
+        addBotMessage("You don't have any requests yet. Would you like to create one? Type 'create request' to get started!")
+      } else {
+        const pending = requests.filter((r: any) => r.status === 'PENDING_ADMIN_APPROVAL' || r.status === 'PENDING').length
+        const active = requests.filter((r: any) => r.status === 'NOTIFIED' || r.status === 'CONFIRMED' || r.status === 'DEPLOYED').length
+        const completed = requests.filter((r: any) => r.status === 'COMPLETED').length
+        
+        const statusText = `Here's your request status:\n\n📋 Total Requests: ${requests.length}\n⏳ Pending: ${pending}\n🔄 Active: ${active}\n✅ Completed: ${completed}\n\nVisit your dashboard to see detailed information about each request!`
+        addBotMessage(statusText)
+      }
+    } catch (error: any) {
+      addBotMessage("I couldn't fetch your requests right now. Please try again later or visit your dashboard directly.")
+    } finally {
+      setTimeout(() => showQuickReplies(), 2000)
+    }
+  }
+
   const handleUserMessage = async (text: string) => {
+    // Add user message to context
+    setConversationContext(prev => [...prev.slice(-4), `user: ${text}`])
+    
     if (currentFlow === 'request') {
       await handleRequestFlow(text)
     } else if (currentFlow === 'concern') {
       await handleConcernFlow(text)
     } else {
-      // Simple intent detection
+      // Intelligent intent detection
+      const intent = detectIntent(text)
       const lowerText = text.toLowerCase()
       
-      if (lowerText.includes('hello') || lowerText.includes('hi') || lowerText.includes('hey') || lowerText.includes('नमस्ते')) {
-        addBotMessage(t('chatbot.greeting') || 'Hello! How can I help you today?')
+      if (intent === 'greeting' || lowerText.match(/\b(hello|hi|hey|namaste|namaskar)\b/)) {
+        const greetings = [
+          "Hello! How can I assist you today?",
+          "Hi there! What can I help you with?",
+          "Hey! I'm here to help. What do you need?",
+          "Namaste! How may I assist you?"
+        ]
+        addBotMessage(greetings[Math.floor(Math.random() * greetings.length)])
         setTimeout(() => showQuickReplies(), 1000)
-      } else if (lowerText.includes('help') || lowerText.includes('मदद')) {
+      } else if (intent === 'create_request' || lowerText.match(/\b(create|new|post|need|want|require|looking for)\b.*\b(request|work|job|service|worker)\b/)) {
+        if (!user || user.role?.toLowerCase() !== 'customer') {
+          addBotMessage("I'd love to help you create a request! However, you need to be logged in as a customer. Would you like to login or sign up?")
+          setTimeout(() => {
+            addBotMessage("Type 'login' to sign in or 'sign up' to create an account!")
+          }, 1000)
+        } else {
+          startRequestFlow()
+        }
+      } else if (intent === 'raise_concern' || lowerText.match(/\b(concern|issue|problem|complaint|report)\b/)) {
+        if (!user || (user.role?.toLowerCase() !== 'customer' && user.role?.toLowerCase() !== 'worker')) {
+          addBotMessage("I can help you raise a concern! You'll need to be logged in as a customer or worker. Would you like to login?")
+        } else {
+          startConcernFlow()
+        }
+      } else if (intent === 'check_status' || lowerText.match(/\b(status|update|progress|where|what)\b.*\b(request|work|job)\b/)) {
+        if (!user || user.role?.toLowerCase() !== 'customer') {
+          addBotMessage("To check your request status, you need to be logged in as a customer. Would you like to login?")
+        } else {
+          checkRequestStatus()
+        }
+      } else if (intent === 'help' || lowerText.includes('help') || lowerText.includes('मदद')) {
         showHelp()
-      } else if (lowerText.includes('about') || lowerText.includes('क्या है') || lowerText.includes('कामकार्ट')) {
+      } else if (intent === 'about' || lowerText.includes('about') || lowerText.includes('क्या है') || lowerText.includes('कामकार्ट')) {
         showAboutKaamKart()
       } else if ((lowerText.includes('how') && lowerText.includes('work')) || lowerText.includes('कैसे काम')) {
         showHowItWorks()
