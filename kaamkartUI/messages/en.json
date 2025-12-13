@@ -675,6 +675,8 @@
     "enterPinCode": "Please provide your 6-digit pin code (required):",
     "useCurrentLocation": "Use Current Location",
     "addOptionalDetails": "Would you like to add any optional details?",
+    "usingCurrentLocation": "I'll use your current location. However, I still need your 6-digit pin code for verification.\n\nPlease provide your pin code:",
+    "addressNotedNeedPinCode": "I've noted your address. However, I need your 6-digit pin code (this is required).\n\nPlease provide your pin code:",
     "quickReplyPendingRequests": "Pending requests",
     "quickReplyManageWorkers": "Manage workers",
     "helpAdmin": "As an admin, you can:\n\n1. Approve/reject customer requests\n2. Manage worker verifications\n3. Deploy workers to jobs\n4. Manage concerns and issues\n5. View statistics and reports\n6. Manage worker types and advertisements\n\nType \"view stats\" for statistics or \"pending requests\" to see pending items.",

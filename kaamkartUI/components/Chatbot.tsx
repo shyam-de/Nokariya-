@@ -877,7 +877,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             "Great! What's the location for this work? (Optional)",
             "Excellent! Where should the workers come? (Optional)"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nYou can:\n• Type "use current location" or "my location" for GPS\n• Or type your address\n• Or type 'skip' to continue without location`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
           break
         }
         // Try natural language parsing first
@@ -939,7 +944,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             "Great! Where do you need the work done?",
             "Excellent! Where should the workers come?"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
         } else {
           const stepKey = 'dates'
           const count = (retryCount[stepKey] || 0) + 1
@@ -989,16 +999,31 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             setIsTyping(false)
             addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Please provide a valid 6-digit pin code.")
           }
-        } else if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here')) {
+        } else if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here') || lowerLocation.includes('use current')) {
           // If using current location, still need pin code
           setRequestData({ ...requestData, useCurrentLocation: true })
-          addBotMessage("I'll use your current location. However, I still need your 6-digit pin code for verification.\n\nPlease provide your pin code:")
+          addBotMessage(t('chatbot.usingCurrentLocation') || "I'll use your current location. However, I still need your 6-digit pin code for verification.\n\nPlease provide your pin code:", 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.skip') || 'Skip'
+            ])
+          }, 500)
         } else if (userInput.trim().length < 5) {
-          addBotMessage(getEmpatheticResponse('confusion') + " Please provide a 6-digit pin code. This is required.\n\nYou can:\n• Type your 6-digit pin code (e.g., '560001')\n• Or type 'use current location' for GPS (you'll still need to provide pin code)")
+          addBotMessage(t('chatbot.enterPinCode') || "Please provide a 6-digit pin code. This is required.", 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
         } else {
           // User provided address but no pin code - ask for pin code
           setRequestData({ ...requestData, location: userInput, useCurrentLocation: false })
-          addBotMessage("I've noted your address. However, I need your 6-digit pin code (this is required).\n\nPlease provide your pin code:")
+          addBotMessage(t('chatbot.addressNotedNeedPinCode') || "I've noted your address. However, I need your 6-digit pin code (this is required).\n\nPlease provide your pin code:", 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
         }
         break
 
@@ -1041,7 +1066,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             }
           } else {
             // Pin code still missing
-            addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
+            addBotMessage(t('chatbot.enterPinCode') || "I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:", 300)
+            setTimeout(() => {
+              addMessage('', 'bot', [
+                t('chatbot.useCurrentLocation') || 'Use Current Location'
+              ])
+            }, 500)
             return
           }
         }
