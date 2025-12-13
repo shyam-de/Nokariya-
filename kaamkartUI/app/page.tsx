@@ -399,36 +399,37 @@ export default function Home() {
 
       {/* Top Slider Banner - Below Navbar */}
       <div className="relative z-30 bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 text-white overflow-hidden mt-0">
-        <div className="relative h-12 md:h-14 flex items-center">
+        <div className="relative h-12 sm:h-13 md:h-14 flex items-center overflow-hidden">
           {/* Slider Container */}
-          <div className="flex w-full h-full relative">
+          <div className="flex w-full h-full relative overflow-hidden">
             {allSliderItems.map((item, index) => {
               const content = (
                 <div
-                  className={`absolute inset-0 flex items-center justify-center gap-3 px-4 transition-all duration-500 ease-in-out ${
+                  key={index}
+                  className={`absolute inset-0 flex items-center justify-center gap-2 sm:gap-3 px-2 sm:px-4 transition-all duration-500 ease-in-out will-change-transform ${
                     index === currentSlide
-                      ? 'opacity-100 translate-x-0'
+                      ? 'opacity-100 translate-x-0 z-10'
                       : index < currentSlide
-                      ? 'opacity-0 -translate-x-full'
-                      : 'opacity-0 translate-x-full'
+                      ? 'opacity-0 -translate-x-full z-0 pointer-events-none'
+                      : 'opacity-0 translate-x-full z-0 pointer-events-none'
                   }`}
                 >
-                  <span className={`text-2xl md:text-3xl ${item.isAd ? 'animate-pulse' : 'animate-bounce-slow'}`}>
+                  <span className={`text-xl sm:text-2xl md:text-3xl flex-shrink-0 ${item.isAd ? 'animate-pulse' : 'animate-bounce-slow'}`}>
                     {item.icon}
                   </span>
-                  <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4">
-                    <span className={`font-bold text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} whitespace-nowrap`}>
+                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 md:gap-4 min-w-0 flex-1">
+                    <span className={`font-bold text-xs sm:text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} whitespace-nowrap truncate`}>
                       {item.title}
                     </span>
                     {item.description && (
                       <>
-                        <span className="hidden md:inline text-white/80">•</span>
-                        <span className="text-xs md:text-sm text-white/90 text-center md:text-left">{item.description}</span>
+                        <span className="hidden sm:inline text-white/80">•</span>
+                        <span className="text-[10px] sm:text-xs md:text-sm text-white/90 text-center sm:text-left line-clamp-1">{item.description}</span>
                       </>
                     )}
                   </div>
                   {item.isAd && (
-                    <span className="ml-2 px-2 py-1 bg-yellow-400 text-yellow-900 text-xs font-bold rounded animate-pulse">
+                    <span className="ml-1 sm:ml-2 px-1.5 sm:px-2 py-0.5 sm:py-1 bg-yellow-400 text-yellow-900 text-[10px] sm:text-xs font-bold rounded animate-pulse flex-shrink-0">
                       AD
                     </span>
                   )}
@@ -436,23 +437,23 @@ export default function Home() {
               )
 
               return item.isAd && item.link ? (
-                <Link key={index} href={item.link} className="w-full h-full">
+                <Link key={`link-${index}`} href={item.link} className="w-full h-full absolute inset-0 z-10">
                   {content}
                 </Link>
               ) : (
-                <div key={index}>{content}</div>
+                <div key={`div-${index}`} className="absolute inset-0 w-full h-full">{content}</div>
               )
             })}
           </div>
           
           {/* Slider Indicators */}
-          <div className="absolute right-4 flex gap-2">
+          <div className="absolute right-2 sm:right-4 flex gap-1 sm:gap-2 z-10">
             {allSliderItems.map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentSlide(index)}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  index === currentSlide ? 'w-6 bg-white' : 'w-2 bg-white/50'
+                className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
+                  index === currentSlide ? 'w-4 sm:w-6 bg-white' : 'w-1.5 sm:w-2 bg-white/50'
                 }`}
                 aria-label={`Go to slide ${index + 1}`}
               />
@@ -475,10 +476,10 @@ export default function Home() {
         
         return (
           <div className="relative z-20 bg-gradient-to-r from-yellow-50 via-orange-50 to-red-50 border-b border-yellow-200">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4">
               <div className="relative flex items-center justify-center">
                 <div
-                  className="relative flex items-center gap-3 md:gap-4 px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg bg-white shadow-md max-w-4xl w-full"
+                  className="relative flex items-center gap-2 sm:gap-3 md:gap-4 px-3 sm:px-4 py-2 rounded-lg transition-all duration-300 hover:shadow-lg bg-white shadow-md max-w-4xl w-full"
                 >
                   {/* Close/Dismiss Button */}
                   <button
@@ -910,9 +911,9 @@ export default function Home() {
           <div className="absolute bottom-20 left-20 w-4 h-4 bg-white/20 rounded-full animate-float-slow animation-delay-2000"></div>
           <div className="absolute bottom-10 right-10 w-3 h-3 bg-white/30 rounded-full animate-float-delayed animation-delay-4000"></div>
           <div className="relative z-10">
-            <h2 className="text-4xl md:text-5xl font-bold mb-4">Ready to Get Started?</h2>
-            <p className="text-xl md:text-2xl mb-8 opacity-95 max-w-2xl mx-auto">
-              Join thousands of customers and workers already using KaamKart to connect and get work done
+            <h2 className="text-4xl md:text-5xl font-bold mb-4" lang={language}>{t('home.readyToGetStarted')}</h2>
+            <p className="text-xl md:text-2xl mb-8 opacity-95 max-w-2xl mx-auto" lang={language}>
+              {t('home.joinThousands')}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {user ? (

@@ -1884,8 +1884,8 @@ export default function AdminDashboard() {
           </div>
         ) : (activeTab === 'pending' || activeTab === 'active' || activeTab === 'history') ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              {activeTab === 'pending' ? 'Pending Approval Requests' : activeTab === 'active' ? 'Active Requests (Need Deployment)' : 'All Request'}
+            <h2 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>
+              {activeTab === 'pending' ? t('admin.pendingApprovalRequests') : activeTab === 'active' ? t('admin.activeRequestsNeedDeployment') : t('admin.allRequests')}
             </h2>
             
             {isCurrentlyLoading ? (
@@ -2325,7 +2325,7 @@ export default function AdminDashboard() {
       {activeTab === 'successStories' && (user?.superAdmin === true || user?.superAdmin === 'true') && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">⭐ Success Stories Management</h2>
+            <h2 className="text-2xl font-bold text-gray-800" lang={language}>⭐ {t('admin.successStoriesManagement')}</h2>
             <button
               onClick={() => {
                 setEditingStory(null)
@@ -2590,7 +2590,7 @@ export default function AdminDashboard() {
       {activeTab === 'advertisements' && (user?.superAdmin === true || user?.superAdmin === 'true') && (
         <div className="bg-white rounded-xl shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-800">📢 Advertisement Management</h2>
+            <h2 className="text-2xl font-bold text-gray-800" lang={language}>📢 {t('admin.advertisementManagement')}</h2>
             <button
               onClick={() => {
                 setEditingAd(null)

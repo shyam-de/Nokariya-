@@ -838,18 +838,45 @@ export default function CustomerDashboard() {
                             type="number"
                             min="1"
                             max="999"
+                            step="1"
                             value={req.numberOfWorkers || 1}
                             onChange={(e) => {
-                              const val = e.target.value === '' ? '' : parseInt(e.target.value)
-                              const numValue = val === '' ? 1 : (isNaN(val as number) ? 1 : Math.max(1, val as number))
-                              const updated = [...formData.workerTypeRequirements]
-                              updated[index] = {
-                                ...updated[index],
-                                numberOfWorkers: numValue
+                              const inputValue = e.target.value
+                              // Allow empty string during typing
+                              if (inputValue === '') {
+                                const updated = [...formData.workerTypeRequirements]
+                                updated[index] = {
+                                  ...updated[index],
+                                  numberOfWorkers: 1
+                                }
+                                setFormData({ ...formData, workerTypeRequirements: updated })
+                                return
                               }
-                              setFormData({ ...formData, workerTypeRequirements: updated })
+                              const parsedValue = parseInt(inputValue, 10)
+                              if (!isNaN(parsedValue)) {
+                                const numValue = Math.max(1, Math.min(999, parsedValue))
+                                const updated = [...formData.workerTypeRequirements]
+                                updated[index] = {
+                                  ...updated[index],
+                                  numberOfWorkers: numValue
+                                }
+                                setFormData({ ...formData, workerTypeRequirements: updated })
+                              }
                             }}
-                            className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm sm:text-base"
+                            onBlur={(e) => {
+                              // Ensure value is at least 1 on blur
+                              const value = parseInt(e.target.value, 10)
+                              if (isNaN(value) || value < 1) {
+                                const updated = [...formData.workerTypeRequirements]
+                                updated[index] = {
+                                  ...updated[index],
+                                  numberOfWorkers: 1
+                                }
+                                setFormData({ ...formData, workerTypeRequirements: updated })
+                              }
+                            }}
+                            className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none"
+                            style={{ WebkitAppearance: 'textfield', MozAppearance: 'textfield' }}
                             placeholder={t('customer.numberOfWorkersPlaceholder')}
                             required
                             lang={language}
