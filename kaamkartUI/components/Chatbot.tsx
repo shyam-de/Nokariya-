@@ -1364,22 +1364,16 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         ]
         addBotMessage(greetings[Math.floor(Math.random() * greetings.length)])
         setTimeout(() => showQuickReplies(), 1000)
-      } else if ((lowerText.includes('why') && (lowerText.includes('accept') || lowerText.includes('available')) && lowerText.includes('request')) || 
-                 (lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('accept'))) {
-        // Handle worker FAQ questions first before create_request intent
-        if (lowerText.includes('accept') && lowerText.includes('request')) {
-          if (!user || user.role?.toLowerCase() !== 'worker') {
-            addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to accept new requests.')
-          } else {
-            addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
-          }
-        } else if (lowerText.includes('available')) {
-          if (!user || user.role?.toLowerCase() !== 'worker') {
-            addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to make yourself available.')
-          } else {
-            addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
-          }
-        }
+      } else if ((lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('accept')) ||
+                 (lowerText.includes('why') && lowerText.includes('not') && lowerText.includes('able') && lowerText.includes('accept'))) {
+        // Handle worker FAQ: Why unable to accept new request?
+        addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+        setTimeout(() => showQuickReplies(), 2000)
+      } else if ((lowerText.includes('why') && lowerText.includes('not') && lowerText.includes('able') && lowerText.includes('available')) ||
+                 (lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('available'))) {
+        // Handle worker FAQ: Why not able to make available?
+        addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+        setTimeout(() => showQuickReplies(), 2000)
       } else if (intent === 'create_request' || lowerText.match(/\b(create|new|post|need|want|require|looking for)\b.*\b(request|work|job|service|worker)\b/)) {
         if (!user || user.role?.toLowerCase() !== 'customer') {
           addBotMessage("I'd love to help you create a request! However, you need to be logged in as a customer. Would you like to login or sign up?")
