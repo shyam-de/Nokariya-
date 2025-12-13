@@ -297,9 +297,12 @@ public class AdminService {
         notificationData.put("startDate", finalRequest.getStartDate() != null ? finalRequest.getStartDate().toString() : null);
         notificationData.put("endDate", finalRequest.getEndDate() != null ? finalRequest.getEndDate().toString() : null);
         notificationData.put("location", finalRequest.getLocation());
+        notificationData.put("requestLatitude", requestLat);
+        notificationData.put("requestLongitude", requestLon);
         notificationData.put("customerId", finalRequest.getCustomer().getId());
         notificationData.put("customerName", finalRequest.getCustomer().getName());
         notificationData.put("message", "New work request available in your area!");
+        notificationData.put("radiusLimitKm", WORKER_NOTIFICATION_RADIUS_KM);
 
         // Get list of workers who are already deployed during this request's date range
         // This includes both deployed workers and confirmed workers (who are committed to work)
@@ -580,39 +583,73 @@ public class AdminService {
                 }
                 
                 // CRITICAL: Final distance check before sending notification
-                // Double-check that worker is within 20km radius
-                double finalDistance = wd.getDistance();
-                
-                // Validate distance is valid
-                if (Double.isNaN(finalDistance) || Double.isInfinite(finalDistance) || finalDistance == Double.MAX_VALUE) {
-                    logger.error("🚫🚫🚫 INVALID DISTANCE: Worker {} (ID: {}, Email: {}) has invalid distance value: {} - NOTIFICATION BLOCKED!", 
-                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalDistance);
+                // RECALCULATE distance from fresh data to ensure accuracy
+                if (worker.getCurrentLocation() == null || worker.getCurrentLocation().getLatitude() == null || 
+                    worker.getCurrentLocation().getLongitude() == null) {
+                    logger.error("🚫🚫🚫 NO LOCATION: Worker {} (ID: {}, Email: {}) has no location - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail);
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
+                double workerLat = worker.getCurrentLocation().getLatitude();
+                double workerLon = worker.getCurrentLocation().getLongitude();
+                
+                // Recalculate distance from fresh coordinates
+                double recalculatedDistance = calculateDistance(requestLat, requestLon, workerLat, workerLon);
+                
+                // Validate recalculated distance
+                if (Double.isNaN(recalculatedDistance) || Double.isInfinite(recalculatedDistance)) {
+                    logger.error("🚫🚫🚫 INVALID RECALCULATED DISTANCE: Worker {} (ID: {}, Email: {}) - result: {} - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, recalculatedDistance);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                if (recalculatedDistance < 0) {
+                    logger.error("🚫🚫🚫 NEGATIVE RECALCULATED DISTANCE: Worker {} (ID: {}, Email: {}) - result: {} - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, recalculatedDistance);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                // CRITICAL: Final check - worker MUST be within 20km radius
+                if (recalculatedDistance > WORKER_NOTIFICATION_RADIUS_KM) {
+                    logger.error("🚫🚫🚫 FINAL DISTANCE CHECK FAILED: Worker {} (ID: {}, Email: {}) is {} km away (exceeds {} km limit) - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
+                            String.format("%.2f", recalculatedDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                    logger.error("   Request location: lat={}, lon={}", requestLat, requestLon);
+                    logger.error("   Worker location: lat={}, lon={}", workerLat, workerLon);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                // Use recalculated distance for logging
+                double finalDistance = recalculatedDistance;
+                
+                // CRITICAL ASSERTION: Worker MUST be within radius
                 if (finalDistance > WORKER_NOTIFICATION_RADIUS_KM) {
-                    logger.error("🚫🚫🚫 DISTANCE CHECK FAILED: Worker {} (ID: {}, Email: {}) is {} km away (exceeds {} km limit) - NOTIFICATION BLOCKED!", 
+                    logger.error("🚨🚨🚨 CRITICAL BUG DETECTED: Worker {} (ID: {}, Email: {}) passed all checks but distance {} km exceeds {} km limit!", 
                             worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
                             String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
-                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                    logger.error("   This should NEVER happen. Request location: lat={}, lon={}", requestLat, requestLon);
+                    logger.error("   Worker location: lat={}, lon={}", workerLat, workerLon);
+                    continue; // DO NOT SEND - This is a critical bug if we reach here
                 }
                 
-                // Additional validation: Ensure distance is not negative (shouldn't happen, but safety check)
-                if (finalDistance < 0) {
-                    logger.error("🚫🚫🚫 NEGATIVE DISTANCE: Worker {} (ID: {}, Email: {}) has negative distance: {} - NOTIFICATION BLOCKED!", 
-                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalDistance);
-                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
-                }
+                // Add distance to notification payload for frontend verification
+                Map<String, Object> workerNotificationData = new HashMap<>(notificationData);
+                workerNotificationData.put("distanceKm", String.format("%.2f", finalDistance));
+                workerNotificationData.put("workerLatitude", workerLat);
+                workerNotificationData.put("workerLongitude", workerLon);
                 
                 // Final safety check - log before sending notification
                 logger.info("✅ SENDING NOTIFICATION to worker {} (ID: {}, Email: {}) for request {} (dates: {} to {}). Distance: {} km (within {} km limit)", 
                         worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalRequest.getId(),
                         finalRequest.getStartDate(), finalRequest.getEndDate(), 
                         String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                logger.info("   Request: lat={}, lon={} | Worker: lat={}, lon={}", 
+                        requestLat, requestLon, workerLat, workerLon);
                 
                 messagingTemplate.convertAndSend(
                         "/topic/worker/" + worker.getUser().getId(),
-                        notificationData
+                        workerNotificationData
                 );
                 notifiedCount++;
                 logger.info("✓✓✓ NOTIFIED worker: {} (ID: {}, Email: {}) for request: {} at distance: {} km", 
