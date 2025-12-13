@@ -1,68 +1,63 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Gradient -->
-    <linearGradient id="handshakeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Brand gradient -->
+    <linearGradient id="brandGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
     </linearGradient>
+    <!-- Accent gradient -->
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
+    </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="30" cy="30" r="28" fill="url(#handshakeGradient)"/>
+  <!-- Card/Badge shape - represents "Kart" -->
+  <rect x="6" y="6" width="48" height="48" rx="12" fill="url(#brandGrad)"/>
   
-  <!-- Multiple handshakes at the top -->
-  <g transform="translate(30, 18)">
-    <!-- First handshake (left) -->
-    <g transform="translate(-8, 0)">
-      <!-- Left hand -->
-      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Right hand -->
-      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Connection/grip -->
-      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
+  <!-- Inner border for depth -->
+  <rect x="10" y="10" width="40" height="40" rx="8" fill="none" stroke="white" stroke-width="1.5" opacity="0.2"/>
+  
+  <!-- Main design: Double K forming a connection bridge -->
+  <g transform="translate(30, 30)">
+    <!-- Shared center vertical - represents connection point -->
+    <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    
+    <!-- Left K - represents Worker -->
+    <g>
+      <!-- Top arm -->
+      <line x1="0" y1="-6" x2="-8" y2="-12" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Bottom arm -->
+      <line x1="0" y1="6" x2="-8" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
     
-    <!-- Second handshake (center) -->
-    <g transform="translate(0, 0)">
-      <!-- Left hand -->
-      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Right hand -->
-      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Connection/grip -->
-      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
+    <!-- Right K - represents Customer -->
+    <g>
+      <!-- Top arm -->
+      <line x1="0" y1="-6" x2="8" y2="-12" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Bottom arm -->
+      <line x1="0" y1="6" x2="8" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
     
-    <!-- Third handshake (right) -->
-    <g transform="translate(8, 0)">
-      <!-- Left hand -->
-      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Right hand -->
-      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
-      <!-- Connection/grip -->
-      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
-    </g>
+    <!-- Connection bridge between K's - represents platform connecting them -->
+    <circle cx="0" cy="0" r="6" fill="none" stroke="url(#accentGrad)" stroke-width="2.5" opacity="0.7"/>
+    <circle cx="0" cy="0" r="3" fill="url(#accentGrad)" opacity="0.9"/>
   </g>
   
-  <!-- Double K below the handshakes -->
-  <g transform="translate(30, 38)">
-    <!-- First K -->
-    <g transform="translate(-5, 0)">
-      <!-- Vertical stem -->
-      <line x1="0" y1="-6" x2="0" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <!-- Top diagonal -->
-      <line x1="0" y1="-2" x2="5" y2="-6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <!-- Bottom diagonal -->
-      <line x1="0" y1="2" x2="5" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    </g>
-    
-    <!-- Second K -->
-    <g transform="translate(5, 0)">
-      <!-- Vertical stem -->
-      <line x1="0" y1="-6" x2="0" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <!-- Top diagonal -->
-      <line x1="0" y1="-2" x2="5" y2="-6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-      <!-- Bottom diagonal -->
-      <line x1="0" y1="2" x2="5" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
-    </g>
+  <!-- Work tool icons on sides - represents "Kaam" (work) -->
+  <!-- Left tool (worker side) -->
+  <g transform="translate(12, 30)">
+    <rect x="-1.5" y="-2" width="3" height="4" rx="0.5" fill="url(#accentGrad)" opacity="0.8"/>
+    <line x1="0" y1="2" x2="0" y2="5" stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
   </g>
+  
+  <!-- Right tool (customer side) -->
+  <g transform="translate(48, 30)">
+    <rect x="-1.5" y="-2" width="3" height="4" rx="0.5" fill="url(#accentGrad)" opacity="0.8"/>
+    <line x1="0" y1="2" x2="0" y2="5" stroke="url(#accentGrad)" stroke-width="2" stroke-linecap="round" opacity="0.8"/>
+  </g>
+  
+  <!-- Connection lines from tools to center - represents networking -->
+  <line x1="15" y1="30" x2="24" y2="30" stroke="url(#accentGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
+  <line x1="36" y1="30" x2="45" y2="30" stroke="url(#accentGrad)" stroke-width="1.5" stroke-linecap="round" opacity="0.5"/>
 </svg>
