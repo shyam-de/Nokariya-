@@ -283,7 +283,7 @@ export default function Home() {
                   height={40}
                   className="w-8 h-8 md:w-10 md:h-10"
                 />
-                <span>KaamKart</span>
+                <span className="hidden sm:inline">KaamKart</span>
               </Link>
               <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline whitespace-nowrap" lang={language}>{t('home.subtitle')}</span>
             </div>
