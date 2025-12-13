@@ -599,9 +599,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         let selectedStartDate: string | null = null
         
         // Try to parse the date - support YYYY-MM-DD format or natural language
-        const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-        if (parsed) {
-          selectedStartDate = parsed
+        const parsedStart = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+        if (parsedStart) {
+          selectedStartDate = parsedStart
         } else {
           addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid date in YYYY-MM-DD format (e.g., 2025-12-15) or type 'skip' to continue without dates.")
           return
@@ -665,9 +665,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Try to parse the date - support YYYY-MM-DD format or natural language
-        const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-        if (parsed) {
-          selectedEndDate = parsed
+        const parsedEnd = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+        if (parsedEnd) {
+          selectedEndDate = parsedEnd
         } else {
           addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid end date in YYYY-MM-DD format (e.g., 2025-12-20) or type 'skip' to continue without end date.")
           return
@@ -864,55 +864,84 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           }
         }
         
-        setRequestData({ ...requestData, optionalFieldsAsked: true })
+        // Handle skip or empty input
         if (userInput.toLowerCase().includes('skip') || userInput.toLowerCase().trim() === '') {
+          setRequestData({ ...requestData, optionalFieldsAsked: true })
           addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${requestData.pinCode}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              'Confirm',
+              'Cancel'
+            ])
+          }, 500)
+          return
+        }
+        
+        // Process any text input as optional fields (landmark, area, etc.)
+        const lowerInput = userInput.toLowerCase()
+        let landmark = requestData.landmark || ''
+        let area = requestData.area || ''
+        let state = requestData.state || ''
+        let city = requestData.city || ''
+        let pinCode = requestData.pinCode || ''
+        
+        // Parse landmark
+        if (lowerInput.includes('landmark') || lowerInput.includes('near') || lowerInput.includes('beside')) {
+          const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+(?:area|state|city|pin|pincode)|$)/i)
+          if (landmarkMatch) {
+            landmark = landmarkMatch[1].trim()
+          }
+        }
+        
+        // Parse area
+        if (lowerInput.includes('area')) {
+          const areaMatch = userInput.match(/area[:\s]+(.+?)(?:\s+(?:state|city|pin|pincode)|$)/i)
+          if (areaMatch) {
+            area = areaMatch[1].trim()
+          }
+        }
+        
+        // Parse state
+        if (lowerInput.includes('state')) {
+          const stateMatch = userInput.match(/state[:\s]+(.+?)(?:\s+(?:city|pin|pincode)|$)/i)
+          if (stateMatch) {
+            state = stateMatch[1].trim()
+          }
+        }
+        
+        // Parse city
+        if (lowerInput.includes('city')) {
+          const cityMatch = userInput.match(/city[:\s]+(.+?)(?:\s+(?:pin|pincode)|$)/i)
+          if (cityMatch) {
+            city = cityMatch[1].trim()
+          }
+        }
+        
+        // Parse pin code
+        const pinMatch = userInput.match(/(?:pin|pincode)[:\s]*(\d{4,6})/i)
+        if (pinMatch) {
+          pinCode = pinMatch[1].trim()
+          // If pin code is 6 digits, try to fetch location details
+          if (pinCode.length === 6) {
+            try {
+              const locationData = await getLocationFromPinCode(pinCode)
+              if (locationData) {
+                state = locationData.state || state
+                city = locationData.city || city
+                if (!requestData.location || requestData.location === '') {
+                  setRequestData((prev: any) => ({ ...prev, location: locationData.address }))
+                }
+              }
+            } catch (error) {
+              logger.error('Error fetching location from pin code:', error)
+            }
+          }
         } else {
-          // Try to parse all optional fields from user input
-          const lowerInput = userInput.toLowerCase()
-          let landmark = requestData.landmark || ''
-          let area = requestData.area || ''
-          let state = requestData.state || ''
-          let city = requestData.city || ''
-          let pinCode = requestData.pinCode || ''
-          
-          // Parse landmark
-          if (lowerInput.includes('landmark') || lowerInput.includes('near') || lowerInput.includes('beside')) {
-            const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+(?:area|state|city|pin|pincode)|$)/i)
-            if (landmarkMatch) {
-              landmark = landmarkMatch[1].trim()
-            }
-          }
-          
-          // Parse area
-          if (lowerInput.includes('area')) {
-            const areaMatch = userInput.match(/area[:\s]+(.+?)(?:\s+(?:state|city|pin|pincode)|$)/i)
-            if (areaMatch) {
-              area = areaMatch[1].trim()
-            }
-          }
-          
-          // Parse state
-          if (lowerInput.includes('state')) {
-            const stateMatch = userInput.match(/state[:\s]+(.+?)(?:\s+(?:city|pin|pincode)|$)/i)
-            if (stateMatch) {
-              state = stateMatch[1].trim()
-            }
-          }
-          
-          // Parse city
-          if (lowerInput.includes('city')) {
-            const cityMatch = userInput.match(/city[:\s]+(.+?)(?:\s+(?:pin|pincode)|$)/i)
-            if (cityMatch) {
-              city = cityMatch[1].trim()
-            }
-          }
-          
-          // Parse pin code
-          const pinMatch = userInput.match(/(?:pin|pincode)[:\s]*(\d{4,6})/i)
-          if (pinMatch) {
-            pinCode = pinMatch[1].trim()
-            // If pin code is 6 digits, try to fetch location details
+          // Try to find 6-digit number as pin code
+          const digitMatch = userInput.match(/\b(\d{6})\b/)
+          if (digitMatch && !pinCode) {
+            pinCode = digitMatch[1]
+            // Auto-fetch location from pin code
             if (pinCode.length === 6) {
               try {
                 const locationData = await getLocationFromPinCode(pinCode)
@@ -927,83 +956,52 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                 logger.error('Error fetching location from pin code:', error)
               }
             }
-          } else {
-            // Try to find 6-digit number as pin code
-            const digitMatch = userInput.match(/\b(\d{6})\b/)
-            if (digitMatch && !pinCode) {
-              pinCode = digitMatch[1]
-              // Auto-fetch location from pin code
-              if (pinCode.length === 6) {
-                try {
-                  const locationData = await getLocationFromPinCode(pinCode)
-                  if (locationData) {
-                    state = locationData.state || state
-                    city = locationData.city || city
-                  if (!requestData.location || requestData.location === '') {
-                    setRequestData((prev: any) => ({ ...prev, location: locationData.address }))
-                  }
-                  }
-                } catch (error) {
-                  logger.error('Error fetching location from pin code:', error)
-                }
-              }
-            }
           }
-          
-          // If no specific keywords found, treat the entire input as landmark or area
-          if (!landmark && !area && !state && !city && !pinCode) {
-            const parts = userInput.split(',').map(p => p.trim()).filter(p => p)
-            if (parts.length > 0) {
-              // If comma-separated, treat first as landmark, second as area
-              landmark = parts[0]
-              if (parts.length > 1) area = parts[1]
-              if (parts.length > 2) state = parts[2]
-              if (parts.length > 3) city = parts[3]
-              if (parts.length > 4) pinCode = parts[4]
-            } else {
-              // Single input - treat as landmark
-              landmark = userInput.trim()
-            }
-          }
-          
-          // Ensure pin code is set (mandatory) - check from requestData first
-          const finalPinCode = pinCode || requestData.pinCode || ''
-          if (!finalPinCode || finalPinCode.length !== 6) {
-            addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
-            return
-          }
-          
-          // If user input doesn't match any pattern, treat it as landmark
-          if (!landmark && !area && userInput.trim() && !userInput.toLowerCase().includes('skip')) {
-            landmark = userInput.trim()
-          }
-          
-          // Update request data with all fields - accept any text input as landmark/area
-          setRequestData({ 
-            ...requestData, 
-            landmark: landmark || requestData.landmark || '',
-            area: area || requestData.area || '',
-            state: state || requestData.state || '',
-            city: city || requestData.city || '',
-            pinCode: finalPinCode,
-            optionalFieldsAsked: true
-          })
-          
-          // Always proceed to confirmation if pin code is set, regardless of what user typed
-          const finalLandmark = landmark || requestData.landmark || ''
-          const finalArea = area || requestData.area || ''
-          const finalState = state || requestData.state || ''
-          const finalCity = city || requestData.city || ''
-          
-          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ') || 'Not specified'}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${finalLandmark ? `\nLandmark: ${finalLandmark}` : ''}${finalArea ? `\nArea: ${finalArea}` : ''}${finalState ? `\nState: ${finalState}` : ''}${finalCity ? `\nCity: ${finalCity}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
-          addBotMessage(t('chatbot.requestFlowConfirm') || confirmText, 300)
-          setTimeout(() => {
-            addMessage('', 'bot', [
-              'Confirm',
-              'Cancel'
-            ])
-          }, 500)
         }
+        
+        // If no specific keywords found, treat the entire input as landmark
+        if (!landmark && !area && !state && !city && !pinCode && userInput.trim()) {
+          // Single input - treat as landmark
+          landmark = userInput.trim()
+        }
+        
+        // Ensure pin code is set (mandatory) - check from requestData first
+        const finalPinCode = pinCode || requestData.pinCode || ''
+        if (!finalPinCode || finalPinCode.length !== 6) {
+          addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
+          return
+        }
+        
+        // If user input doesn't match any pattern but is not empty, treat it as landmark
+        if (!landmark && userInput.trim() && !userInput.toLowerCase().includes('skip')) {
+          landmark = userInput.trim()
+        }
+        
+        // Update request data with all fields - accept any text input as landmark/area
+        setRequestData({ 
+          ...requestData, 
+          landmark: landmark || requestData.landmark || '',
+          area: area || requestData.area || '',
+          state: state || requestData.state || '',
+          city: city || requestData.city || '',
+          pinCode: finalPinCode,
+          optionalFieldsAsked: true
+        })
+        
+        // Always proceed to confirmation if pin code is set, regardless of what user typed
+        const finalLandmark = landmark || requestData.landmark || ''
+        const finalArea = area || requestData.area || ''
+        const finalState = state || requestData.state || ''
+        const finalCity = city || requestData.city || ''
+        
+        const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ') || 'Not specified'}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${finalLandmark ? `\nLandmark: ${finalLandmark}` : ''}${finalArea ? `\nArea: ${finalArea}` : ''}${finalState ? `\nState: ${finalState}` : ''}${finalCity ? `\nCity: ${finalCity}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
+        addBotMessage(t('chatbot.requestFlowConfirm') || confirmText, 300)
+        setTimeout(() => {
+          addMessage('', 'bot', [
+            'Confirm',
+            'Cancel'
+          ])
+        }, 500)
         break
 
       case 'confirm':
