@@ -171,27 +171,120 @@ export default function CustomerDashboard() {
     }
   }
 
-  const getLocation = () => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
+  // Reverse geocode coordinates to get address, state, and city
+  const reverseGeocode = async (latitude: number, longitude: number) => {
+    try {
+      // Using OpenStreetMap Nominatim API (free, no API key required)
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'KaamKart-App' // Required by Nominatim
+          }
+        }
+      )
+      const data = await response.json()
+      
+      if (data && data.address) {
+        const address = data.address
+        const state = address.state || address.region || address.province || ''
+        const city = address.city || address.town || address.village || address.county || ''
+        const pinCode = address.postcode || ''
+        const fullAddress = data.display_name || ''
+        
+        setFormData({
+          ...formData,
+          location: {
+            ...formData.location,
+            latitude,
+            longitude,
+            state: state,
+            city: city,
+            pinCode: pinCode,
+            address: fullAddress
+          }
+        })
+        
+        if (state && city) {
+          toast.success(t('customer.locationDetected') || 'Location detected successfully!')
+        }
+      }
+    } catch (error) {
+      console.error('Reverse geocoding error:', error)
+      // Still set coordinates even if reverse geocoding fails
+      setFormData({
+        ...formData,
+        location: {
+          ...formData.location,
+          latitude,
+          longitude
+        }
+      })
+    }
+  }
+
+  // Get state and city from pin code
+  const getLocationFromPinCode = async (pinCode: string) => {
+    if (!pinCode || pinCode.length !== 6) return
+    
+    try {
+      // Using India Post Pin Code API (free, no API key required)
+      const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`)
+      const data = await response.json()
+      
+      if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+        const postOffice = data[0].PostOffice[0]
+        const state = postOffice.State || ''
+        const city = postOffice.District || postOffice.Name || ''
+        
+        if (state && city) {
           setFormData({
             ...formData,
             location: {
               ...formData.location,
-              latitude: position.coords.latitude,
-              longitude: position.coords.longitude,
-              // Don't overwrite address if user has already entered it
-              address: formData.location.address || 'Current Location'
+              state: state,
+              city: city,
+              pinCode: pinCode
             }
           })
+          toast.success(t('customer.locationFromPinCode') || 'State and City detected from Pin Code!')
+        }
+      }
+    } catch (error) {
+      console.error('Pin code lookup error:', error)
+      // Silently fail - user can still enter manually
+    }
+  }
+
+  const getLocation = () => {
+    if (navigator.geolocation) {
+      toast.loading(t('customer.gettingLocation') || 'Getting your location...')
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const lat = position.coords.latitude
+          const lon = position.coords.longitude
+          
+          // Set coordinates first
+          setFormData({
+            ...formData,
+            location: {
+              ...formData.location,
+              latitude: lat,
+              longitude: lon
+            }
+          })
+          
+          // Then reverse geocode to get state, city, and pin code
+          await reverseGeocode(lat, lon)
+          toast.dismiss()
         },
         () => {
-          toast.error('Unable to get location. Please fill in address fields instead.')
+          toast.dismiss()
+          toast.error(t('customer.geolocationError') || 'Geolocation is not supported or permission denied. Please fill in address fields.')
         }
       )
     } else {
-      toast.error('Geolocation is not supported by your browser. Please fill in address fields.')
+      toast.error(t('customer.geolocationNotSupported') || 'Geolocation is not supported by your browser. Please fill in address fields.')
     }
   }
 
@@ -323,8 +416,40 @@ export default function CustomerDashboard() {
     const hasAddressFields = formData.location.state && formData.location.city && formData.location.pinCode
     
     if (!hasCurrentLocation && !hasAddressFields) {
-      toast.error('Please either use current location or fill in State, City, and Pin Code')
+      toast.error(t('customer.locationRequired') || 'Please either use current location or fill in State, City, and Pin Code')
       return
+    }
+    
+    // Validate state, city, and pin code format if address fields are provided
+    if (!hasCurrentLocation && hasAddressFields) {
+      // Validate State: Only letters, spaces, hyphens, and apostrophes allowed
+      const stateRegex = /^[a-zA-Z\s'\-\.]+$/
+      if (!stateRegex.test(formData.location.state.trim())) {
+        toast.error(t('customer.invalidState') || 'State should contain only letters, spaces, hyphens, and apostrophes')
+        return
+      }
+      if (formData.location.state.trim().length < 2) {
+        toast.error(t('customer.stateMinLength') || 'State must be at least 2 characters long')
+        return
+      }
+      
+      // Validate City: Only letters, spaces, hyphens, and apostrophes allowed
+      const cityRegex = /^[a-zA-Z\s'\-\.]+$/
+      if (!cityRegex.test(formData.location.city.trim())) {
+        toast.error(t('customer.invalidCity') || 'City should contain only letters, spaces, hyphens, and apostrophes')
+        return
+      }
+      if (formData.location.city.trim().length < 2) {
+        toast.error(t('customer.cityMinLength') || 'City must be at least 2 characters long')
+        return
+      }
+      
+      // Validate Pin Code: Must be exactly 6 digits (Indian pin code format)
+      const pinCodeRegex = /^\d{6}$/
+      if (!pinCodeRegex.test(formData.location.pinCode.trim())) {
+        toast.error(t('customer.invalidPinCode') || 'Pin Code must be exactly 6 digits')
+        return
+      }
     }
     
     setIsSubmitting(true)
@@ -1054,12 +1179,26 @@ export default function CustomerDashboard() {
                               type="text"
                               id="state"
                               value={formData.location.state || ''}
-                              onChange={(e) => setFormData({ 
-                                ...formData, 
-                                location: { ...formData.location, state: e.target.value }
-                              })}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                // Allow only letters, spaces, hyphens, apostrophes, and dots
+                                if (value === '' || /^[a-zA-Z\s'\-\.]*$/.test(value)) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    location: { ...formData.location, state: value }
+                                  })
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim()
+                                if (value && value.length < 2) {
+                                  toast.error(t('customer.stateMinLength') || 'State must be at least 2 characters long')
+                                }
+                              }}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                               placeholder={t('customer.state')}
+                              pattern="[a-zA-Z\s'\-\.]+"
+                              title={t('customer.stateValidation') || 'State should contain only letters, spaces, hyphens, and apostrophes'}
                               lang={language}
                             />
                           </div>
@@ -1071,12 +1210,26 @@ export default function CustomerDashboard() {
                               type="text"
                               id="city"
                               value={formData.location.city || ''}
-                              onChange={(e) => setFormData({ 
-                                ...formData, 
-                                location: { ...formData.location, city: e.target.value }
-                              })}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                // Allow only letters, spaces, hyphens, apostrophes, and dots
+                                if (value === '' || /^[a-zA-Z\s'\-\.]*$/.test(value)) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    location: { ...formData.location, city: value }
+                                  })
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim()
+                                if (value && value.length < 2) {
+                                  toast.error(t('customer.cityMinLength') || 'City must be at least 2 characters long')
+                                }
+                              }}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                               placeholder={t('customer.city')}
+                              pattern="[a-zA-Z\s'\-\.]+"
+                              title={t('customer.cityValidation') || 'City should contain only letters, spaces, hyphens, and apostrophes'}
                               lang={language}
                             />
                           </div>
@@ -1090,12 +1243,37 @@ export default function CustomerDashboard() {
                               type="text"
                               id="pinCode"
                               value={formData.location.pinCode || ''}
-                              onChange={(e) => setFormData({ 
-                                ...formData, 
-                                location: { ...formData.location, pinCode: e.target.value }
-                              })}
+                              onChange={(e) => {
+                                const value = e.target.value
+                                // Allow only digits, max 6 digits
+                                if (value === '' || /^\d{0,6}$/.test(value)) {
+                                  setFormData({ 
+                                    ...formData, 
+                                    location: { ...formData.location, pinCode: value }
+                                  })
+                                  
+                                  // Auto-detect state and city when 6 digits are entered
+                                  if (value.length === 6) {
+                                    getLocationFromPinCode(value)
+                                  }
+                                }
+                              }}
+                              onBlur={(e) => {
+                                const value = e.target.value.trim()
+                                if (value && !/^\d{6}$/.test(value)) {
+                                  toast.error(t('customer.invalidPinCode') || 'Pin Code must be exactly 6 digits')
+                                } else if (value && value.length === 6) {
+                                  // Try to get location if not already set
+                                  if (!formData.location.state || !formData.location.city) {
+                                    getLocationFromPinCode(value)
+                                  }
+                                }
+                              }}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
                               placeholder={t('customer.pinCode')}
+                              pattern="\d{6}"
+                              title={t('customer.pinCodeValidation') || 'Pin Code must be exactly 6 digits'}
+                              maxLength={6}
                               lang={language}
                             />
                           </div>

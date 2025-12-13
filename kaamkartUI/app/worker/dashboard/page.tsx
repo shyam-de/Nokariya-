@@ -136,6 +136,9 @@ export default function WorkerDashboard() {
   useAutoLogout()
 
   useEffect(() => {
+    // SSR guard
+    if (typeof window === 'undefined') return
+
     const token = SessionStorage.getToken()
     const userData = SessionStorage.getUser()
     
@@ -144,8 +147,18 @@ export default function WorkerDashboard() {
       return
     }
 
-    const userObj = JSON.parse(userData) as User
-    setUser(userObj)
+    try {
+      // Handle case where userData might not be a string
+      const userStr = typeof userData === 'string' ? userData : JSON.stringify(userData)
+      const userObj = JSON.parse(userStr) as User
+      setUser(userObj)
+    } catch (error) {
+      // Invalid user data, clear and redirect
+      console.error('Error parsing user data:', error)
+      SessionStorage.clear()
+      router.push('/')
+      return
+    }
 
     // Get location
     if (navigator.geolocation) {
@@ -1383,7 +1396,7 @@ export default function WorkerDashboard() {
       </div>
       
       {/* Chatbot */}
-      <Chatbot user={user} />
+      {user && <Chatbot user={user} />}
     </div>
   )
 }
