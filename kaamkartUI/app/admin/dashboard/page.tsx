@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
+import { SessionStorage } from '@/lib/session'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import axios from 'axios'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -137,9 +139,12 @@ export default function AdminDashboard() {
     isSuperAdmin: false
   })
 
+  // Auto-logout after 30 minutes of inactivity
+  useAutoLogout()
+
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
+    const token = SessionStorage.getToken()
+    const userData = SessionStorage.getUser()
     
     if (!token || !userData) {
       router.push('/')
@@ -166,7 +171,7 @@ export default function AdminDashboard() {
     if (!user || (user.superAdmin !== true && user.superAdmin !== 'true')) return
     setIsLoadingStories(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/success-stories`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -183,7 +188,7 @@ export default function AdminDashboard() {
     if (!user || (user.superAdmin !== true && user.superAdmin !== 'true')) return
     setIsLoadingAds(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/advertisements`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -200,7 +205,7 @@ export default function AdminDashboard() {
     if (!user || (user.superAdmin !== true && user.superAdmin !== 'true')) return
     setIsLoadingWorkerTypes(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/worker-types`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -233,7 +238,7 @@ export default function AdminDashboard() {
       return
     }
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(`${API_URL}/admin/worker-types`, workerTypeFormData, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -260,7 +265,7 @@ export default function AdminDashboard() {
       return
     }
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.put(`${API_URL}/admin/worker-types/${editingWorkerType.id}`, workerTypeFormData, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -285,7 +290,7 @@ export default function AdminDashboard() {
   const handleDeleteWorkerType = async (id: number) => {
     if (!confirm('Are you sure you want to delete this worker type?')) return
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.delete(`${API_URL}/admin/worker-types/${id}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -299,7 +304,7 @@ export default function AdminDashboard() {
 
   const handleToggleWorkerTypeActive = async (id: number) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(`${API_URL}/admin/worker-types/${id}/toggle-active`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -358,7 +363,7 @@ export default function AdminDashboard() {
   const fetchPendingRequests = async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/requests/pending`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -374,7 +379,7 @@ export default function AdminDashboard() {
   const fetchActiveRequests = async () => {
     setIsLoadingActive(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/requests/active`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -397,7 +402,7 @@ export default function AdminDashboard() {
   const fetchAllRequests = async () => {
     setIsLoadingHistory(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const params = new URLSearchParams()
       if (searchQuery) params.append('search', searchQuery)
       if (sortBy) params.append('sortBy', sortBy)
@@ -424,7 +429,7 @@ export default function AdminDashboard() {
 
   const handleApprove = async (requestId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(
         `${API_URL}/admin/requests/${requestId}/approve`,
         {},
@@ -444,7 +449,7 @@ export default function AdminDashboard() {
       return
     }
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(
         `${API_URL}/admin/requests/${requestId}/reject`,
         {},
@@ -462,7 +467,7 @@ export default function AdminDashboard() {
   const fetchConfirmationStatus = async (requestId: string) => {
     setIsLoadingConfirmation({ ...isLoadingConfirmation, [requestId]: true })
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/admin/requests/${requestId}/confirmation-status`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -481,7 +486,7 @@ export default function AdminDashboard() {
     }
     setIsDeploying({ ...isDeploying, [requestId]: true })
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(
         `${API_URL}/admin/requests/${requestId}/deploy`,
         {},
@@ -533,7 +538,7 @@ export default function AdminDashboard() {
   const fetchWorkers = async () => {
     setIsLoadingWorkers(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const params = new URLSearchParams()
       if (workersSearch) params.append('search', workersSearch)
       if (workersSortBy) params.append('sortBy', workersSortBy)
@@ -555,7 +560,7 @@ export default function AdminDashboard() {
   const fetchCustomers = async () => {
     setIsLoadingCustomers(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const params = new URLSearchParams()
       if (customersSearch) params.append('search', customersSearch)
       if (customersSortBy) params.append('sortBy', customersSortBy)
@@ -577,7 +582,7 @@ export default function AdminDashboard() {
   const fetchSystemUsers = async () => {
     setIsLoadingSystemUsers(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const params = new URLSearchParams()
       if (systemUsersSearch) params.append('search', systemUsersSearch)
       if (systemUsersSortBy) params.append('sortBy', systemUsersSortBy)
@@ -598,7 +603,7 @@ export default function AdminDashboard() {
 
   const handleToggleVerification = async (workerId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(`${API_URL}/admin/workers/${workerId}/toggle-verification`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -611,7 +616,7 @@ export default function AdminDashboard() {
 
   const handleToggleBlock = async (userId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.post(`${API_URL}/admin/users/${userId}/toggle-block`, {}, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -733,7 +738,7 @@ export default function AdminDashboard() {
     e.preventDefault()
     setIsCreatingUser(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       
       // Validate worker has a labor type selected
       if (userFormData.role === 'worker' && !userFormData.workerType) {
@@ -794,8 +799,7 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() => {
-                  localStorage.removeItem('token')
-                  localStorage.removeItem('user')
+                  SessionStorage.clear()
                   router.push('/')
                 }}
                 className="px-4 py-2 text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
@@ -838,8 +842,7 @@ export default function AdminDashboard() {
               </div>
               <button
                 onClick={() => {
-                  localStorage.removeItem('token')
-                  localStorage.removeItem('user')
+                  SessionStorage.clear()
                   router.push('/')
                 }}
                 className="w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-200"
@@ -1374,7 +1377,7 @@ export default function AdminDashboard() {
                         onClick={async () => {
                           // Refresh concerns to get latest user messages before opening modal
                           try {
-                            const token = localStorage.getItem('token')
+                            const token = SessionStorage.getToken()
                             const response = await axios.get(`${API_URL}/admin/concerns`, {
                               headers: { Authorization: `Bearer ${token}` }
                             })
@@ -2425,7 +2428,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={async () => {
                     try {
-                      const token = localStorage.getItem('token')
+                      const token = SessionStorage.getToken()
                       // Prepare data: set customerName or workerName based on storyType
                       const payload = {
                         ...storyFormData,
@@ -2519,7 +2522,7 @@ export default function AdminDashboard() {
                       onClick={async () => {
                         if (!confirm('Are you sure you want to delete this success story?')) return
                         try {
-                          const token = localStorage.getItem('token')
+                          const token = SessionStorage.getToken()
                           await axios.delete(`${API_URL}/admin/success-stories/${story.id}`, {
                             headers: { Authorization: `Bearer ${token}` }
                           })
@@ -2665,7 +2668,7 @@ export default function AdminDashboard() {
                 <button
                   onClick={async () => {
                     try {
-                      const token = localStorage.getItem('token')
+                      const token = SessionStorage.getToken()
                       const payload = {
                         ...adFormData,
                         startDate: adFormData.startDate ? new Date(adFormData.startDate).toISOString() : null,
@@ -2754,7 +2757,7 @@ export default function AdminDashboard() {
                       onClick={async () => {
                         if (!confirm('Are you sure you want to delete this advertisement?')) return
                         try {
-                          const token = localStorage.getItem('token')
+                          const token = SessionStorage.getToken()
                           await axios.delete(`${API_URL}/admin/advertisements/${ad.id}`, {
                             headers: { Authorization: `Bearer ${token}` }
                           })

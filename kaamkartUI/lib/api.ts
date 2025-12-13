@@ -1,4 +1,5 @@
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios'
+import { SessionStorage } from './session'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
@@ -15,12 +16,15 @@ const apiClient: AxiosInstance = axios.create({
 // Request interceptor to add auth token
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
-    // Get token from localStorage
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null
+    // Get token from sessionStorage (multi-tab support)
+    const token = SessionStorage.getToken()
     
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    
+    // Update last activity on any API call
+    SessionStorage.setLastActivity()
     
     return config
   },
@@ -57,13 +61,10 @@ apiClient.interceptors.response.use(
       
       if (!isAuthEndpoint) {
         // This is a session expiration - clear token and redirect
-        if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
-          // Redirect to login if not already there
-          if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-            window.location.href = '/login'
-          }
+        SessionStorage.clear()
+        // Redirect to login if not already there
+        if (typeof window !== 'undefined' && window.location.pathname !== '/login' && window.location.pathname !== '/') {
+          window.location.href = '/login'
         }
         return Promise.reject({
           message: 'Session expired. Please login again.',

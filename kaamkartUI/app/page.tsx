@@ -73,18 +73,17 @@ export default function Home() {
       return
     }
 
-    const token = localStorage.getItem('token')
-    const userStr = localStorage.getItem('user')
+    const token = SessionStorage.getToken()
+    const userStr = SessionStorage.getUser()
     
     if (token && userStr) {
       try {
-        const userObj = JSON.parse(userStr) as User
+        const userObj = userStr as User
         setUser(userObj)
       } catch (e) {
         // Invalid user data, clear it and continue to show home page
         if (typeof window !== 'undefined') {
-          localStorage.removeItem('token')
-          localStorage.removeItem('user')
+          SessionStorage.clear()
         }
         // Silently handle error - don't log in production
         if (process.env.NODE_ENV === 'development') {

@@ -9,6 +9,8 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Chatbot from '@/components/Chatbot'
 import { apiClient } from '@/lib/api'
+import { SessionStorage } from '@/lib/session'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
@@ -130,9 +132,12 @@ export default function WorkerDashboard() {
   })
   const [isSubmittingConcern, setIsSubmittingConcern] = useState(false)
 
+  // Auto-logout after 30 minutes of inactivity
+  useAutoLogout()
+
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
+    const token = SessionStorage.getToken()
+    const userData = SessionStorage.getUser()
     
     if (!token || !userData) {
       router.push('/')
@@ -196,7 +201,7 @@ export default function WorkerDashboard() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -215,7 +220,7 @@ export default function WorkerDashboard() {
 
   const updateLocation = async (loc: {latitude: number, longitude: number}) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.put(
         `${API_URL}/workers/location`,
         {
@@ -234,7 +239,7 @@ export default function WorkerDashboard() {
 
   const fetchWorkerProfile = async () => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/workers/profile`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -247,7 +252,7 @@ export default function WorkerDashboard() {
   const fetchAvailableRequests = async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/requests/available`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -263,7 +268,7 @@ export default function WorkerDashboard() {
   const fetchWorkHistory = async () => {
     setIsLoadingHistory(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/workers/history`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -297,7 +302,7 @@ export default function WorkerDashboard() {
   const fetchMyConcerns = async () => {
     setIsLoadingConcerns(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/concerns/my-concerns`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -317,7 +322,7 @@ export default function WorkerDashboard() {
   const fetchConcernMessages = async (concernId: string) => {
     setIsLoadingMessages({ ...isLoadingMessages, [concernId]: true })
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.get(`${API_URL}/concerns/${concernId}/messages`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -331,7 +336,7 @@ export default function WorkerDashboard() {
 
   const handleConfirm = async (requestId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await axios.post(
         `${API_URL}/requests/${requestId}/confirm`,
         {},
@@ -385,7 +390,7 @@ export default function WorkerDashboard() {
   const toggleAvailability = async () => {
     setIsToggling(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const newAvailability = !available
       await axios.put(
         `${API_URL}/workers/availability`,
@@ -407,7 +412,7 @@ export default function WorkerDashboard() {
     e.preventDefault()
     setIsUpdatingProfile(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await axios.put(`${API_URL}/workers/profile/update`, profileData, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -416,7 +421,7 @@ export default function WorkerDashboard() {
       fetchProfile()
       // Update user in localStorage
       const updatedUser = { ...user, ...response.data.user }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
+      SessionStorage.setUser(updatedUser)
       setUser(updatedUser)
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update profile')
@@ -431,7 +436,7 @@ export default function WorkerDashboard() {
 
     setIsSubmittingRating(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const customerId = selectedRequest.customer?.id
       
       if (customerId) {
@@ -463,7 +468,7 @@ export default function WorkerDashboard() {
     e.preventDefault()
     setIsSubmittingConcern(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const data: any = {
         description: concernData.description,
         type: concernData.type
@@ -502,8 +507,7 @@ export default function WorkerDashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    SessionStorage.clear()
     router.push('/')
   }
 
@@ -1044,7 +1048,7 @@ export default function WorkerDashboard() {
                                   if (!editingConcern) return
                                   setIsUpdatingConcernStatus(true)
                                   try {
-                                    const token = localStorage.getItem('token')
+                                    const token = SessionStorage.getToken()
                                     const payload: any = {
                                       status: editingConcern.status === 'IN_REVIEW' ? 'PENDING' : editingConcern.status
                                     }

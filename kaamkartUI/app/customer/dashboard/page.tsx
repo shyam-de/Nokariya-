@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
+import { SessionStorage } from '@/lib/session'
+import { useAutoLogout } from '@/hooks/useAutoLogout'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -118,16 +120,19 @@ export default function CustomerDashboard() {
   const [userMessage, setUserMessage] = useState('')
   const [isSubmittingMessage, setIsSubmittingMessage] = useState(false)
 
+  // Auto-logout after 30 minutes of inactivity
+  useAutoLogout()
+
   useEffect(() => {
-    const token = localStorage.getItem('token')
-    const userData = localStorage.getItem('user')
+    const token = SessionStorage.getToken()
+    const userData = SessionStorage.getUser()
     
     if (!token || !userData) {
       router.push('/')
       return
     }
 
-    const userObj = JSON.parse(userData) as User
+    const userObj = userData as User
     setUser(userObj)
     fetchRequests()
     fetchProfile()
@@ -205,7 +210,7 @@ export default function CustomerDashboard() {
   const fetchRequests = async () => {
     setIsLoading(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       if (!token) {
         toast.error(t('common.error'))
         router.push('/login')
@@ -252,8 +257,7 @@ export default function CustomerDashboard() {
         toast.error('Cannot connect to server. Please check if API is running on port 8585.')
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         toast.error('Session expired. Please login again.')
-        localStorage.removeItem('token')
-        localStorage.removeItem('user')
+        SessionStorage.clear()
         router.push('/login')
       } else {
         toast.error(error.response?.data?.message || 'Failed to fetch requests')
@@ -325,7 +329,7 @@ export default function CustomerDashboard() {
     
     setIsSubmitting(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const requestData = {
         workerTypeRequirements: formData.workerTypeRequirements.map(req => ({
           workerType: req.laborType.toUpperCase(), // Backend expects 'workerType', not 'laborType'
@@ -403,7 +407,7 @@ export default function CustomerDashboard() {
     e.preventDefault()
     setIsUpdatingProfile(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await apiClient.put('/profile', profileData, {
       })
       toast.success(t('customer.profileUpdated'))
@@ -411,7 +415,7 @@ export default function CustomerDashboard() {
       fetchProfile()
       // Update user in localStorage
       const updatedUser = { ...user, ...response.data.user }
-      localStorage.setItem('user', JSON.stringify(updatedUser))
+      SessionStorage.setUser(updatedUser)
       setUser(updatedUser)
     } catch (error: any) {
       toast.error(error.response?.data?.message || t('customer.profileError'))
@@ -422,7 +426,7 @@ export default function CustomerDashboard() {
 
   const handleCompleteRequest = async (requestId: string) => {
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       await apiClient.post(`/requests/${requestId}/complete`, {}, {
       })
       toast.success(t('dashboard.completed'))
@@ -438,7 +442,7 @@ export default function CustomerDashboard() {
 
     setIsSubmittingRating(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const deployedWorkers = selectedRequest.deployedWorkers || []
       
       // Rate each deployed worker
@@ -474,7 +478,7 @@ export default function CustomerDashboard() {
     e.preventDefault()
     setIsSubmittingConcern(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const data: any = {
         description: concernData.description,
         type: concernData.type
@@ -514,7 +518,7 @@ export default function CustomerDashboard() {
   const fetchMyConcerns = async () => {
     setIsLoadingConcerns(true)
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await apiClient.get('/concerns/my-concerns', {
       })
       setMyConcerns(response.data)
@@ -533,7 +537,7 @@ export default function CustomerDashboard() {
   const fetchConcernMessages = async (concernId: string) => {
     setIsLoadingMessages({ ...isLoadingMessages, [concernId]: true })
     try {
-      const token = localStorage.getItem('token')
+      const token = SessionStorage.getToken()
       const response = await apiClient.get(`/concerns/${concernId}/messages`, {
       })
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
@@ -545,8 +549,7 @@ export default function CustomerDashboard() {
   }
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
+    SessionStorage.clear()
     router.push('/')
   }
 
@@ -1438,7 +1441,7 @@ export default function CustomerDashboard() {
                                   if (!editingConcern) return
                                   setIsUpdatingConcernStatus(true)
                                   try {
-                                    const token = localStorage.getItem('token')
+                                    const token = SessionStorage.getToken()
                                     const payload: any = {
                                       status: editingConcern.status === 'IN_REVIEW' ? 'PENDING' : editingConcern.status
                                     }

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
+import { SessionStorage } from '@/lib/session'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -135,8 +136,10 @@ export default function Login() {
         return
       }
       
-      localStorage.setItem('token', response.data.token)
-      localStorage.setItem('user', JSON.stringify(response.data.user))
+      // Use sessionStorage for multi-tab support
+      SessionStorage.setToken(response.data.token)
+      SessionStorage.setUser(response.data.user)
+      SessionStorage.setLastActivity()
       
       toast.success(isLogin ? t('login.loginSuccess') : t('login.registerSuccess'))
       
