@@ -61,7 +61,7 @@ export const INDIAN_CITIES = [
   // Jharkhand
   'Ranchi', 'Jamshedpur', 'Dhanbad', 'Bokaro Steel City', 'Hazaribagh', 'Deoghar', 'Giridih', 'Ramgarh', 'Medininagar', 'Chaibasa',
   // Karnataka
-  'Bangalore', 'Mysore', 'Hubli', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davangere', 'Bellary', 'Bijapur', 'Shimoga',
+  'Bangalore', 'Mysore', 'Mysuru', 'Hubli', 'Mangalore', 'Belgaum', 'Gulbarga', 'Davangere', 'Bellary', 'Bijapur', 'Shimoga',
   // Kerala
   'Kochi', 'Thiruvananthapuram', 'Kozhikode', 'Thrissur', 'Kollam', 'Alappuzha', 'Kannur', 'Kottayam', 'Palakkad', 'Malappuram',
   // Madhya Pradesh
@@ -177,9 +177,9 @@ export const getNearestCities = async (
     const detectedState = reverseData?.address?.state || reverseData?.address?.region || ''
     
     // Search for nearby cities using Nominatim
-    // Search in a 100km radius for cities
+    // Search in a 50km radius for cities
     const searchResponse = await fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=city&lat=${latitude}&lon=${longitude}&radius=100000&limit=50&countrycodes=in`,
+      `https://nominatim.openstreetmap.org/search?format=json&q=city&lat=${latitude}&lon=${longitude}&radius=50000&limit=50&countrycodes=in`,
       {
         headers: {
           'User-Agent': 'KaamKart-App'
@@ -222,15 +222,18 @@ export const getNearestCities = async (
     // Sort by distance
     matchedCities.sort((a, b) => a.distance - b.distance)
     
-    // If we don't have enough results, geocode some popular cities from the detected state
-    if (matchedCities.length < limit) {
+    // Filter cities within 50km radius
+    const citiesWithin50km = matchedCities.filter(city => city.distance <= 50)
+    
+    // If we don't have enough results within 50km, geocode some popular cities from the detected state
+    if (citiesWithin50km.length < limit) {
       // Get a subset of cities to geocode (prioritize major cities)
       const citiesToGeocode = INDIAN_CITIES
         .filter(city => !processedCities.has(city))
         .slice(0, Math.min(20, limit * 3)) // Limit API calls
       
       // Geocode cities in batches (with delay to respect rate limits)
-      for (let i = 0; i < citiesToGeocode.length && matchedCities.length < limit; i++) {
+      for (let i = 0; i < citiesToGeocode.length && citiesWithin50km.length < limit; i++) {
         const city = citiesToGeocode[i]
         try {
           // Small delay to respect API rate limits
@@ -251,8 +254,11 @@ export const getNearestCities = async (
             const cityLon = parseFloat(geoData[0].lon)
             if (cityLat && cityLon) {
               const distance = calculateDistance(latitude, longitude, cityLat, cityLon)
-              matchedCities.push({ city, distance })
-              processedCities.add(city)
+              // Only add if within 50km
+              if (distance <= 50) {
+                citiesWithin50km.push({ city, distance })
+                processedCities.add(city)
+              }
             }
           }
         } catch (err) {
@@ -261,10 +267,11 @@ export const getNearestCities = async (
       }
       
       // Sort again after adding geocoded cities
-      matchedCities.sort((a, b) => a.distance - b.distance)
+      citiesWithin50km.sort((a, b) => a.distance - b.distance)
     }
     
-    return matchedCities.slice(0, limit).map(c => ({ 
+    // Return only cities within 50km
+    return citiesWithin50km.slice(0, limit).map(c => ({ 
       city: c.city, 
       distance: Math.round(c.distance * 10) / 10 // Round to 1 decimal place
     }))

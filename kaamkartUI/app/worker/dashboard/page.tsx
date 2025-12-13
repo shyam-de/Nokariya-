@@ -92,7 +92,9 @@ export default function WorkerDashboard() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const [isToggling, setIsToggling] = useState(false)
-  const [activeTab, setActiveTab] = useState<'available' | 'history' | 'concerns'>('available')
+  const [activeTab, setActiveTab] = useState<'available' | 'activeWork' | 'history' | 'concerns'>('available')
+  const [activeWork, setActiveWork] = useState<any[]>([])
+  const [isLoadingActiveWork, setIsLoadingActiveWork] = useState(false)
   const [myConcerns, setMyConcerns] = useState<any[]>([])
   const [user, setUser] = useState<User | null>(null)
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
@@ -182,6 +184,7 @@ export default function WorkerDashboard() {
     fetchWorkHistory()
     fetchProfile()
     fetchMyConcerns()
+    fetchActiveWork()
     
     // Check for chatbot data in sessionStorage
     if (typeof window !== 'undefined') {
@@ -312,6 +315,35 @@ export default function WorkerDashboard() {
     }
   }
 
+  const fetchActiveWork = async () => {
+    setIsLoadingActiveWork(true)
+    try {
+      const token = SessionStorage.getToken()
+      const response = await axios.get(`${API_URL}/workers/active-work`, {
+        headers: { Authorization: `Bearer ${token}` }
+      })
+      setActiveWork(response.data || [])
+    } catch (error: any) {
+      console.error('Error fetching active work:', error)
+      // If endpoint doesn't exist, try to get from work history with DEPLOYED status
+      try {
+        const token = SessionStorage.getToken()
+        const historyResponse = await axios.get(`${API_URL}/workers/history`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const deployedWork = (historyResponse.data || []).filter((work: any) => 
+          work.status === 'DEPLOYED' || work.status === 'CONFIRMED'
+        )
+        setActiveWork(deployedWork)
+      } catch (historyError) {
+        console.error('Error fetching work history for active work:', historyError)
+        toast.error(t('worker.error') || 'Failed to fetch active work')
+      }
+    } finally {
+      setIsLoadingActiveWork(false)
+    }
+  }
+
   const fetchMyConcerns = async () => {
     setIsLoadingConcerns(true)
     try {
@@ -359,6 +391,10 @@ export default function WorkerDashboard() {
       )
       toast.success(t('worker.applicationSubmitted'))
       fetchAvailableRequests()
+      // Refresh active work if on that tab
+      if (activeTab === 'activeWork') {
+        fetchActiveWork()
+      }
     } catch (error: any) {
       toast.error(error.response?.data?.message || t('worker.applicationError'))
     }
@@ -766,6 +802,19 @@ export default function WorkerDashboard() {
               <span className="hidden sm:inline">🔔 </span>{t('worker.availableRequests')} ({requests.length})
             </button>
             <button
+              onClick={() => {
+                setActiveTab('activeWork')
+                fetchActiveWork()
+              }}
+              className={`px-3 py-2 md:px-4 md:py-3 lg:px-6 whitespace-nowrap rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 ${
+                activeTab === 'activeWork'
+                  ? 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-md'
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              <span className="hidden sm:inline">📍 </span>{t('worker.activeWork')} ({activeWork.length})
+            </button>
+            <button
               onClick={() => setActiveTab('history')}
               className={`px-3 py-2 md:px-4 md:py-3 lg:px-6 whitespace-nowrap rounded-lg text-xs md:text-sm font-semibold transition-all duration-200 ${
                 activeTab === 'history'
@@ -1150,6 +1199,130 @@ export default function WorkerDashboard() {
                       </div>
                     </div>
                   ))
+                )}
+              </div>
+            )}
+            {activeTab === 'activeWork' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                {isLoadingActiveWork ? (
+                  <div className="col-span-1 md:col-span-2 flex justify-center items-center py-20">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+                  </div>
+                ) : activeWork.length === 0 ? (
+                  <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
+                    <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📍</div>
+                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noActiveWork') || 'No active work assignments'}</p>
+                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.noActiveWorkHelp') || 'When you confirm a job, it will appear here with location and directions.'}</p>
+                  </div>
+                ) : (
+                  activeWork.map((work: any, index: number) => {
+                    const workLocation = work.location || work.request?.location
+                    const customer = work.customer || work.request?.customer
+                    const hasLocation = workLocation?.latitude && workLocation?.longitude
+                    const directionsUrl = hasLocation 
+                      ? `https://www.google.com/maps/dir/?api=1&destination=${workLocation.latitude},${workLocation.longitude}`
+                      : workLocation?.address 
+                        ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(workLocation.address)}`
+                        : null
+                    
+                    return (
+                      <div key={`active-${work.requestId || work.id}-${index}`} className="bg-white rounded-xl shadow-lg p-4 md:p-6 border-t-4 border-orange-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform">
+                        <div className="flex flex-col gap-3 md:gap-4">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <span className="text-xl md:text-2xl">🔨</span>
+                                <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900">
+                                  {work.workType || work.request?.workType || 'Work Assignment'}
+                                </h3>
+                              </div>
+                              {work.startDate && work.endDate && (
+                                <div className="text-xs md:text-sm text-gray-600 mb-2">
+                                  📅 {new Date(work.startDate).toLocaleDateString()} - {new Date(work.endDate).toLocaleDateString()}
+                                </div>
+                              )}
+                            </div>
+                            <div className="flex-shrink-0">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
+                                {t('worker.active') || 'Active'}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2 text-sm">
+                            {customer && (
+                              <div className="flex items-start gap-2 text-gray-700">
+                                <span className="text-lg">👤</span>
+                                <div>
+                                  <p className="font-medium">{customer.name || 'Customer'}</p>
+                                  {customer.phone && (
+                                    <p className="text-xs text-gray-500">{customer.phone}</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {workLocation && (
+                              <div className="flex items-start gap-2 text-gray-700">
+                                <span className="text-lg">📍</span>
+                                <div className="flex-1">
+                                  <p className="font-medium mb-1" lang={language}>{t('worker.workLocation') || 'Work Location'}</p>
+                                  <p className="text-sm break-words">{workLocation.address || 'Address not available'}</p>
+                                  {workLocation.state && workLocation.city && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      {workLocation.city}, {workLocation.state}
+                                      {workLocation.pinCode && ` - ${workLocation.pinCode}`}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                            
+                            {work.laborTypes && work.laborTypes.length > 0 && (
+                              <div className="flex items-start gap-2 text-gray-700">
+                                <span className="text-lg">🔧</span>
+                                <div>
+                                  <p className="text-xs text-gray-500 mb-1" lang={language}>{t('worker.workerTypes') || 'Worker Types'}</p>
+                                  <div className="flex flex-wrap gap-1">
+                                    {work.laborTypes.map((type: string, idx: number) => (
+                                      <span key={idx} className="inline-block px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                        {type}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {directionsUrl && (
+                            <a
+                              href={directionsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full mt-4 flex items-center justify-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 text-white py-3 px-4 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform"
+                            >
+                              <span>🗺️</span>
+                              <span lang={language}>{t('worker.getDirections') || 'Get Directions'}</span>
+                              <span>→</span>
+                            </a>
+                          )}
+                          
+                          {work.requestId && (
+                            <button
+                              onClick={() => {
+                                setSelectedRequest(work.request || work)
+                                setShowRatingModal(true)
+                              }}
+                              className="w-full mt-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-all"
+                            >
+                              {t('worker.viewDetails') || 'View Details'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )
+                  })
                 )}
               </div>
             )}
