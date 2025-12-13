@@ -1852,7 +1852,7 @@ export default function AdminDashboard() {
                     type="text"
                     value={systemUsersSearch}
                     onChange={(e) => setSystemUsersSearch(e.target.value)}
-                    placeholder="Search by name, email, phone, address..."
+                    placeholder={t('admin.searchSystemUsersPlaceholder') || 'Search by name, email, phone, address...'}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                   />
                 </div>
@@ -2070,7 +2070,7 @@ export default function AdminDashboard() {
                             {/* Overall Summary */}
                             <div className="bg-white rounded-lg p-3 border-2 border-blue-300">
                               <div className="flex justify-between items-center mb-2">
-                                <span className="text-sm font-bold text-gray-800">Overall Status</span>
+                                <span className="text-sm font-bold text-gray-800" lang={language}>{t('admin.overallStatus')}</span>
                                 <span className={`text-sm font-bold ${
                                   confirmationStatus[request.id].allRequirementsMet ? 'text-green-600' : 'text-orange-600'
                                 }`}>
@@ -2373,7 +2373,7 @@ export default function AdminDashboard() {
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 disabled:opacity-50"
                 >
                   <option value="PENDING">Pending</option>
-                  <option value="IN_REVIEW">In Review</option>
+                  <option value="IN_REVIEW">{t('admin.inReview') || 'In Review'}</option>
                   <option value="RESOLVED">Resolved</option>
                   <option value="DISMISSED">Dismissed</option>
                 </select>
@@ -2391,7 +2391,7 @@ export default function AdminDashboard() {
                   disabled={isUpdatingConcern || selectedConcern.status === 'IN_REVIEW'}
                   className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  🔍 Mark as In Review
+                  🔍 {t('admin.markAsInReview')}
                 </button>
                 <button
                   onClick={() => handleUpdateConcernStatus(selectedConcern.id, 'DISMISSED')}
@@ -2438,13 +2438,14 @@ export default function AdminDashboard() {
               <h3 className="text-xl font-bold mb-4">{editingStory ? t('admin.editSuccessStory') : t('admin.createSuccessStory')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.title')} *</label>
                   <input
                     type="text"
                     value={storyFormData.title}
                     onChange={(e) => setStoryFormData({ ...storyFormData, title: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    placeholder="Enter story title"
+                    placeholder={t('admin.enterStoryTitle') || 'Enter story title'}
+                    lang={language}
                   />
                 </div>
                 <div>
@@ -2457,17 +2458,18 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Description *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.description')} *</label>
                   <textarea
                     value={storyFormData.description}
                     onChange={(e) => setStoryFormData({ ...storyFormData, description: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                     rows={4}
-                    placeholder="Enter story description"
+                    placeholder={t('admin.enterStoryDescription') || 'Enter story description'}
+                    lang={language}
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Story Type *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.storyType')} *</label>
                   <div className="flex gap-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -2480,7 +2482,7 @@ export default function AdminDashboard() {
                         }}
                         className="w-4 h-4"
                       />
-                      <span className="text-sm font-medium text-gray-700">Customer Story</span>
+                      <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.customerStory')}</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input
@@ -2493,24 +2495,25 @@ export default function AdminDashboard() {
                         }}
                         className="w-4 h-4"
                       />
-                      <span className="text-sm font-medium text-gray-700">Worker Story</span>
+                      <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.workerStory')}</span>
                     </label>
                   </div>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {storyFormData.storyType === 'customer' ? 'Customer Name' : 'Worker Name'} *
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                    {storyFormData.storyType === 'customer' ? t('admin.customerName') : t('admin.workerName')} *
                   </label>
                   <input
                     type="text"
                     value={storyFormData.name}
                     onChange={(e) => setStoryFormData({ ...storyFormData, name: e.target.value })}
                     className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
-                    placeholder={`Enter ${storyFormData.storyType === 'customer' ? 'customer' : 'worker'} name`}
+                    placeholder={storyFormData.storyType === 'customer' ? t('admin.enterCustomerName') : t('admin.enterWorkerName')}
+                    lang={language}
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Labor Type</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.laborType')}</label>
                   <input
                     type="text"
                     value={storyFormData.workerType}
@@ -2703,7 +2706,7 @@ export default function AdminDashboard() {
               <h3 className="text-xl font-bold mb-4">{editingAd ? t('admin.editAdvertisement') : t('admin.createAdvertisement')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.title') || 'Title'} <span className="text-red-500">*</span></label>
                   <input
                     type="text"
                     value={adFormData.title}

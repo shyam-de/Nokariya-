@@ -814,7 +814,7 @@ export default function WorkerDashboard() {
               disabled={isLoading}
               className="px-4 py-2 md:px-6 md:py-2 bg-white border-2 border-primary-300 text-primary-600 rounded-lg text-sm md:text-base font-medium hover:bg-primary-50 transition-all duration-200 hover:scale-105 transform disabled:opacity-50 w-full sm:w-auto"
             >
-              {isLoading ? 'Refreshing...' : '🔄 Refresh'}
+              {isLoading ? t('admin.refreshing') : `🔄 ${t('admin.refresh')}`}
             </button>
           )}
         </div>
@@ -1398,7 +1398,7 @@ export default function WorkerDashboard() {
                 {workHistory.length === 0 ? (
                   <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
                     <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📚</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">No work history yet</p>
+                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">{t('worker.noWorkHistoryYet') || 'No work history yet'}</p>
                     <p className="text-sm md:text-base text-gray-400">Complete some jobs to see your history here!</p>
                   </div>
                 ) : (

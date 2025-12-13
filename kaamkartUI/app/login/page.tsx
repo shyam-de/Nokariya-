@@ -169,7 +169,7 @@ export default function Login() {
       console.log('Sending request to:', `${API_URL}${endpoint}`)
       const response = await apiClient.post(endpoint, data)
       
-      console.log('Response received:', response.data)
+      logger.log('Response received:', response.data)
       
       if (!response.data.token) {
         toast.error(t('common.error'))
@@ -192,8 +192,8 @@ export default function Login() {
         router.push('/worker/dashboard')
       }
     } catch (error: any) {
-      console.error('Login/Register error:', error)
-      console.error('Error response:', error.response)
+      logger.error('Login/Register error:', error)
+      logger.error('Error response:', error.response)
       const errorMessage = error.response?.data?.message || 
                           error.message || 
                           'An error occurred'
@@ -245,7 +245,7 @@ export default function Login() {
             KaamKart
           </h1>
           <p className="text-gray-600">
-            {showForgotPassword ? 'Reset Password' : isLogin ? 'Welcome back!' : 'Create your account'}
+            {showForgotPassword ? t('resetPassword.title') : isLogin ? t('login.welcomeBack') : t('login.createAccount')}
           </p>
         </div>
 
@@ -268,7 +268,7 @@ export default function Login() {
                   type="button"
                   onClick={async () => {
                     if (!forgotPasswordEmail) {
-                      toast.error('Please enter your email')
+                      toast.error(t('login.pleaseEnterEmail') || 'Please enter your email', { id: 'please-enter-email' })
                       return
                     }
                     
@@ -276,7 +276,7 @@ export default function Login() {
                     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
                     const trimmedEmail = forgotPasswordEmail.trim().toLowerCase()
                     if (!emailRegex.test(trimmedEmail)) {
-                      toast.error('Please enter a valid email address')
+                      toast.error(t('login.pleaseEnterValidEmail') || 'Please enter a valid email address', { id: 'please-enter-valid-email' })
                       return
                     }
                     

@@ -302,7 +302,10 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     addMessage(reply, 'user')
     
     // Handle worker FAQ questions FIRST, before other checks
-    if (reply.includes('Why not able to make available') || reply.includes('why not able to make available') || (reply.includes('available') && reply.includes('why'))) {
+    // Check for both English and Hindi text
+    const lowerReply = reply.toLowerCase()
+    const isHindiAvailableQuestion = reply.includes('उपलब्ध') && (reply.includes('क्यों') || reply.includes('नहीं'))
+    if (reply.includes('Why not able to make available') || reply.includes('why not able to make available') || (lowerReply.includes('available') && lowerReply.includes('why')) || isHindiAvailableQuestion) {
       // FAQ: Why not able to make available - Only for workers
       if (!user || user.role?.toLowerCase() !== 'worker') {
         addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to make yourself available.')
@@ -1375,7 +1378,8 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
         setTimeout(() => showQuickReplies(), 2000)
       } else if ((lowerText.includes('why') && lowerText.includes('not') && lowerText.includes('able') && lowerText.includes('available')) ||
-                 (lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('available'))) {
+                 (lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('available')) ||
+                 (text.includes('उपलब्ध') && (text.includes('क्यों') || text.includes('नहीं')))) {
         // Handle worker FAQ: Why not able to make available?
         addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
         setTimeout(() => showQuickReplies(), 2000)

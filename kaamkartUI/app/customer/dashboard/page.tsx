@@ -421,7 +421,7 @@ export default function CustomerDashboard() {
                       req.laborType.trim() === '' ||
                       req.laborType === 'Select Worker Type'
       if (isEmpty) {
-        console.log(`Requirement ${idx + 1} is invalid:`, req)
+        logger.log(`Requirement ${idx + 1} is invalid:`, req)
       }
       return isEmpty
     })
@@ -547,14 +547,14 @@ export default function CustomerDashboard() {
           area: formData.location.area || null
         }
       }
-      console.log('Sending request data:', JSON.stringify(requestData, null, 2))
+      logger.log('Sending request data:', JSON.stringify(requestData, null, 2))
       const response = await apiClient.post('/requests', requestData, {
         headers: { 
           Authorization: `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
-      console.log('Request created successfully:', response.data)
+      logger.log('Request created successfully:', response.data)
       toast.success(t('customer.requestCreated'))
       setShowRequestForm(false)
       setFormData({
@@ -1674,7 +1674,7 @@ export default function CustomerDashboard() {
                       </div>
                       <div className="space-y-2 text-sm text-gray-600 mb-4">
                         {concern.request && (
-                          <p><span className="font-semibold">Related Request:</span> {concern.request.workType} (ID: {concern.request.id})</p>
+                          <p lang={language}><span className="font-semibold">{t('customer.relatedRequest')}:</span> {concern.request.workType} ({t('admin.id')}: {concern.request.id})</p>
                         )}
                         <p><span className="font-semibold">Created:</span> {new Date(concern.createdAt).toLocaleString()}</p>
                         {concern.resolvedAt && (
@@ -1743,7 +1743,7 @@ export default function CustomerDashboard() {
                           </div>
                         ) : editingConcern && editingConcern.id === concern.id ? (
                           <>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Update Status:</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">{t('customer.updateStatus') || 'Update Status:'}</label>
                             <select
                               value={editingConcern.status === 'IN_REVIEW' ? 'PENDING' : editingConcern.status}
                               onChange={(e) => {
