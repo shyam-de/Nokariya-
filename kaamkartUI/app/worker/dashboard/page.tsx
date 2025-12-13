@@ -296,12 +296,16 @@ export default function WorkerDashboard() {
       const response = await axios.get(`${API_URL}/workers/history`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setWorkHistory(response.data)
+      // Filter out DEPLOYED and CONFIRMED - these should only show in Active Work tab
+      const historyData = (response.data || []).filter((work: any) => 
+        work.status !== 'DEPLOYED' && work.status !== 'CONFIRMED' && work.status !== 'ADMIN_APPROVED'
+      )
+      setWorkHistory(historyData)
       setDataLoaded(prev => ({ ...prev, workHistory: true }))
       
       // Check which completed requests have been rated
       const ratedSet = new Set<string>()
-      for (const work of response.data) {
+      for (const work of historyData) {
         if (work.status === 'COMPLETED') {
           try {
             const ratingCheck = await axios.get(`${API_URL}/ratings/check/${work.requestId}`, {
