@@ -170,7 +170,26 @@ public class AdminService {
         
         double requestLat = finalRequest.getLocation().getLatitude();
         double requestLon = finalRequest.getLocation().getLongitude();
-        logger.info("📍 Request location: lat={}, lon={} (Request ID: {})", requestLat, requestLon, finalRequest.getId());
+        
+        // Validate request coordinates are valid (not 0,0 and within valid ranges)
+        if (requestLat == 0.0 && requestLon == 0.0) {
+            logger.error("❌ CRITICAL: Request {} has invalid location (0,0). Cannot calculate distances. Skipping worker notifications.", 
+                    finalRequest.getId());
+            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
+            return requestRepository.save(savedRequest);
+        }
+        
+        if (Math.abs(requestLat) > 90 || Math.abs(requestLon) > 180) {
+            logger.error("❌ CRITICAL: Request {} has invalid coordinates (lat: {}, lon: {}). Cannot calculate distances. Skipping worker notifications.", 
+                    finalRequest.getId(), requestLat, requestLon);
+            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
+            return requestRepository.save(savedRequest);
+        }
+        
+        logger.info("📍 Request location: lat={}, lon={}, address={} (Request ID: {})", 
+                requestLat, requestLon, 
+                finalRequest.getLocation().getAddress() != null ? finalRequest.getLocation().getAddress() : "N/A",
+                finalRequest.getId());
         
         List<WorkerDistance> workersWithDistance = availableWorkers.stream()
                 .filter(worker -> {
@@ -192,13 +211,45 @@ public class AdminService {
                 .map(worker -> {
                     double workerLat = worker.getCurrentLocation().getLatitude();
                     double workerLon = worker.getCurrentLocation().getLongitude();
+                    
+                    // Validate coordinates are valid (not 0,0 which is in the ocean)
+                    if (workerLat == 0.0 && workerLon == 0.0) {
+                        logger.warn("⚠️ Worker {} (ID: {}) has invalid location (0,0) - excluding from notifications", 
+                                worker.getUser().getName(), worker.getUser().getId());
+                        return new WorkerDistance(worker, Double.MAX_VALUE); // Set to max to exclude
+                    }
+                    
+                    // Validate coordinates are within valid ranges
+                    if (Math.abs(workerLat) > 90 || Math.abs(workerLon) > 180) {
+                        logger.warn("⚠️ Worker {} (ID: {}) has invalid coordinates (lat: {}, lon: {}) - excluding from notifications", 
+                                worker.getUser().getName(), worker.getUser().getId(), workerLat, workerLon);
+                        return new WorkerDistance(worker, Double.MAX_VALUE); // Set to max to exclude
+                    }
+                    
                     double distance = calculateDistance(requestLat, requestLon, workerLat, workerLon);
-                    logger.debug("Worker {} (ID: {}) distance: {} km from request location", 
-                            worker.getUser().getName(), worker.getUser().getId(), String.format("%.2f", distance));
+                    
+                    // Validate distance calculation result
+                    if (Double.isNaN(distance) || Double.isInfinite(distance)) {
+                        logger.error("❌ Invalid distance calculation for worker {} (ID: {}) - result: {} - excluding from notifications", 
+                                worker.getUser().getName(), worker.getUser().getId(), distance);
+                        return new WorkerDistance(worker, Double.MAX_VALUE); // Set to max to exclude
+                    }
+                    
+                    logger.info("📍 Worker {} (ID: {}) distance: {} km from request location (lat: {}, lon: {})", 
+                            worker.getUser().getName(), worker.getUser().getId(), String.format("%.2f", distance),
+                            workerLat, workerLon);
                     return new WorkerDistance(worker, distance);
                 })
                 .filter(wd -> {
                     // CRITICAL: Only include workers within 20km radius
+                    // Also exclude workers with invalid distances (NaN, Infinite, or MAX_VALUE)
+                    if (Double.isNaN(wd.getDistance()) || Double.isInfinite(wd.getDistance()) || wd.getDistance() == Double.MAX_VALUE) {
+                        logger.warn("🚫 Excluding worker {} (ID: {}) - invalid distance value", 
+                                wd.getWorker().getUser().getName(), 
+                                wd.getWorker().getUser().getId());
+                        return false;
+                    }
+                    
                     boolean withinRadius = wd.getDistance() <= WORKER_NOTIFICATION_RADIUS_KM;
                     if (!withinRadius) {
                         logger.info("🚫 Excluding worker {} (ID: {}) - distance {} km exceeds {} km radius", 
@@ -531,10 +582,25 @@ public class AdminService {
                 // CRITICAL: Final distance check before sending notification
                 // Double-check that worker is within 20km radius
                 double finalDistance = wd.getDistance();
+                
+                // Validate distance is valid
+                if (Double.isNaN(finalDistance) || Double.isInfinite(finalDistance) || finalDistance == Double.MAX_VALUE) {
+                    logger.error("🚫🚫🚫 INVALID DISTANCE: Worker {} (ID: {}, Email: {}) has invalid distance value: {} - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalDistance);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
                 if (finalDistance > WORKER_NOTIFICATION_RADIUS_KM) {
                     logger.error("🚫🚫🚫 DISTANCE CHECK FAILED: Worker {} (ID: {}, Email: {}) is {} km away (exceeds {} km limit) - NOTIFICATION BLOCKED!", 
                             worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
                             String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                // Additional validation: Ensure distance is not negative (shouldn't happen, but safety check)
+                if (finalDistance < 0) {
+                    logger.error("🚫🚫🚫 NEGATIVE DISTANCE: Worker {} (ID: {}, Email: {}) has negative distance: {} - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalDistance);
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
