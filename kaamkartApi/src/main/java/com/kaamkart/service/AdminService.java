@@ -655,6 +655,15 @@ public class AdminService {
                 logger.info("✓✓✓ NOTIFIED worker: {} (ID: {}, Email: {}) for request: {} at distance: {} km", 
                         worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalRequest.getId(),
                         String.format("%.2f", finalDistance));
+                logger.info("   📍 DISTANCE VERIFICATION: Request (lat={}, lon={}) to Worker (lat={}, lon={}) = {} km (limit: {} km)", 
+                        requestLat, requestLon, workerLat, workerLon, 
+                        String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                
+                // CRITICAL: If this log shows distance > 20km, there's a bug in the filtering logic
+                if (finalDistance > WORKER_NOTIFICATION_RADIUS_KM + 0.1) { // 0.1km tolerance for floating point
+                    logger.error("🚨🚨🚨 CRITICAL BUG: Worker {} received notification but distance {} km > {} km limit!", 
+                            worker.getUser().getName(), String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                }
                 
                 // Special logging for problematic worker
                 if (workerEmail != null && workerEmail.toLowerCase().contains("elctician")) {
