@@ -1190,13 +1190,22 @@ public class AdminService {
                         return false;
                     }
                     // Strict check: customer must be within 20km radius
-                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01); // 0.01km tolerance for precision
+                    // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
+                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
                     if (!withinRadius) {
                         logger.debug("Customer {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
                                 customer.getName(), customer.getId(),
                                 String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false; // Explicitly return false
                     }
-                    return withinRadius;
+                    // Double-check: if distance exceeds limit, block it
+                    if (distance > ADMIN_RADIUS_KM) {
+                        logger.warn("Customer {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
+                                customer.getName(), customer.getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false; // Block if somehow exceeded
+                    }
+                    return true;
                 })
                 .collect(Collectors.toList());
     }
