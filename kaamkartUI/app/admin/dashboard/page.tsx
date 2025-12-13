@@ -2533,7 +2533,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.imageUrl') || 'Image URL'}</label>
                   <input
                     type="url"
                     value={storyFormData.imageUrl}
@@ -2755,7 +2755,7 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Image URL</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">{t('admin.imageUrl') || 'Image URL'}</label>
                   <input
                     type="url"
                     value={adFormData.imageUrl}
