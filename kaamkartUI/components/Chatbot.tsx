@@ -574,9 +574,21 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         break
 
       case 'startDate':
+        // Allow skipping dates
+        const lowerDateInput = userInput.toLowerCase().trim()
+        if (lowerDateInput === 'skip' || lowerDateInput === 'no' || lowerDateInput === 'not needed') {
+          setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined })
+          const locationPrompts = [
+            "Perfect! Now, I need your location details.",
+            "Great! Where do you need the work done?",
+            "Excellent! Where should the workers come?"
+          ]
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          break
+        }
+        
         // Handle start date selection
         let selectedStartDate: string | null = null
-        const lowerDateInput = userInput.toLowerCase().trim()
         
         if (lowerDateInput.includes('1') || lowerDateInput.includes('today') || lowerDateInput.includes('आज')) {
           selectedStartDate = formatDate(new Date())
@@ -630,9 +642,28 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         break
 
       case 'endDate':
+        // Allow skipping end date
+        const lowerEndInput = userInput.toLowerCase().trim()
+        if (lowerEndInput === 'skip' || lowerEndInput === 'no' || lowerEndInput === 'not needed') {
+          const requestStartDate = requestData.startDate
+          // If start date exists, keep it but skip end date
+          if (requestStartDate) {
+            setRequestData({ ...requestData, endDate: '', currentDateStep: undefined })
+          } else {
+            // If no start date, skip both
+            setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined })
+          }
+          const locationPrompts = [
+            "Perfect! Now, I need your location details.",
+            "Great! Where do you need the work done?",
+            "Excellent! Where should the workers come?"
+          ]
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          break
+        }
+        
         // Handle end date selection
         let selectedEndDate: string | null = null
-        const lowerEndInput = userInput.toLowerCase().trim()
         const requestStartDate = requestData.startDate
         
         if (!requestStartDate) {
@@ -943,37 +974,30 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             }
           }
           
-          // If no specific keywords found, try to extract from comma-separated values
+          // If no specific keywords found, treat the entire input as landmark or area
           if (!landmark && !area && !state && !city && !pinCode) {
             const parts = userInput.split(',').map(p => p.trim()).filter(p => p)
             if (parts.length > 0) {
+              // If comma-separated, treat first as landmark, second as area
               landmark = parts[0]
               if (parts.length > 1) area = parts[1]
               if (parts.length > 2) state = parts[2]
               if (parts.length > 3) city = parts[3]
               if (parts.length > 4) pinCode = parts[4]
             } else {
+              // Single input - treat as landmark
               landmark = userInput.trim()
             }
           }
           
-          setRequestData({ 
-            ...requestData, 
-            landmark: landmark || requestData.landmark || '',
-            area: area || requestData.area || '',
-            state: state || requestData.state || '',
-            city: city || requestData.city || '',
-            pinCode: pinCode || requestData.pinCode || ''
-          })
-          
-          // Ensure pin code is set (mandatory)
+          // Ensure pin code is set (mandatory) - check from requestData first
           const finalPinCode = pinCode || requestData.pinCode || ''
           if (!finalPinCode || finalPinCode.length !== 6) {
             addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
             return
           }
           
-          // Update request data with all fields
+          // Update request data with all fields - accept any text input as landmark/area
           setRequestData({ 
             ...requestData, 
             landmark: landmark || requestData.landmark || '',
@@ -984,7 +1008,13 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             optionalFieldsAsked: true
           })
           
-          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${landmark ? `\nLandmark: ${landmark}` : ''}${area ? `\nArea: ${area}` : ''}${state ? `\nState: ${state}` : ''}${city ? `\nCity: ${city}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
+          // Always proceed to confirmation if pin code is set, regardless of what user typed
+          const finalLandmark = landmark || requestData.landmark || ''
+          const finalArea = area || requestData.area || ''
+          const finalState = state || requestData.state || ''
+          const finalCity = city || requestData.city || ''
+          
+          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ') || 'Not specified'}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${finalLandmark ? `\nLandmark: ${finalLandmark}` : ''}${finalArea ? `\nArea: ${finalArea}` : ''}${finalState ? `\nState: ${finalState}` : ''}${finalCity ? `\nCity: ${finalCity}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
           addBotMessage(t('chatbot.requestFlowConfirm') || confirmText)
         }
         break

@@ -1522,7 +1522,6 @@ export default function WorkerDashboard() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0 hidden sm:block">{getStatusBadge(request.status)}</div>
                         </div>
 
                         <button
