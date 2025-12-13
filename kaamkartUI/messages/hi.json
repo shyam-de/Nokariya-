@@ -465,6 +465,8 @@
     "secondaryPhone": "द्वितीयक फोन",
     "profileUpdated": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई",
     "profileError": "प्रोफ़ाइल अपडेट करने में विफल",
+    "deployedCannotMakeAvailable": "आप काम पर तैनात हैं, उपलब्ध नहीं हो सकते। एक बार जब आप अपना वर्तमान काम पूरा कर लेंगे, तो आप फिर से खुद को उपलब्ध कर सकेंगे।",
+    "failedToUpdateAvailability": "उपलब्धता अपडेट करने में विफल",
     "rateCustomer": "ग्राहक को रेट करें",
     "ratingSubmitted": "रेटिंग सफलतापूर्वक जमा की गई",
     "customerLabel": "ग्राहक:",

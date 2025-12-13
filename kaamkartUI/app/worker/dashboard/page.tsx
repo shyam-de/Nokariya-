@@ -465,8 +465,16 @@ export default function WorkerDashboard() {
       )
       setAvailable(newAvailability)
       toast.success(`You are now ${newAvailability ? 'available' : 'unavailable'}`)
-    } catch (error) {
-      toast.error('Failed to update availability')
+    } catch (error: any) {
+      // Check if worker is deployed
+      const errorMessage = error.response?.data?.message || error.message || ''
+      if (errorMessage.toLowerCase().includes('deployed') || 
+          errorMessage.toLowerCase().includes('active work') ||
+          errorMessage.toLowerCase().includes('cannot set availability')) {
+        toast.error(t('worker.deployedCannotMakeAvailable') || 'You are deployed on work, not able to make available. Once you complete your current work assignment, you will be able to make yourself available again.')
+      } else {
+        toast.error(t('worker.failedToUpdateAvailability') || 'Failed to update availability')
+      }
     } finally {
       setIsToggling(false)
     }

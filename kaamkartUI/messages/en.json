@@ -466,6 +466,8 @@
     "secondaryPhone": "Secondary Phone",
     "profileUpdated": "Profile updated successfully",
     "profileError": "Failed to update profile",
+    "deployedCannotMakeAvailable": "You are deployed on work, not able to make available. Once you complete your current work assignment, you will be able to make yourself available again.",
+    "failedToUpdateAvailability": "Failed to update availability",
     "rateCustomer": "Rate Customer",
     "ratingSubmitted": "Rating submitted successfully",
     "customerLabel": "Customer:",
