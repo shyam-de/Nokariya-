@@ -489,10 +489,10 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     switch (step) {
       case 'workType':
         let selectedWorkType = ''
-        const lowerInput = userInput.toLowerCase().trim()
+        const workTypeLowerInput = userInput.toLowerCase().trim()
         
         // Extract number from input (e.g., "1", "2", etc.)
-        const numberMatch = lowerInput.match(/^(\d+)/)
+        const numberMatch = workTypeLowerInput.match(/^(\d+)/)
         const selectedIndex = numberMatch ? parseInt(numberMatch[1]) - 1 : -1
         
         // Map numerical or text input to work type from API
@@ -507,11 +507,11 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             // Try to match by name
             const matchedType = workerTypes.find((type: any) => {
               const typeName = (type.displayName || type.name).toLowerCase()
-              return lowerInput.includes(typeName) || typeName.includes(lowerInput)
+              return workTypeLowerInput.includes(typeName) || typeName.includes(workTypeLowerInput)
             })
             if (matchedType) {
               selectedWorkType = matchedType.displayName || matchedType.name
-            } else if (lowerInput.includes('other')) {
+            } else if (workTypeLowerInput.includes('other')) {
               selectedWorkType = 'Other'
             } else if (userInput.trim().length >= 2) {
               // User typed custom work type
@@ -523,19 +523,19 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           }
         } else {
           // Fallback to hardcoded types if API data not loaded
-          if (lowerInput.includes('1') || lowerInput.includes('plumbing') || lowerInput.includes('plumber')) {
+          if (workTypeLowerInput.includes('1') || workTypeLowerInput.includes('plumbing') || workTypeLowerInput.includes('plumber')) {
             selectedWorkType = 'Plumbing'
-          } else if (lowerInput.includes('2') || lowerInput.includes('electrical') || lowerInput.includes('electrician')) {
+          } else if (workTypeLowerInput.includes('2') || workTypeLowerInput.includes('electrical') || workTypeLowerInput.includes('electrician')) {
             selectedWorkType = 'Electrical'
-          } else if (lowerInput.includes('3') || lowerInput.includes('cleaning') || lowerInput.includes('cleaner')) {
+          } else if (workTypeLowerInput.includes('3') || workTypeLowerInput.includes('cleaning') || workTypeLowerInput.includes('cleaner')) {
             selectedWorkType = 'Cleaning'
-          } else if (lowerInput.includes('4') || lowerInput.includes('construction') || lowerInput.includes('builder')) {
+          } else if (workTypeLowerInput.includes('4') || workTypeLowerInput.includes('construction') || workTypeLowerInput.includes('builder')) {
             selectedWorkType = 'Construction'
-          } else if (lowerInput.includes('5') || lowerInput.includes('painting') || lowerInput.includes('painter')) {
+          } else if (workTypeLowerInput.includes('5') || workTypeLowerInput.includes('painting') || workTypeLowerInput.includes('painter')) {
             selectedWorkType = 'Painting'
-          } else if (lowerInput.includes('6') || lowerInput.includes('carpentry') || lowerInput.includes('carpenter')) {
+          } else if (workTypeLowerInput.includes('6') || workTypeLowerInput.includes('carpentry') || workTypeLowerInput.includes('carpenter')) {
             selectedWorkType = 'Carpentry'
-          } else if (lowerInput.includes('7') || lowerInput.includes('other')) {
+          } else if (workTypeLowerInput.includes('7') || workTypeLowerInput.includes('other')) {
             selectedWorkType = 'Other'
           } else if (userInput.trim().length >= 2) {
             // User typed custom work type
@@ -553,58 +553,157 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           "Excellent! When should the workers start?"
         ]
         
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nPlease provide your start date in YYYY-MM-DD format (e.g., 2025-12-15) or type "skip" to continue without dates.`, 300)
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}`, 300)
+        setTimeout(() => {
+          const today = new Date()
+          const tomorrow = new Date(today)
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          const nextWeek = new Date(today)
+          nextWeek.setDate(nextWeek.getDate() + 7)
+          addMessage('', 'bot', [
+            `1. ${t('chatbot.today') || 'Today'} (${formatDate(today)})`,
+            `2. ${t('chatbot.tomorrow') || 'Tomorrow'} (${formatDate(tomorrow)})`,
+            `3. ${t('chatbot.nextWeek') || 'Next Week'} (${formatDate(nextWeek)})`,
+            `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+            `5. ${t('chatbot.skip') || 'Skip'}`
+          ])
+        }, 500)
         setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
       case 'workerTypes':
         const selectedWorkerTypes = userInput.split(',').map(t => t.trim()).filter(t => t)
         setRequestData({ ...requestData, workerTypes: selectedWorkerTypes })
-        addBotMessage(t('chatbot.requestFlowWorkerCount') || 'How many workers do you need for each type? (e.g., "2 plumbers, 1 electrician")')
+        addBotMessage(t('chatbot.requestFlowWorkerCount') || 'How many workers do you need?', 300)
+        setTimeout(() => {
+          addMessage('', 'bot', [
+            '1',
+            '2',
+            '3',
+            '4',
+            '5+'
+          ])
+        }, 500)
         break
 
       case 'workerCount':
-        // Parse worker counts more intelligently
-        const countMatch = userInput.match(/(\d+)\s*([a-zA-Z\s]+)/g)
-        if (!countMatch && !userInput.match(/\d+/)) {
-          addBotMessage(getEmpatheticResponse('confusion') + " I need to know how many workers you need. For example: '2 plumbers' or '1 electrician and 2 cleaners'. Could you provide that?")
-          return
+        // Handle clickable number options or text input
+        const workerCountLowerInput = userInput.toLowerCase().trim()
+        let workerCountValue = ''
+        
+        // Check for clickable number options (1, 2, 3, 4, 5+)
+        if (workerCountLowerInput === '1' || workerCountLowerInput.includes('one')) {
+          workerCountValue = '1'
+        } else if (workerCountLowerInput === '2' || workerCountLowerInput.includes('two')) {
+          workerCountValue = '2'
+        } else if (workerCountLowerInput === '3' || workerCountLowerInput.includes('three')) {
+          workerCountValue = '3'
+        } else if (workerCountLowerInput === '4' || workerCountLowerInput.includes('four')) {
+          workerCountValue = '4'
+        } else if (workerCountLowerInput === '5' || workerCountLowerInput.includes('five') || workerCountLowerInput.includes('5+')) {
+          workerCountValue = '5+'
+        } else {
+          // Parse worker counts from text input
+          const countMatch = userInput.match(/(\d+)\s*([a-zA-Z\s]+)/g)
+          if (!countMatch && !userInput.match(/\d+/)) {
+            addBotMessage(t('chatbot.requestFlowWorkerCount') || 'How many workers do you need?', 300)
+            setTimeout(() => {
+              addMessage('', 'bot', [
+                '1',
+                '2',
+                '3',
+                '4',
+                '5+'
+              ])
+            }, 500)
+            return
+          }
+          workerCountValue = userInput
         }
-        setRequestData({ ...requestData, workerCountText: userInput })
+        
+        setRequestData({ ...requestData, workerCountText: workerCountValue })
         // Ask for start date first
         const startDatePrompts = [
           "Perfect! When would you like the work to start?",
           "Great! What's your preferred start date?",
           "Excellent! When should the work begin?"
         ]
-        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}\n\nPlease provide your start date in YYYY-MM-DD format (e.g., 2025-12-15) or type "skip" to continue without dates.`, 300)
+        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}`, 300)
+        setTimeout(() => {
+          const today = new Date()
+          const tomorrow = new Date(today)
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          const nextWeek = new Date(today)
+          nextWeek.setDate(nextWeek.getDate() + 7)
+          addMessage('', 'bot', [
+            `1. ${t('chatbot.today') || 'Today'} (${formatDate(today)})`,
+            `2. ${t('chatbot.tomorrow') || 'Tomorrow'} (${formatDate(tomorrow)})`,
+            `3. ${t('chatbot.nextWeek') || 'Next Week'} (${formatDate(nextWeek)})`,
+            `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+            `5. ${t('chatbot.skip') || 'Skip'}`
+          ])
+        }, 500)
         setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
       case 'startDate':
-        // Allow skipping dates
+        // Handle clickable date options or text input
         const lowerDateInput = userInput.toLowerCase().trim()
-        if (lowerDateInput === 'skip' || lowerDateInput === 'no' || lowerDateInput === 'not needed') {
+        let selectedStartDate: string | null = null
+        
+        // Handle clickable options
+        if (lowerDateInput.includes('1') || lowerDateInput.includes('today')) {
+          selectedStartDate = formatDate(new Date())
+        } else if (lowerDateInput.includes('2') || lowerDateInput.includes('tomorrow')) {
+          const tomorrow = new Date()
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          selectedStartDate = formatDate(tomorrow)
+        } else if (lowerDateInput.includes('3') || lowerDateInput.includes('next week')) {
+          const nextWeek = new Date()
+          nextWeek.setDate(nextWeek.getDate() + 7)
+          selectedStartDate = formatDate(nextWeek)
+        } else if (lowerDateInput.includes('4') || lowerDateInput.includes('custom')) {
+          // Ask for custom date input
+          addBotMessage(t('chatbot.enterCustomDate') || 'Please enter your start date in YYYY-MM-DD format (e.g., 2025-12-15):', 300)
+          setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDateCustom' }))
+          return
+        } else if (lowerDateInput.includes('5') || lowerDateInput === 'skip' || lowerDateInput === 'no' || lowerDateInput === 'not needed') {
           setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined })
           const locationPrompts = [
             "Perfect! Now, I need your location details.",
             "Great! Where do you need the work done?",
             "Excellent! Where should the workers come?"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
           break
-        }
-        
-        // Handle start date input - accept YYYY-MM-DD format or natural language
-        let selectedStartDate: string | null = null
-        
-        // Try to parse the date - support YYYY-MM-DD format or natural language
-        const parsedStart = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-        if (parsedStart) {
-          selectedStartDate = parsedStart
         } else {
-          addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid date in YYYY-MM-DD format (e.g., 2025-12-15) or type 'skip' to continue without dates.")
-          return
+          // Try to parse the date - support YYYY-MM-DD format or natural language
+          const parsedStart = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+          if (parsedStart) {
+            selectedStartDate = parsedStart
+          } else {
+            addBotMessage(t('chatbot.invalidDate') || "Please select a date from the options above or enter a valid date in YYYY-MM-DD format.", 300)
+            setTimeout(() => {
+              const today = new Date()
+              const tomorrow = new Date(today)
+              tomorrow.setDate(tomorrow.getDate() + 1)
+              const nextWeek = new Date(today)
+              nextWeek.setDate(nextWeek.getDate() + 7)
+              addMessage('', 'bot', [
+                `1. ${t('chatbot.today') || 'Today'} (${formatDate(today)})`,
+                `2. ${t('chatbot.tomorrow') || 'Tomorrow'} (${formatDate(tomorrow)})`,
+                `3. ${t('chatbot.nextWeek') || 'Next Week'} (${formatDate(nextWeek)})`,
+                `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+                `5. ${t('chatbot.skip') || 'Skip'}`
+              ])
+            }, 500)
+            return
+          }
         }
         
         if (selectedStartDate) {
@@ -625,20 +724,81 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             const twoWeeksAfter = new Date(start)
             twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
             addMessage('', 'bot', [
-              `1. Day After Start (${formatDate(dayAfter)})`,
-              `2. Week After Start (${formatDate(weekAfter)})`,
-              `3. Two Weeks After (${formatDate(twoWeeksAfter)})`,
-              '4. Custom Date'
+              `1. ${t('chatbot.dayAfterStart') || 'Day After Start'} (${formatDate(dayAfter)})`,
+              `2. ${t('chatbot.weekAfterStart') || 'Week After Start'} (${formatDate(weekAfter)})`,
+              `3. ${t('chatbot.twoWeeksAfter') || 'Two Weeks After'} (${formatDate(twoWeeksAfter)})`,
+              `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+              `5. ${t('chatbot.skip') || 'Skip'}`
             ])
           }, 500)
         }
         break
+      
+      case 'startDateCustom':
+        // Handle custom date input
+        const parsedCustomStart = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+        if (parsedCustomStart) {
+          setRequestData({ ...requestData, startDate: parsedCustomStart, currentDateStep: 'endDate' })
+          const endDatePrompts = [
+            "Great! When would you like the work to end?",
+            "Perfect! What's your preferred end date?",
+            "Excellent! When should the work be completed?"
+          ]
+          addBotMessage(`${endDatePrompts[Math.floor(Math.random() * endDatePrompts.length)]}`, 300)
+          setTimeout(() => {
+            const start = new Date(parsedCustomStart)
+            const dayAfter = new Date(start)
+            dayAfter.setDate(dayAfter.getDate() + 1)
+            const weekAfter = new Date(start)
+            weekAfter.setDate(weekAfter.getDate() + 7)
+            const twoWeeksAfter = new Date(start)
+            twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
+            addMessage('', 'bot', [
+              `1. ${t('chatbot.dayAfterStart') || 'Day After Start'} (${formatDate(dayAfter)})`,
+              `2. ${t('chatbot.weekAfterStart') || 'Week After Start'} (${formatDate(weekAfter)})`,
+              `3. ${t('chatbot.twoWeeksAfter') || 'Two Weeks After'} (${formatDate(twoWeeksAfter)})`,
+              `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+              `5. ${t('chatbot.skip') || 'Skip'}`
+            ])
+          }, 500)
+        } else {
+          addBotMessage(t('chatbot.invalidDate') || "Please enter a valid date in YYYY-MM-DD format (e.g., 2025-12-15):", 300)
+        }
+        break
 
       case 'endDate':
-        // Allow skipping end date
+        // Handle clickable date options or text input
         const lowerEndInput = userInput.toLowerCase().trim()
-        if (lowerEndInput === 'skip' || lowerEndInput === 'no' || lowerEndInput === 'not needed') {
-          const requestStartDate = requestData.startDate
+        let selectedEndDate: string | null = null
+        const requestStartDate = requestData.startDate
+        
+        if (!requestStartDate) {
+          addBotMessage(t('chatbot.provideStartDateFirst') || "Please provide a start date first.")
+          return
+        }
+        
+        // Handle clickable options
+        if (lowerEndInput.includes('1') || lowerEndInput.includes('day after')) {
+          const start = new Date(requestStartDate)
+          const dayAfter = new Date(start)
+          dayAfter.setDate(dayAfter.getDate() + 1)
+          selectedEndDate = formatDate(dayAfter)
+        } else if (lowerEndInput.includes('2') || lowerEndInput.includes('week after')) {
+          const start = new Date(requestStartDate)
+          const weekAfter = new Date(start)
+          weekAfter.setDate(weekAfter.getDate() + 7)
+          selectedEndDate = formatDate(weekAfter)
+        } else if (lowerEndInput.includes('3') || lowerEndInput.includes('two weeks')) {
+          const start = new Date(requestStartDate)
+          const twoWeeksAfter = new Date(start)
+          twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
+          selectedEndDate = formatDate(twoWeeksAfter)
+        } else if (lowerEndInput.includes('4') || lowerEndInput.includes('custom')) {
+          // Ask for custom date input
+          addBotMessage(t('chatbot.enterCustomEndDate') || 'Please enter your end date in YYYY-MM-DD format (e.g., 2025-12-20):', 300)
+          setRequestData((prev: any) => ({ ...prev, currentDateStep: 'endDateCustom' }))
+          return
+        } else if (lowerEndInput.includes('5') || lowerEndInput === 'skip' || lowerEndInput === 'no' || lowerEndInput === 'not needed') {
           // If start date exists, keep it but skip end date
           if (requestStartDate) {
             setRequestData({ ...requestData, endDate: '', currentDateStep: undefined })
@@ -651,26 +811,38 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             "Great! Where do you need the work done?",
             "Excellent! Where should the workers come?"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
           break
-        }
-        
-        // Handle end date input - accept YYYY-MM-DD format or natural language
-        let selectedEndDate: string | null = null
-        const requestStartDate = requestData.startDate
-        
-        if (!requestStartDate) {
-          addBotMessage("Please provide a start date first.")
-          return
-        }
-        
-        // Try to parse the date - support YYYY-MM-DD format or natural language
-        const parsedEnd = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-        if (parsedEnd) {
-          selectedEndDate = parsedEnd
         } else {
-          addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid end date in YYYY-MM-DD format (e.g., 2025-12-20) or type 'skip' to continue without end date.")
-          return
+          // Try to parse the date - support YYYY-MM-DD format or natural language
+          const parsedEnd = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+          if (parsedEnd) {
+            selectedEndDate = parsedEnd
+          } else {
+            addBotMessage(t('chatbot.invalidDate') || "Please select a date from the options above or enter a valid date in YYYY-MM-DD format.", 300)
+            setTimeout(() => {
+              const start = new Date(requestStartDate)
+              const dayAfter = new Date(start)
+              dayAfter.setDate(dayAfter.getDate() + 1)
+              const weekAfter = new Date(start)
+              weekAfter.setDate(weekAfter.getDate() + 7)
+              const twoWeeksAfter = new Date(start)
+              twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
+              addMessage('', 'bot', [
+                `1. ${t('chatbot.dayAfterStart') || 'Day After Start'} (${formatDate(dayAfter)})`,
+                `2. ${t('chatbot.weekAfterStart') || 'Week After Start'} (${formatDate(weekAfter)})`,
+                `3. ${t('chatbot.twoWeeksAfter') || 'Two Weeks After'} (${formatDate(twoWeeksAfter)})`,
+                `4. ${t('chatbot.customDate') || 'Custom Date'}`,
+                `5. ${t('chatbot.skip') || 'Skip'}`
+              ])
+            }, 500)
+            return
+          }
         }
         
         if (selectedEndDate) {
@@ -803,7 +975,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                 optionalFieldsAsked: false
               })
               setIsTyping(false)
-              addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any additional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+              addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\n${t('chatbot.addOptionalDetails') || 'Would you like to add any additional details?'}`, 300)
+              setTimeout(() => {
+                addMessage('', 'bot', [
+                  t('chatbot.skip') || 'Skip'
+                ])
+              }, 500)
             } else {
               setIsTyping(false)
               addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Please provide a valid 6-digit pin code.`)
@@ -845,7 +1022,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                   optionalFieldsAsked: true
                 })
                 setIsTyping(false)
-                addBotMessage(`Perfect! Pin code ${pinCode} verified.\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any optional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+                addBotMessage(`Perfect! Pin code ${pinCode} verified.\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\n${t('chatbot.addOptionalDetails') || 'Would you like to add any optional details?'}`, 300)
+                setTimeout(() => {
+                  addMessage('', 'bot', [
+                    t('chatbot.skip') || 'Skip'
+                  ])
+                }, 500)
                 return
               } else {
                 setIsTyping(false)
@@ -878,7 +1060,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Process any text input as optional fields (landmark, area, etc.)
-        const lowerInput = userInput.toLowerCase()
+        const optionalFieldsLowerInput = userInput.toLowerCase()
         let landmark = requestData.landmark || ''
         let area = requestData.area || ''
         let state = requestData.state || ''
@@ -886,7 +1068,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         let pinCode = requestData.pinCode || ''
         
         // Parse landmark
-        if (lowerInput.includes('landmark') || lowerInput.includes('near') || lowerInput.includes('beside')) {
+        if (optionalFieldsLowerInput.includes('landmark') || optionalFieldsLowerInput.includes('near') || optionalFieldsLowerInput.includes('beside')) {
           const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+(?:area|state|city|pin|pincode)|$)/i)
           if (landmarkMatch) {
             landmark = landmarkMatch[1].trim()
@@ -894,7 +1076,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Parse area
-        if (lowerInput.includes('area')) {
+        if (optionalFieldsLowerInput.includes('area')) {
           const areaMatch = userInput.match(/area[:\s]+(.+?)(?:\s+(?:state|city|pin|pincode)|$)/i)
           if (areaMatch) {
             area = areaMatch[1].trim()
@@ -902,7 +1084,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Parse state
-        if (lowerInput.includes('state')) {
+        if (optionalFieldsLowerInput.includes('state')) {
           const stateMatch = userInput.match(/state[:\s]+(.+?)(?:\s+(?:city|pin|pincode)|$)/i)
           if (stateMatch) {
             state = stateMatch[1].trim()
@@ -910,7 +1092,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Parse city
-        if (lowerInput.includes('city')) {
+        if (optionalFieldsLowerInput.includes('city')) {
           const cityMatch = userInput.match(/city[:\s]+(.+?)(?:\s+(?:pin|pincode)|$)/i)
           if (cityMatch) {
             city = cityMatch[1].trim()
@@ -973,7 +1155,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // If user input doesn't match any pattern but is not empty, treat it as landmark
-        if (!landmark && userInput.trim() && !userInput.toLowerCase().includes('skip')) {
+        if (!landmark && userInput.trim() && !optionalFieldsLowerInput.includes('skip')) {
           landmark = userInput.trim()
         }
         
@@ -1024,20 +1206,20 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       case 'type':
         let concernType = 'OTHER'
         let concernTypeName = 'Other'
-        const lowerInput = userInput.toLowerCase()
-        if (lowerInput.includes('1') || lowerInput.includes('quality') || lowerInput.includes('work quality')) {
+        const concernLowerInput = userInput.toLowerCase()
+        if (concernLowerInput.includes('1') || concernLowerInput.includes('quality') || concernLowerInput.includes('work quality')) {
           concernType = 'WORK_QUALITY'
           concernTypeName = 'Work Quality'
-        } else if (lowerInput.includes('2') || lowerInput.includes('payment')) {
+        } else if (concernLowerInput.includes('2') || concernLowerInput.includes('payment')) {
           concernType = 'PAYMENT_ISSUE'
           concernTypeName = 'Payment Issue'
-        } else if (lowerInput.includes('3') || lowerInput.includes('behavior')) {
+        } else if (concernLowerInput.includes('3') || concernLowerInput.includes('behavior')) {
           concernType = 'BEHAVIOR'
           concernTypeName = 'Behavior'
-        } else if (lowerInput.includes('4') || lowerInput.includes('safety')) {
+        } else if (concernLowerInput.includes('4') || concernLowerInput.includes('safety')) {
           concernType = 'SAFETY'
           concernTypeName = 'Safety'
-        } else if (lowerInput.includes('5') || lowerInput.includes('other')) {
+        } else if (concernLowerInput.includes('5') || concernLowerInput.includes('other')) {
           concernType = 'OTHER'
           concernTypeName = 'Other'
         }
