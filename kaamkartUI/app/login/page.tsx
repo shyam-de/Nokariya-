@@ -9,6 +9,7 @@ import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import { getLocationFromPinCode } from '@/lib/indianLocationValidation'
+import { logger } from '@/lib/logger'
 
 export default function Login() {
   const router = useRouter()
@@ -496,13 +497,13 @@ export default function Login() {
                               city: location.city || prev.city,
                               address: location.address || prev.address
                             }))
-                            toast.success(t('login.pinCodeDetected') || 'Location detected from Pin Code!')
+                            toast.success(t('login.pinCodeDetected') || 'Location detected from Pin Code!', { id: 'login-pin-code-detected' })
                           } else {
-                            toast.error(t('login.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
+                            toast.error(t('login.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.', { id: 'login-pin-code-not-found' })
                           }
                         } catch (error) {
-                          console.error('Error fetching location from pin code:', error)
-                          toast.error(t('login.pinCodeError') || 'Error detecting location from Pin Code. Please try again.')
+                          logger.error('Error fetching location from pin code:', error)
+                          toast.error(t('login.pinCodeError') || 'Error detecting location from Pin Code. Please try again.', { id: 'login-pin-code-error' })
                         }
                       }
                     }
