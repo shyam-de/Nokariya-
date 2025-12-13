@@ -98,6 +98,18 @@ export default function AdminDashboard() {
   const [isLoadingWorkerTypes, setIsLoadingWorkerTypes] = useState(false)
   const [showWorkerTypeForm, setShowWorkerTypeForm] = useState(false)
   const [editingWorkerType, setEditingWorkerType] = useState<any>(null)
+  const [dataLoaded, setDataLoaded] = useState({
+    pendingRequests: false,
+    activeRequests: false,
+    allRequests: false,
+    concerns: false,
+    workers: false,
+    customers: false,
+    systemUsers: false,
+    successStories: false,
+    advertisements: false,
+    workerTypes: false
+  })
   const [workerTypeFormData, setWorkerTypeFormData] = useState({
     name: '',
     displayName: '',
@@ -188,9 +200,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setSuccessStories(response.data)
+      setDataLoaded(prev => ({ ...prev, successStories: true }))
     } catch (error: any) {
       console.error('Error fetching success stories:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch success stories')
+      setDataLoaded(prev => ({ ...prev, successStories: true }))
     } finally {
       setIsLoadingStories(false)
     }
@@ -205,9 +219,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setAdvertisements(response.data)
+      setDataLoaded(prev => ({ ...prev, advertisements: true }))
     } catch (error: any) {
       console.error('Error fetching advertisements:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch advertisements')
+      setDataLoaded(prev => ({ ...prev, advertisements: true }))
     } finally {
       setIsLoadingAds(false)
     }
@@ -222,9 +238,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setWorkerTypes(response.data)
+      setDataLoaded(prev => ({ ...prev, workerTypes: true }))
     } catch (error: any) {
       console.error('Error fetching worker types:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch worker types')
+      setDataLoaded(prev => ({ ...prev, workerTypes: true }))
     } finally {
       setIsLoadingWorkerTypes(false)
     }
@@ -380,9 +398,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setRequests(response.data)
+      setDataLoaded(prev => ({ ...prev, pendingRequests: true }))
     } catch (error: any) {
       console.error('Error fetching requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch requests')
+      setDataLoaded(prev => ({ ...prev, pendingRequests: true }))
     } finally {
       setIsLoading(false)
     }
@@ -396,6 +416,7 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setActiveRequests(response.data)
+      setDataLoaded(prev => ({ ...prev, activeRequests: true }))
       
       // Auto-fetch confirmation status for all active requests
       response.data.forEach((request: Request) => {
@@ -406,6 +427,7 @@ export default function AdminDashboard() {
     } catch (error: any) {
       console.error('Error fetching active requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch active requests')
+      setDataLoaded(prev => ({ ...prev, activeRequests: true }))
     } finally {
       setIsLoadingActive(false)
     }
@@ -431,9 +453,11 @@ export default function AdminDashboard() {
       }
       
       setAllRequests(filtered)
+      setDataLoaded(prev => ({ ...prev, allRequests: true }))
     } catch (error: any) {
       console.error('Error fetching all requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch requests')
+      setDataLoaded(prev => ({ ...prev, allRequests: true }))
     } finally {
       setIsLoadingHistory(false)
     }
@@ -539,9 +563,11 @@ export default function AdminDashboard() {
           fetchConcernMessages(updatedSelected.id)
         }
       }
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
     } catch (error: any) {
       console.error('Error fetching concerns:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch concerns')
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
       setIsLoadingConcerns(false)
     }
@@ -561,9 +587,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setWorkers(response.data)
+      setDataLoaded(prev => ({ ...prev, workers: true }))
     } catch (error: any) {
       console.error('Error fetching workers:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch workers')
+      setDataLoaded(prev => ({ ...prev, workers: true }))
     } finally {
       setIsLoadingWorkers(false)
     }
@@ -583,9 +611,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setCustomers(response.data)
+      setDataLoaded(prev => ({ ...prev, customers: true }))
     } catch (error: any) {
       console.error('Error fetching customers:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch customers')
+      setDataLoaded(prev => ({ ...prev, customers: true }))
     } finally {
       setIsLoadingCustomers(false)
     }
@@ -605,9 +635,11 @@ export default function AdminDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setSystemUsers(response.data)
+      setDataLoaded(prev => ({ ...prev, systemUsers: true }))
     } catch (error: any) {
       console.error('Error fetching system users:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch system users')
+      setDataLoaded(prev => ({ ...prev, systemUsers: true }))
     } finally {
       setIsLoadingSystemUsers(false)
     }
@@ -1077,7 +1109,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">📋 </span>{t('admin.pendingRequests')} ({requests.length})
+              <span className="hidden sm:inline">📋 </span>{t('admin.pendingRequests')}{dataLoaded.pendingRequests && ` (${requests.length})`}
             </button>
             <button
               onClick={() => setActiveTab('active')}
@@ -1088,7 +1120,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">🚀 </span>{t('admin.activeRequests')} ({activeRequests.length})
+              <span className="hidden sm:inline">🚀 </span>{t('admin.activeRequests')}{dataLoaded.activeRequests && ` (${activeRequests.length})`}
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -1099,7 +1131,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">📜 </span>{t('admin.allRequests')} ({allRequests.length})
+              <span className="hidden sm:inline">📜 </span>{t('admin.allRequests')}{dataLoaded.allRequests && ` (${allRequests.length})`}
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -1110,7 +1142,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">📢 </span>{t('admin.concerns')} ({concerns.filter((c: any) => c.status === 'PENDING').length})
+              <span className="hidden sm:inline">📢 </span>{t('admin.concerns')}{dataLoaded.concerns && ` (${concerns.filter((c: any) => c.status === 'PENDING').length})`}
             </button>
             <button
               onClick={() => setActiveTab('workers')}
@@ -1121,7 +1153,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">👷 </span>{t('admin.workers')} ({workers.length})
+              <span className="hidden sm:inline">👷 </span>{t('admin.workers')}{dataLoaded.workers && ` (${workers.length})`}
             </button>
             <button
               onClick={() => setActiveTab('customers')}
@@ -1132,7 +1164,7 @@ export default function AdminDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">👥 </span>{t('admin.customers')} ({customers.length})
+              <span className="hidden sm:inline">👥 </span>{t('admin.customers')}{dataLoaded.customers && ` (${customers.length})`}
             </button>
             {(user?.superAdmin === true || user?.superAdmin === 'true') && (
               <>
@@ -1144,7 +1176,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">👨‍💼 </span><span lang={language}>{t('admin.systemUsers')}</span> ({systemUsers.length})
+                  <span className="hidden sm:inline">👨‍💼 </span><span lang={language}>{t('admin.systemUsers')}</span>{dataLoaded.systemUsers && ` (${systemUsers.length})`}
                 </button>
                 <button
                   onClick={() => setActiveTab('successStories')}
@@ -1154,7 +1186,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">⭐ </span><span lang={language}>{t('admin.successStories')}</span> ({successStories.length})
+                  <span className="hidden sm:inline">⭐ </span><span lang={language}>{t('admin.successStories')}</span>{dataLoaded.successStories && ` (${successStories.length})`}
                 </button>
                 <button
                   onClick={() => setActiveTab('advertisements')}
@@ -1164,7 +1196,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">📢 </span><span lang={language}>{t('admin.advertisements')}</span> ({advertisements.length})
+                  <span className="hidden sm:inline">📢 </span><span lang={language}>{t('admin.advertisements')}</span>{dataLoaded.advertisements && ` (${advertisements.length})`}
                 </button>
                 <button
                   onClick={() => setActiveTab('workerTypes')}
@@ -1174,7 +1206,7 @@ export default function AdminDashboard() {
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                   }`}
                 >
-                  <span className="hidden sm:inline">🔧 </span><span lang={language}>{t('admin.workerTypes')}</span> ({workerTypes.length})
+                  <span className="hidden sm:inline">🔧 </span><span lang={language}>{t('admin.workerTypes')}</span>{dataLoaded.workerTypes && ` (${workerTypes.length})`}
                 </button>
               </>
             )}
@@ -1308,7 +1340,16 @@ export default function AdminDashboard() {
                             concern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {t(`customer.${concern.type.toLowerCase()}`) || concern.type.replace(/_/g, ' ')}
+                            {(() => {
+                              const typeMap: {[key: string]: string} = {
+                                'WORK_QUALITY': t('customer.workQuality') || 'Work Quality',
+                                'PAYMENT_ISSUE': t('customer.paymentIssue') || 'Payment Issue',
+                                'BEHAVIOR': t('customer.behavior') || 'Behavior',
+                                'SAFETY': t('customer.safety') || 'Safety',
+                                'OTHER': t('customer.other') || 'Other'
+                              }
+                              return typeMap[concern.type] || concern.type.replace(/_/g, ' ')
+                            })()}
                           </span>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${
                             concern.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
@@ -2186,7 +2227,16 @@ export default function AdminDashboard() {
                   selectedConcern.type === 'SAFETY' ? 'bg-orange-100 text-orange-800' :
                   'bg-gray-100 text-gray-800'
                 }`}>
-                  {selectedConcern.type.replace(/_/g, ' ')}
+                  {(() => {
+                    const typeMap: {[key: string]: string} = {
+                      'WORK_QUALITY': t('customer.workQuality') || 'Work Quality',
+                      'PAYMENT_ISSUE': t('customer.paymentIssue') || 'Payment Issue',
+                      'BEHAVIOR': t('customer.behavior') || 'Behavior',
+                      'SAFETY': t('customer.safety') || 'Safety',
+                      'OTHER': t('customer.other') || 'Other'
+                    }
+                    return typeMap[selectedConcern.type] || selectedConcern.type.replace(/_/g, ' ')
+                  })()}
                 </span>
               </div>
               <div>
