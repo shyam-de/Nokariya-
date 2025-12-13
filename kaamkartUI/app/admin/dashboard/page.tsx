@@ -2420,13 +2420,13 @@ export default function AdminDashboard() {
               }}
               className="bg-green-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-green-600 transition-colors"
             >
-              + Add Success Story
+              + {t('admin.createSuccessStory')}
             </button>
           </div>
 
           {showStoryForm && (
             <div className="mb-6 bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
-              <h3 className="text-xl font-bold mb-4">{editingStory ? 'Edit' : 'Add'} Success Story</h3>
+              <h3 className="text-xl font-bold mb-4">{editingStory ? t('admin.editSuccessStory') : t('admin.createSuccessStory')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
@@ -2685,13 +2685,13 @@ export default function AdminDashboard() {
               }}
               className="bg-yellow-500 text-white px-6 py-2 rounded-lg font-semibold hover:bg-yellow-600 transition-colors"
             >
-              + Add Advertisement
+              + {t('admin.createAdvertisement')}
             </button>
           </div>
 
           {showAdForm && (
             <div className="mb-6 bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
-              <h3 className="text-xl font-bold mb-4">{editingAd ? 'Edit' : 'Add'} Advertisement</h3>
+              <h3 className="text-xl font-bold mb-4">{editingAd ? t('admin.editAdvertisement') : t('admin.createAdvertisement')}</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Title *</label>
