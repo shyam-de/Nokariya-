@@ -6,6 +6,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Chatbot from '@/components/Chatbot'
+import { SessionStorage } from '@/lib/session'
 
 interface User {
   id: string | number
