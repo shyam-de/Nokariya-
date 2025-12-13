@@ -10,29 +10,22 @@
   <!-- Background circle -->
   <circle cx="30" cy="30" r="28" fill="url(#kkGradient)"/>
   
-  <!-- Innovative Overlapping Double K Design -->
+  <!-- Innovative Double K - Sharing a common center stem -->
   <g transform="translate(30, 30)">
-    <!-- First K - positioned left -->
-    <g transform="translate(-6, 0)">
-      <!-- Vertical stem -->
-      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-      <!-- Top diagonal arm -->
-      <line x1="0" y1="-6" x2="8" y2="-14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-      <!-- Bottom diagonal arm -->
-      <line x1="0" y1="6" x2="8" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-    </g>
+    <!-- Shared center vertical stem -->
+    <line x1="0" y1="-16" x2="0" y2="16" stroke="white" stroke-width="5" stroke-linecap="round"/>
     
-    <!-- Second K - overlapping the first, shifted right -->
-    <g transform="translate(6, 0)">
-      <!-- Vertical stem (overlaps with first K) -->
-      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-      <!-- Top diagonal arm (mirrored, overlaps) -->
-      <line x1="0" y1="-6" x2="-8" y2="-14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-      <!-- Bottom diagonal arm (mirrored, overlaps) -->
-      <line x1="0" y1="6" x2="-8" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
-    </g>
+    <!-- Left K - top arm -->
+    <line x1="0" y1="-8" x2="-10" y2="-16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Left K - bottom arm -->
+    <line x1="0" y1="8" x2="-10" y2="16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
     
-    <!-- Center connection point where K's overlap -->
-    <circle cx="0" cy="0" r="3" fill="white" opacity="0.95"/>
+    <!-- Right K - top arm -->
+    <line x1="0" y1="-8" x2="10" y2="-16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Right K - bottom arm -->
+    <line x1="0" y1="8" x2="10" y2="16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    
+    <!-- Center accent dot -->
+    <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.95"/>
   </g>
 </svg>
