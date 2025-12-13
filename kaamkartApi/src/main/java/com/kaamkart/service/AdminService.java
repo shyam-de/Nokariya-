@@ -250,14 +250,26 @@ public class AdminService {
                         return false;
                     }
                     
-                    boolean withinRadius = wd.getDistance() <= WORKER_NOTIFICATION_RADIUS_KM;
+                    // CRITICAL: Use strict comparison with small tolerance for floating point precision
+                    // Only include workers strictly within 20km (with 0.01km tolerance for precision)
+                    boolean withinRadius = wd.getDistance() <= (WORKER_NOTIFICATION_RADIUS_KM + 0.01);
                     if (!withinRadius) {
                         logger.info("🚫 Excluding worker {} (ID: {}) - distance {} km exceeds {} km radius", 
                                 wd.getWorker().getUser().getName(), 
                                 wd.getWorker().getUser().getId(),
                                 String.format("%.2f", wd.getDistance()),
                                 WORKER_NOTIFICATION_RADIUS_KM);
+                        return false; // Explicitly return false
                     } else {
+                        // Double-check: if distance is exactly at or very close to limit, log it
+                        if (wd.getDistance() > WORKER_NOTIFICATION_RADIUS_KM) {
+                            logger.error("🚨 CRITICAL: Worker {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
+                                    wd.getWorker().getUser().getName(), 
+                                    wd.getWorker().getUser().getId(),
+                                    String.format("%.2f", wd.getDistance()),
+                                    WORKER_NOTIFICATION_RADIUS_KM);
+                            return false; // Block if somehow exceeded
+                        }
                         logger.info("✅ Worker {} (ID: {}) is within {} km radius - distance: {} km", 
                                 wd.getWorker().getUser().getName(), 
                                 wd.getWorker().getUser().getId(),
@@ -610,13 +622,22 @@ public class AdminService {
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
-                // CRITICAL: Final check - worker MUST be within 20km radius
-                if (recalculatedDistance > WORKER_NOTIFICATION_RADIUS_KM) {
+                // CRITICAL: Final check - worker MUST be within 20km radius (strict check with tolerance)
+                // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
+                if (recalculatedDistance > (WORKER_NOTIFICATION_RADIUS_KM + 0.01)) {
                     logger.error("🚫🚫🚫 FINAL DISTANCE CHECK FAILED: Worker {} (ID: {}, Email: {}) is {} km away (exceeds {} km limit) - NOTIFICATION BLOCKED!", 
                             worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
                             String.format("%.2f", recalculatedDistance), WORKER_NOTIFICATION_RADIUS_KM);
                     logger.error("   Request location: lat={}, lon={}", requestLat, requestLon);
                     logger.error("   Worker location: lat={}, lon={}", workerLat, workerLon);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
+                // Additional safety check: if distance is exactly at limit or slightly over, block it
+                if (recalculatedDistance > WORKER_NOTIFICATION_RADIUS_KM) {
+                    logger.error("🚫🚫🚫 DISTANCE EXCEEDS LIMIT: Worker {} (ID: {}, Email: {}) distance {} km > {} km - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
+                            String.format("%.2f", recalculatedDistance), WORKER_NOTIFICATION_RADIUS_KM);
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
@@ -839,7 +860,10 @@ public class AdminService {
                 logger.debug("Super admin without locationFilter, returning all workers");
             }
         } else {
-            logger.warn("getAllWorkers called with null adminId - returning all workers (this should not happen)");
+            // CRITICAL: If adminId is null, this is a security issue
+            // For safety, return empty list instead of all workers
+            logger.error("🚨 SECURITY: getAllWorkers called with null adminId - returning empty list for safety");
+            return new ArrayList<>();
         }
         
         // Apply search filter
@@ -938,7 +962,10 @@ public class AdminService {
                 logger.debug("Super admin without locationFilter, returning all customers");
             }
         } else {
-            logger.warn("getAllCustomers called with null adminId - returning all customers (this should not happen)");
+            // CRITICAL: If adminId is null, this is a security issue
+            // For safety, return empty list instead of all customers
+            logger.error("🚨 SECURITY: getAllCustomers called with null adminId - returning empty list for safety");
+            return new ArrayList<>();
         }
         
         // Apply search filter
@@ -1156,7 +1183,20 @@ public class AdminService {
                             customer.getLocation().getLatitude(),
                             customer.getLocation().getLongitude()
                     );
-                    return distance <= ADMIN_RADIUS_KM;
+                    // Validate distance calculation
+                    if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
+                        logger.warn("Invalid distance calculated for customer {} (ID: {}) - excluding", 
+                                customer.getName(), customer.getId());
+                        return false;
+                    }
+                    // Strict check: customer must be within 20km radius
+                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01); // 0.01km tolerance for precision
+                    if (!withinRadius) {
+                        logger.debug("Customer {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
+                                customer.getName(), customer.getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                    }
+                    return withinRadius;
                 })
                 .collect(Collectors.toList());
     }
