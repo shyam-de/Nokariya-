@@ -552,7 +552,22 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           "Great! What dates work for you?",
           "Excellent! When should the workers start?"
         ]
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\n${t('chatbot.requestFlowStartDateOptions') || 'Please select a start date:\n\n1. Today\n2. Tomorrow\n3. Next week\n4. Custom date (YYYY-MM-DD)'}`)
+        const today = new Date()
+        const tomorrow = new Date(today)
+        tomorrow.setDate(tomorrow.getDate() + 1)
+        const nextWeek = new Date(today)
+        nextWeek.setDate(nextWeek.getDate() + 7)
+        const formatDate = (d: Date) => d.toISOString().split('T')[0]
+        
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}`, 300)
+        setTimeout(() => {
+          addMessage('', 'bot', [
+            `1. Today (${formatDate(today)})`,
+            `2. Tomorrow (${formatDate(tomorrow)})`,
+            `3. Next Week (${formatDate(nextWeek)})`,
+            '4. Custom Date'
+          ])
+        }, 500)
         setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
@@ -635,7 +650,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         if (selectedStartDate) {
-          setRequestData({ ...requestData, startDate: selectedStartDate })
+          setRequestData({ ...requestData, startDate: selectedStartDate, currentDateStep: 'endDate' })
           // Now ask for end date
           const endDatePrompts = [
             "Great! When would you like the work to end?",
