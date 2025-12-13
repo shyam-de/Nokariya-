@@ -619,10 +619,15 @@ export default function WorkerDashboard() {
       'REJECTED': { bg: 'bg-red-100', text: 'text-red-800', icon: '🚫' }
     }
     const config = statusConfig[status] || statusConfig['PENDING']
+    
+    // Translate status - use admin status translations (they're shared)
+    const statusKey = `status${status.toLowerCase().replace(/_/g, '')}`
+    const translatedStatus = t(`admin.${statusKey}`) || status.replace(/_/g, ' ')
+    
     return (
-      <span className={`px-4 py-2 rounded-full text-sm font-medium ${config.bg} ${config.text} flex items-center gap-2`}>
+      <span className={`px-4 py-2 rounded-full text-sm font-medium ${config.bg} ${config.text} flex items-center gap-2`} lang={language}>
         <span>{config.icon}</span>
-        {status.replace(/_/g, ' ')}
+        {translatedStatus}
       </span>
     )
   }
