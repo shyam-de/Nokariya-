@@ -52,6 +52,7 @@ public class AdminService {
 
     private static final double EARTH_RADIUS_KM = 6371.0;
     private static final double ADMIN_RADIUS_KM = 20.0; // 20km radius for admin
+    private static final double WORKER_NOTIFICATION_RADIUS_KM = 20.0; // 20km radius for worker notifications
 
     public List<Request> getPendingApprovalRequests(Long adminId) {
         List<Request> requests = requestRepository.findByStatusOrderByCreatedAtDesc(Request.RequestStatus.PENDING_ADMIN_APPROVAL);
@@ -156,6 +157,7 @@ public class AdminService {
 
         // Calculate distances and sort
         // CRITICAL: Only include verified workers - unverified workers should NEVER receive notifications
+        // CRITICAL: Only include workers within 20km radius of the request location
         final Request finalRequest = savedRequest;
         List<WorkerDistance> workersWithDistance = availableWorkers.stream()
                 .filter(worker -> {
@@ -185,9 +187,24 @@ public class AdminService {
                     );
                     return new WorkerDistance(worker, distance);
                 })
+                .filter(wd -> {
+                    // CRITICAL: Only include workers within 20km radius
+                    boolean withinRadius = wd.getDistance() <= WORKER_NOTIFICATION_RADIUS_KM;
+                    if (!withinRadius) {
+                        logger.debug("Excluding worker {} (ID: {}) - distance {} km exceeds {} km radius", 
+                                wd.getWorker().getUser().getName(), 
+                                wd.getWorker().getUser().getId(),
+                                String.format("%.2f", wd.getDistance()),
+                                WORKER_NOTIFICATION_RADIUS_KM);
+                    }
+                    return withinRadius;
+                })
                 .sorted(Comparator.comparing(WorkerDistance::getDistance))
                 .limit(finalRequest.getNumberOfWorkers() * 3) // Notify 3x the required workers
                 .collect(Collectors.toList());
+
+        logger.info("📍 WORKER NOTIFICATION RADIUS FILTER: Found {} workers within {} km radius of request location (Request ID: {})", 
+                workersWithDistance.size(), WORKER_NOTIFICATION_RADIUS_KM, finalRequest.getId());
 
         // Send notifications via WebSocket to workers who match the required labor types
         // Only notify workers whose labor types match the request requirements
