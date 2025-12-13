@@ -481,7 +481,9 @@
     "fetchingStats": "Fetching statistics...",
     "adminStats": "📊 Current Statistics:\n\n• Pending Requests: {pending}\n• Active Requests: {active}\n• Total Workers: {workers}\n• Total Customers: {customers}\n• Pending Concerns: {concerns}\n\nVisit your dashboard for detailed information.",
     "statsError": "Could not fetch statistics. Please try again later.",
-    "adminOnly": "This feature is only available for admins."
+    "adminOnly": "This feature is only available for admins.",
+    "quickReplyContact": "Contact support",
+    "contactSupportMessage": "I'm here to help! Let me guide you through raising a concern so we can assist you better."
   }
 }
 
