@@ -445,13 +445,17 @@ export default function CustomerDashboard() {
       return
     }
     
-    if (!formData.startDate || !formData.endDate) {
-      toast.error('Please select start and end dates')
+    // Validate dates only if provided (dates are optional)
+    if (formData.startDate && formData.endDate) {
+      if (new Date(formData.endDate) < new Date(formData.startDate)) {
+        toast.error('End date must be after start date')
+        return
+      }
+    } else if (formData.startDate && !formData.endDate) {
+      toast.error('Please select end date if start date is provided')
       return
-    }
-    
-    if (new Date(formData.endDate) < new Date(formData.startDate)) {
-      toast.error('End date must be after start date')
+    } else if (!formData.startDate && formData.endDate) {
+      toast.error('Please select start date if end date is provided')
       return
     }
     
@@ -977,7 +981,7 @@ export default function CustomerDashboard() {
                   <div className="space-y-4">
                     <div>
                       <label htmlFor="workType" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
-                        {t('customer.workType')} <span className="text-red-500">*</span>
+                        {t('customer.workType')} <span className="text-gray-400 text-xs">({t('customer.optional') || 'Optional'})</span>
                       </label>
                       <input
                         type="text"
@@ -986,7 +990,6 @@ export default function CustomerDashboard() {
                         onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
                         className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
                         placeholder={t('customer.workTypePlaceholder')}
-                        required
                         lang={language}
                       />
                     </div>
@@ -1129,7 +1132,7 @@ export default function CustomerDashboard() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="startDate" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
-                        {t('customer.startDate')}
+                        {t('customer.startDate')} <span className="text-gray-400 text-xs">({t('customer.optional') || 'Optional'})</span>
                       </label>
                       <input
                         type="date"
@@ -1138,12 +1141,11 @@ export default function CustomerDashboard() {
                         min={new Date().toISOString().split('T')[0]}
                         onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                         className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        required
                       />
                     </div>
                     <div>
                       <label htmlFor="endDate" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
-                        {t('customer.endDate')}
+                        {t('customer.endDate')} <span className="text-gray-400 text-xs">({t('customer.optional') || 'Optional'})</span>
                       </label>
                       <input
                         type="date"
@@ -1152,7 +1154,6 @@ export default function CustomerDashboard() {
                         min={formData.startDate || new Date().toISOString().split('T')[0]}
                         onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                         className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        required
                       />
                     </div>
                   </div>

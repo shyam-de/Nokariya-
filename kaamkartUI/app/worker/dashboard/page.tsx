@@ -11,6 +11,7 @@ import Chatbot from '@/components/Chatbot'
 import { apiClient } from '@/lib/api'
 import { SessionStorage } from '@/lib/session'
 import { useAutoLogout } from '@/hooks/useAutoLogout'
+import { logger } from '@/lib/logger'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8585/api'
 
@@ -338,21 +339,34 @@ export default function WorkerDashboard() {
       setActiveWork(response.data || [])
       setDataLoaded(prev => ({ ...prev, activeWork: true }))
     } catch (error: any) {
-      console.error('Error fetching active work:', error)
-      // If endpoint doesn't exist, try to get from work history with DEPLOYED status
-      try {
-        const token = SessionStorage.getToken()
-        const historyResponse = await axios.get(`${API_URL}/workers/history`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        const deployedWork = (historyResponse.data || []).filter((work: any) => 
-          work.status === 'DEPLOYED' || work.status === 'CONFIRMED'
-        )
-        setActiveWork(deployedWork)
-        setDataLoaded(prev => ({ ...prev, activeWork: true }))
-      } catch (historyError) {
-        console.error('Error fetching work history for active work:', historyError)
-        toast.error(t('worker.error') || 'Failed to fetch active work')
+      // If endpoint returns 500 or doesn't exist, fallback to work history
+      // Don't show error toast for 500 errors - silently fallback
+      if (error.response?.status === 500 || error.response?.status >= 500) {
+        // Server error - use fallback
+        try {
+          const token = SessionStorage.getToken()
+          const historyResponse = await axios.get(`${API_URL}/workers/history`, {
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          const deployedWork = (historyResponse.data || []).filter((work: any) => 
+            work.status === 'DEPLOYED' || work.status === 'CONFIRMED' || work.status === 'ADMIN_APPROVED'
+          )
+          setActiveWork(deployedWork)
+          setDataLoaded(prev => ({ ...prev, activeWork: true }))
+        } catch (historyError: any) {
+          // Only show error if fallback also fails
+          logger.error('Error fetching work history for active work:', historyError)
+          if (historyError.response?.status !== 500) {
+            toast.error(t('worker.error') || 'Failed to fetch active work', { id: 'active-work-error' })
+          }
+          setActiveWork([])
+          setDataLoaded(prev => ({ ...prev, activeWork: true }))
+        }
+      } else {
+        // Other errors (401, 403, etc.) - show error
+        logger.error('Error fetching active work:', error)
+        toast.error(error.response?.data?.message || t('worker.error') || 'Failed to fetch active work', { id: 'active-work-error' })
+        setActiveWork([])
         setDataLoaded(prev => ({ ...prev, activeWork: true }))
       }
     } finally {

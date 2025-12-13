@@ -264,7 +264,6 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       setTimeout(() => {
         addMessage('', 'bot', [
           t('chatbot.quickReplyRaiseConcern') || 'Raise a concern',
-          t('chatbot.quickReplyContact') || 'Contact support',
           t('chatbot.quickReplyHelp') || 'How to use KaamKart'
         ])
       }, 600)
@@ -371,20 +370,29 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     setRequestData({})
     setRetryCount({})
     const greetings = [
-      "Great! I'd be happy to help you create a request. What type of work do you need?",
-      "Perfect! Let's get started. What kind of work are you looking for?",
-      "Awesome! To help you find the right workers, what type of work do you need done?"
+      "Great! I'd be happy to help you create a request. What type of work do you need? (Optional)",
+      "Perfect! Let's get started. What kind of work are you looking for? (Optional)",
+      "Awesome! To help you find the right workers, what type of work do you need done? (Optional)"
     ]
     const examples = language === 'hi' 
-      ? "उदाहरण: प्लंबिंग, इलेक्ट्रिकल, क्लीनिंग, कंस्ट्रक्शन"
-      : "For example: Plumbing, Electrical, Cleaning, Construction, Painting, etc."
+      ? "उदाहरण: प्लंबिंग, इलेक्ट्रिकल, क्लीनिंग, कंस्ट्रक्शन\nया 'skip' टाइप करें"
+      : "For example: Plumbing, Electrical, Cleaning, Construction, Painting, etc.\nOr type 'skip' to continue"
     addBotMessage(`${greetings[Math.floor(Math.random() * greetings.length)]}\n\n${examples}`)
   }
 
   const startConcernFlow = () => {
     setCurrentFlow('concern')
     setConcernData({})
-    addBotMessage(t('chatbot.concernFlowStart') || 'I can help you raise a concern. What type of concern is this?\n\n1. Work Quality\n2. Payment Issue\n3. Behavior\n4. Safety\n5. Other\n\nPlease type the number or name.')
+    addBotMessage(t('chatbot.concernFlowStart') || 'I can help you raise a concern. Please select the type of concern:', 300)
+    setTimeout(() => {
+      addMessage('', 'bot', [
+        '1. Work Quality',
+        '2. Payment Issue',
+        '3. Behavior',
+        '4. Safety',
+        '5. Other'
+      ])
+    }, 500)
   }
 
   const handleRequestFlow = async (userInput: string) => {
@@ -392,8 +400,18 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     
     switch (step) {
       case 'workType':
+        if (userInput.toLowerCase().trim() === 'skip' || userInput.toLowerCase().trim() === 'no' || userInput.toLowerCase().trim() === 'not needed') {
+          setRequestData({ ...requestData, workType: '' })
+          const workerTypePrompts = [
+            "Got it! What type of workers do you need?",
+            "Perfect! Now, which workers would you like?",
+            "Great! What kind of workers are you looking for?"
+          ]
+          addBotMessage(`${workerTypePrompts[Math.floor(Math.random() * workerTypePrompts.length)]}\n\nYou can mention multiple types like: "Plumber, Electrician" or just one type.`)
+          break
+        }
         if (userInput.trim().length < 2) {
-          addBotMessage(getEmpatheticResponse('confusion') + " Could you please provide more details about the type of work? For example: 'plumbing', 'electrical work', 'house cleaning', etc.")
+          addBotMessage(getEmpatheticResponse('confusion') + " Could you please provide more details about the type of work? For example: 'plumbing', 'electrical work', 'house cleaning', etc.\n\nOr type 'skip' to continue without work type.")
           return
         }
         setRequestData({ ...requestData, workType: userInput })
@@ -424,10 +442,21 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           "Great! What are your preferred dates?",
           "Excellent! When would you like the work to start and end?"
         ]
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nYou can say:\n• "Today to tomorrow"\n• "2024-12-20 to 2024-12-25"\n• "Next week"\n• Or any date format you prefer!`)
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nYou can say:\n• "Today to tomorrow"\n• "2024-12-20 to 2024-12-25"\n• "Next week"\n• Or any date format you prefer!\n\nOr type 'skip' to continue without dates (optional).`)
         break
 
       case 'dates':
+        // Allow skipping dates
+        if (userInput.toLowerCase().trim() === 'skip' || userInput.toLowerCase().trim() === 'no' || userInput.toLowerCase().trim() === 'not needed') {
+          setRequestData({ ...requestData, startDate: '', endDate: '' })
+          const locationPrompts = [
+            "Perfect! Now, where do you need the work done? (Optional)",
+            "Great! What's the location for this work? (Optional)",
+            "Excellent! Where should the workers come? (Optional)"
+          ]
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nYou can:\n• Type "use current location" or "my location" for GPS\n• Or type your address\n• Or type 'skip' to continue without location`)
+          break
+        }
         // Try natural language parsing first
         let startDate: string | null = null
         let endDate: string | null = null
@@ -483,71 +512,110 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           
           setRequestData({ ...requestData, startDate, endDate })
           const locationPrompts = [
-            "Perfect! Now, where do you need the work done?",
-            "Great! What's the location for this work?",
+            "Perfect! Now, I need your location details.",
+            "Great! Where do you need the work done?",
             "Excellent! Where should the workers come?"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nYou can:\n• Type "use current location" or "my location" for GPS\n• Or type your address`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
         } else {
           const stepKey = 'dates'
           const count = (retryCount[stepKey] || 0) + 1
           setRetryCount({ ...retryCount, [stepKey]: count })
           
           if (count === 1) {
-            addBotMessage(getEmpatheticResponse('confusion') + " I need both a start date and end date. You can say:\n• '2024-12-20 to 2024-12-25'\n• 'Today to tomorrow'\n• 'Next week'\n\nWhat dates work for you?")
+            addBotMessage(getEmpatheticResponse('confusion') + " I need both a start date and end date. You can say:\n• '2024-12-20 to 2024-12-25'\n• 'Today to tomorrow'\n• 'Next week'\n\nOr type 'skip' to continue without dates (optional).\n\nWhat dates work for you?")
           } else {
-            addBotMessage("Let me help you with the format. Please provide dates like:\n• Start: 2024-12-20, End: 2024-12-25\n• Or: 'today to next week'\n\nWhat are your preferred dates?")
+            addBotMessage("Let me help you with the format. Please provide dates like:\n• Start: 2024-12-20, End: 2024-12-25\n• Or: 'today to next week'\n• Or type 'skip' to continue without dates\n\nWhat are your preferred dates?")
           }
         }
         break
 
       case 'location':
         const lowerLocation = userInput.toLowerCase()
-        if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here')) {
-          setRequestData({ ...requestData, useCurrentLocation: true, optionalFieldsAsked: false })
-          addBotMessage("Perfect! I'll use your current location. Would you like to add any additional details to help workers find you easily?\n\nOptional details:\n• Landmark (e.g., 'Near City Mall')\n• Area (e.g., 'Downtown')\n• State, City, Pin Code\n\nOr just type 'skip' to continue!")
+        
+        // Check if user provided a pin code (6 digits) - this is mandatory
+        const pinCodeMatch = userInput.match(/\b(\d{6})\b/)
+        if (pinCodeMatch) {
+          const pinCode = pinCodeMatch[1]
+          addBotMessage("I see you provided a pin code. Let me fetch the location details...")
+          setIsTyping(true)
+          try {
+            const locationData = await getLocationFromPinCode(pinCode)
+            if (locationData) {
+              setRequestData({ 
+                ...requestData, 
+                location: locationData.address,
+                pinCode: pinCode,
+                state: locationData.state,
+                city: locationData.city,
+                useCurrentLocation: false,
+                optionalFieldsAsked: false
+              })
+              setIsTyping(false)
+              addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any additional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+            } else {
+              setIsTyping(false)
+              addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Please provide a valid 6-digit pin code.`)
+            }
+          } catch (error) {
+            setIsTyping(false)
+            addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Please provide a valid 6-digit pin code.")
+          }
+        } else if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here')) {
+          // If using current location, still need pin code
+          setRequestData({ ...requestData, useCurrentLocation: true })
+          addBotMessage("I'll use your current location. However, I still need your 6-digit pin code for verification.\n\nPlease provide your pin code:")
+        } else if (userInput.trim().length < 5) {
+          addBotMessage(getEmpatheticResponse('confusion') + " Please provide a 6-digit pin code. This is required.\n\nYou can:\n• Type your 6-digit pin code (e.g., '560001')\n• Or type 'use current location' for GPS (you'll still need to provide pin code)")
         } else {
-          // Check if user provided a pin code (6 digits)
+          // User provided address but no pin code - ask for pin code
+          setRequestData({ ...requestData, location: userInput, useCurrentLocation: false })
+          addBotMessage("I've noted your address. However, I need your 6-digit pin code (this is required).\n\nPlease provide your pin code:")
+        }
+        break
+
+      case 'optionalFields':
+        // Check if pin code is missing - it's mandatory
+        if (!requestData.pinCode || requestData.pinCode.length !== 6) {
+          // Check if user provided pin code in this input
           const pinCodeMatch = userInput.match(/\b(\d{6})\b/)
           if (pinCodeMatch) {
             const pinCode = pinCodeMatch[1]
-            addBotMessage("I see you provided a pin code. Let me fetch the location details...")
             setIsTyping(true)
             try {
               const locationData = await getLocationFromPinCode(pinCode)
               if (locationData) {
                 setRequestData({ 
                   ...requestData, 
-                  location: locationData.address,
                   pinCode: pinCode,
-                  state: locationData.state,
-                  city: locationData.city,
-                  useCurrentLocation: false,
-                  optionalFieldsAsked: false
+                  state: locationData.state || requestData.state,
+                  city: locationData.city || requestData.city,
+                  location: requestData.location || locationData.address,
+                  optionalFieldsAsked: true
                 })
                 setIsTyping(false)
-                addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any additional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+                addBotMessage(`Perfect! Pin code ${pinCode} verified.\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any optional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+                return
               } else {
                 setIsTyping(false)
-                addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Could you provide the full address instead?`)
+                addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Please provide a valid 6-digit pin code.`)
+                return
               }
             } catch (error) {
               setIsTyping(false)
-              addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Could you provide the full address instead?")
+              addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Please provide a valid 6-digit pin code.")
+              return
             }
-          } else if (userInput.trim().length < 5) {
-            addBotMessage(getEmpatheticResponse('confusion') + " That seems too short for an address. Could you provide:\n• A full address (e.g., '123 Main Street, Mumbai')\n• A 6-digit pin code\n• Or type 'use current location' for GPS")
           } else {
-            setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
-            addBotMessage("Great! I've noted your location. Would you like to add any additional details to help workers find you?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area, State, City, Pin Code\n\nOr type 'skip' to proceed!")
+            // Pin code still missing
+            addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
+            return
           }
         }
-        break
-
-      case 'optionalFields':
+        
         setRequestData({ ...requestData, optionalFieldsAsked: true })
         if (userInput.toLowerCase().includes('skip') || userInput.toLowerCase().trim() === '') {
-          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${requestData.pinCode}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
         } else {
           // Try to parse all optional fields from user input
           const lowerInput = userInput.toLowerCase()
@@ -654,7 +722,25 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             pinCode: pinCode || requestData.pinCode || ''
           })
           
-          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}${landmark ? `\nLandmark: ${landmark}` : ''}${area ? `\nArea: ${area}` : ''}${state ? `\nState: ${state}` : ''}${city ? `\nCity: ${city}` : ''}${pinCode ? `\nPin Code: ${pinCode}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
+          // Ensure pin code is set (mandatory)
+          const finalPinCode = pinCode || requestData.pinCode || ''
+          if (!finalPinCode || finalPinCode.length !== 6) {
+            addBotMessage("I need your 6-digit pin code to proceed. This is required.\n\nPlease provide your pin code:")
+            return
+          }
+          
+          // Update request data with all fields
+          setRequestData({ 
+            ...requestData, 
+            landmark: landmark || requestData.landmark || '',
+            area: area || requestData.area || '',
+            state: state || requestData.state || '',
+            city: city || requestData.city || '',
+            pinCode: finalPinCode,
+            optionalFieldsAsked: true
+          })
+          
+          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${landmark ? `\nLandmark: ${landmark}` : ''}${area ? `\nArea: ${area}` : ''}${state ? `\nState: ${state}` : ''}${city ? `\nCity: ${city}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
           addBotMessage(t('chatbot.requestFlowConfirm') || confirmText)
         }
         break
@@ -678,26 +764,39 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     switch (step) {
       case 'type':
         let concernType = 'OTHER'
+        let concernTypeName = 'Other'
         const lowerInput = userInput.toLowerCase()
         if (lowerInput.includes('1') || lowerInput.includes('quality') || lowerInput.includes('work quality')) {
           concernType = 'WORK_QUALITY'
+          concernTypeName = 'Work Quality'
         } else if (lowerInput.includes('2') || lowerInput.includes('payment')) {
           concernType = 'PAYMENT_ISSUE'
+          concernTypeName = 'Payment Issue'
         } else if (lowerInput.includes('3') || lowerInput.includes('behavior')) {
           concernType = 'BEHAVIOR'
+          concernTypeName = 'Behavior'
         } else if (lowerInput.includes('4') || lowerInput.includes('safety')) {
           concernType = 'SAFETY'
+          concernTypeName = 'Safety'
         } else if (lowerInput.includes('5') || lowerInput.includes('other')) {
           concernType = 'OTHER'
+          concernTypeName = 'Other'
         }
         
-        setConcernData({ ...concernData, type: concernType })
+        setConcernData({ ...concernData, type: concernType, typeName: concernTypeName })
         addBotMessage(t('chatbot.concernFlowDescription') || 'Please describe your concern in detail. What happened and how can we help?')
         break
 
       case 'description':
         setConcernData({ ...concernData, description: userInput })
-        addBotMessage(t('chatbot.concernFlowConfirm') || `Please confirm:\n\nConcern Type: ${concernData.type}\nDescription: ${userInput}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+        const typeName = concernData.typeName || concernData.type || 'Other'
+        addBotMessage(t('chatbot.concernFlowConfirm') || `Please confirm:\n\nConcern Type: ${typeName}\nDescription: ${userInput}`, 300)
+        setTimeout(() => {
+          addMessage('', 'bot', [
+            'Confirm',
+            'Cancel'
+          ])
+        }, 500)
         break
 
       case 'confirm':
@@ -714,11 +813,21 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   }
 
   const getRequestStep = (): string => {
-    if (!requestData.workType) return 'workType'
+    // Only worker types are required, everything else is optional except pin code
     if (!requestData.workerTypes) return 'workerTypes'
     if (!requestData.workerCountText) return 'workerCount'
-    if (!requestData.startDate || !requestData.endDate) return 'dates'
-    if (!requestData.location && !requestData.useCurrentLocation) return 'location'
+    // Optional fields - only ask if not set
+    if (requestData.workType === undefined) return 'workType'
+    if (requestData.startDate === undefined && requestData.endDate === undefined) return 'dates'
+    // Location is required (for pin code), but can be asked in optionalFields if not provided
+    if (requestData.location === undefined && requestData.useCurrentLocation === undefined && !requestData.pinCode) return 'location'
+    // Pin code is mandatory - check if we have it
+    if (!requestData.pinCode || requestData.pinCode.length !== 6) {
+      // If we're in optionalFields, we'll handle pin code there
+      if (requestData.optionalFieldsAsked === undefined) return 'optionalFields'
+      // If optionalFields was asked but pin code still missing, go back to location
+      return 'location'
+    }
     if (requestData.optionalFieldsAsked === undefined) return 'optionalFields'
     return 'confirm'
   }
@@ -752,8 +861,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     addBotMessage(t('chatbot.navigatingToDashboard') || 'Redirecting you to the concern form...')
     setTimeout(() => {
       if (typeof window !== 'undefined') {
-        // Store concern data in sessionStorage
-        sessionStorage.setItem('chatbotConcernData', JSON.stringify(concernData))
+        // Store concern data in sessionStorage with typeName
+        const concernDataToStore = {
+          ...concernData,
+          typeName: concernData.typeName || concernData.type || 'Other'
+        }
+        sessionStorage.setItem('chatbotConcernData', JSON.stringify(concernDataToStore))
         // Navigate to appropriate dashboard based on user role
         if (user?.role?.toLowerCase() === 'customer') {
           router.push('/customer/dashboard?action=raiseConcern')
@@ -767,23 +880,56 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const showAdminStats = async () => {
     try {
       addBotMessage(t('chatbot.fetchingStats') || 'Fetching statistics...')
+      setIsTyping(true)
       
-      // Use real stats if available, otherwise show placeholder
-      const pending = adminStats?.pendingRequests ?? 0
-      const active = adminStats?.activeRequests ?? 0
-      const workers = adminStats?.totalWorkers ?? 0
-      const customers = adminStats?.totalCustomers ?? 0
-      const concerns = adminStats?.pendingConcerns ?? 0
-      
-      const statsText = t('chatbot.adminStats')?.replace('{pending}', pending.toString())
-        ?.replace('{active}', active.toString())
-        ?.replace('{workers}', workers.toString())
-        ?.replace('{customers}', customers.toString())
-        ?.replace('{concerns}', concerns.toString())
-        || `📊 Current Statistics:\n\n• Pending Requests: ${pending}\n• Active Requests: ${active}\n• Total Workers: ${workers}\n• Total Customers: ${customers}\n• Pending Concerns: ${concerns}\n\nVisit your dashboard for detailed information.`
-      
-      addBotMessage(statsText)
+      // Fetch real-time stats from API endpoints
+      try {
+        // Fetch all stats in parallel
+        const [pendingRes, activeRes, workersRes, customersRes, concernsRes] = await Promise.all([
+          apiClient.get('/admin/requests/pending').catch(() => ({ data: [] })),
+          apiClient.get('/admin/requests/active').catch(() => ({ data: [] })),
+          apiClient.get('/admin/workers').catch(() => ({ data: [] })),
+          apiClient.get('/admin/customers').catch(() => ({ data: [] })),
+          apiClient.get('/admin/concerns').catch(() => ({ data: [] }))
+        ])
+        
+        const pending = Array.isArray(pendingRes.data) ? pendingRes.data.length : 0
+        const active = Array.isArray(activeRes.data) ? activeRes.data.length : 0
+        const workers = Array.isArray(workersRes.data) ? workersRes.data.length : 0
+        const customers = Array.isArray(customersRes.data) ? customersRes.data.length : 0
+        const concerns = Array.isArray(concernsRes.data) 
+          ? concernsRes.data.filter((c: any) => c.status === 'PENDING' || c.status === 'OPEN').length 
+          : 0
+        
+        setIsTyping(false)
+        const statsText = t('chatbot.adminStats')?.replace('{pending}', pending.toString())
+          ?.replace('{active}', active.toString())
+          ?.replace('{workers}', workers.toString())
+          ?.replace('{customers}', customers.toString())
+          ?.replace('{concerns}', concerns.toString())
+          || `📊 Current Statistics:\n\n• Pending Requests: ${pending}\n• Active Requests: ${active}\n• Total Workers: ${workers}\n• Total Customers: ${customers}\n• Pending Concerns: ${concerns}\n\nVisit your dashboard for detailed information.`
+        
+        addBotMessage(statsText)
+      } catch (apiError: any) {
+        setIsTyping(false)
+        // Fallback to props if API fails
+        const pending = adminStats?.pendingRequests ?? 0
+        const active = adminStats?.activeRequests ?? 0
+        const workers = adminStats?.totalWorkers ?? 0
+        const customers = adminStats?.totalCustomers ?? 0
+        const concerns = adminStats?.pendingConcerns ?? 0
+        
+        const statsText = t('chatbot.adminStats')?.replace('{pending}', pending.toString())
+          ?.replace('{active}', active.toString())
+          ?.replace('{workers}', workers.toString())
+          ?.replace('{customers}', customers.toString())
+          ?.replace('{concerns}', concerns.toString())
+          || `📊 Current Statistics:\n\n• Pending Requests: ${pending}\n• Active Requests: ${active}\n• Total Workers: ${workers}\n• Total Customers: ${customers}\n• Pending Concerns: ${concerns}\n\nVisit your dashboard for detailed information.`
+        
+        addBotMessage(statsText)
+      }
     } catch (error: any) {
+      setIsTyping(false)
       addBotMessage(t('chatbot.statsError') || 'Could not fetch statistics. Please try again later.')
     }
   }
@@ -962,6 +1108,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             }, 1000)
           }
         }
+      } else if (user?.role?.toLowerCase() === 'worker' && (
+        lowerText.match(/\b(why|how|can't|cannot|unable|not able|not working|disabled|click|accept|available|availability)\b.*\b(available|accept|notification|request|button|toggle|switch)\b/) ||
+        lowerText.match(/\b(available|accept|notification|request)\b.*\b(why|how|can't|cannot|unable|not able|not working|disabled|click|button|toggle|switch)\b/)
+      )) {
+        // Worker asking about availability or accepting requests
+        addBotMessage("I understand your concern! 🔍\n\nUntil your current work is not complete, you are not able to:\n\n• Make yourself available\n• Accept new requests from notifications\n\nThis is to ensure you can focus on completing your current assignments before taking on new work. Once you complete your current work, you'll be able to make yourself available and accept new requests again.\n\nYou can check your active work in the 'Active Work' tab on your dashboard.")
       } else if (lowerText.includes('stats') || lowerText.includes('statistics') || lowerText.includes('आंकड़े')) {
         if (user?.role?.toLowerCase() === 'admin') {
           showAdminStats()
