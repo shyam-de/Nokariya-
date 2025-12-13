@@ -964,29 +964,29 @@ export default function Home() {
               <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-indigo-400 bg-clip-text text-transparent mb-4">
                 KaamKart
               </h3>
-              <p className="text-gray-400">
-                Your trusted platform for connecting with skilled workers and getting work done efficiently.
+              <p className="text-gray-400" lang={language}>
+                {t('home.footerTagline') || 'Your trusted platform for connecting with skilled workers and getting work done efficiently.'}
               </p>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <h4 className="font-semibold mb-4" lang={language}>{t('home.quickLinks') || 'Quick Links'}</h4>
               <ul className="space-y-2 text-gray-400">
-                <li><Link href="/login" className="hover:text-white transition-colors">Find Workers</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Join as Worker</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Login</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('home.findWorkers') || 'Find Workers'}</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('home.joinAsWorker') || 'Join as Worker'}</Link></li>
+                <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('common.login') || 'Login'}</Link></li>
               </ul>
             </div>
             <div>
-              <h4 className="font-semibold mb-4">Support</h4>
+              <h4 className="font-semibold mb-4" lang={language}>{t('home.support') || 'Support'}</h4>
               <ul className="space-y-2 text-gray-400">
                 <li>📧 support@kaamkart.com</li>
                 <li>📞 +91 1234567890</li>
-                <li>📍 Available 24/7</li>
+                <li lang={language}>📍 {t('home.available247') || 'Available 24/7'}</li>
               </ul>
             </div>
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-gray-400">
-            <p>© 2024 KaamKart. All rights reserved. Made with ❤️ for connecting workers and customers.</p>
+            <p lang={language}>{t('home.allRightsReserved') || '© 2024 KaamKart. All rights reserved. Made with ❤️ for connecting workers and customers.'}</p>
           </div>
         </div>
       </footer>
