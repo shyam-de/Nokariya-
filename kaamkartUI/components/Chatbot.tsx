@@ -190,21 +190,39 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   // Generate empathetic response
   const getEmpatheticResponse = (situation: string): string => {
     const responses: {[key: string]: string[]} = {
-      error: [
-        "I understand that can be frustrating. Let me help you with that.",
-        "No worries! Let's try a different approach.",
-        "That's okay, let me guide you through this step by step."
-      ],
-      success: [
-        "Great! That's perfect.",
-        "Excellent! Moving forward.",
-        "Perfect! Let's continue."
-      ],
-      confusion: [
-        "I see you might be unsure. Let me clarify that for you.",
-        "No problem! Let me explain that better.",
-        "I understand the confusion. Here's what I meant..."
-      ]
+      error: language === 'hi' 
+        ? [
+            "मैं समझता हूँ कि यह निराशाजनक हो सकता है। मैं आपकी मदद करता हूँ।",
+            "कोई बात नहीं! आइए एक अलग तरीके से कोशिश करते हैं।",
+            "ठीक है, मैं आपको कदम दर कदम मार्गदर्शन करता हूँ।"
+          ]
+        : [
+            "I understand that can be frustrating. Let me help you with that.",
+            "No worries! Let's try a different approach.",
+            "That's okay, let me guide you through this step by step."
+          ],
+      success: language === 'hi'
+        ? [
+            "बढ़िया! यह सही है।",
+            "उत्कृष्ट! आगे बढ़ते हैं।",
+            "परफेक्ट! चलिए जारी रखते हैं।"
+          ]
+        : [
+            "Great! That's perfect.",
+            "Excellent! Moving forward.",
+            "Perfect! Let's continue."
+          ],
+      confusion: language === 'hi'
+        ? [
+            "मैं देख रहा हूँ कि आप अनिश्चित हो सकते हैं। मैं आपके लिए इसे स्पष्ट करता हूँ।",
+            "कोई समस्या नहीं! मैं इसे बेहतर तरीके से समझाता हूँ।",
+            "मैं भ्रम को समझता हूँ। यहाँ मेरा मतलब था..."
+          ]
+        : [
+            "I see you might be unsure. Let me clarify that for you.",
+            "No problem! Let me explain that better.",
+            "I understand the confusion. Here's what I meant..."
+          ]
     }
     const options = responses[situation] || responses.error
     return options[Math.floor(Math.random() * options.length)]
