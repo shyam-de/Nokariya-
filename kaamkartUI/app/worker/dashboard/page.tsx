@@ -1393,11 +1393,14 @@ export default function WorkerDashboard() {
                     <div key={`${work.requestId}-${index}`} className="bg-white rounded-xl shadow-lg p-4 md:p-6 border-t-4 border-purple-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                         <div className="flex-1 w-full">
-                          <div className="flex items-center gap-2 md:gap-3 mb-2">
-                            <span className="text-xl md:text-2xl">⚡</span>
-                            <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900 mb-2">
-                              {work.workType}
-                            </h3>
+                          <div className="flex items-center justify-between gap-2 md:gap-3 mb-2">
+                            <div className="flex items-center gap-2 md:gap-3">
+                              <span className="text-xl md:text-2xl">⚡</span>
+                              <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900">
+                                {work.workType}
+                              </h3>
+                            </div>
+                            <div className="flex-shrink-0 sm:hidden">{getStatusBadge(work.status)}</div>
                           </div>
                           {work.startDate && work.endDate && (
                             <div className="text-xs md:text-sm text-gray-600 mb-2">
@@ -1427,7 +1430,7 @@ export default function WorkerDashboard() {
                             </div>
                           </div>
                         </div>
-                        <div className="flex-shrink-0">{getStatusBadge(work.status)}</div>
+                        <div className="flex-shrink-0 hidden sm:block">{getStatusBadge(work.status)}</div>
                       </div>
                       {work.status === 'COMPLETED' && !ratedRequests.has(work.requestId) && (
                         <button
@@ -1472,9 +1475,12 @@ export default function WorkerDashboard() {
                       <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                           <div className="flex-1 w-full">
-                            <div className="flex items-center gap-2 md:gap-3 mb-2">
-                              <span className="text-xl md:text-2xl">⚡</span>
-                              <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900">{request.workType}</h3>
+                            <div className="flex items-center justify-between gap-2 md:gap-3 mb-2">
+                              <div className="flex items-center gap-2 md:gap-3">
+                                <span className="text-xl md:text-2xl">⚡</span>
+                                <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900">{request.workType}</h3>
+                              </div>
+                              <div className="flex-shrink-0 sm:hidden">{getStatusBadge(request.status)}</div>
                             </div>
                             {request.startDate && request.endDate && (
                               <div className="text-xs md:text-sm text-gray-600 mb-2">
@@ -1517,7 +1523,7 @@ export default function WorkerDashboard() {
                               </div>
                             </div>
                           </div>
-                          <div className="flex-shrink-0">{getStatusBadge(request.status)}</div>
+                          <div className="flex-shrink-0 hidden sm:block">{getStatusBadge(request.status)}</div>
                         </div>
 
                         <button

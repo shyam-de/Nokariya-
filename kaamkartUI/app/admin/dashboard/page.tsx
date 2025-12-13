@@ -571,7 +571,16 @@ export default function AdminDashboard() {
       if (workersSearch) params.append('search', workersSearch)
       if (workersSortBy) params.append('sortBy', workersSortBy)
       if (workersSortOrder) params.append('sortOrder', workersSortOrder)
-      if (workersLocationFilter) params.append('locationFilter', 'true')
+      
+      // For non-super admins, always apply location filter (20km radius)
+      // For super admins, use the checkbox value
+      const isSuperAdmin = user?.superAdmin === true || user?.superAdmin === 'true'
+      if (isSuperAdmin) {
+        if (workersLocationFilter) params.append('locationFilter', 'true')
+      } else {
+        // Regular admins always see workers within 20km radius
+        params.append('locationFilter', 'true')
+      }
       
       const response = await axios.get(`${API_URL}/admin/workers?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
@@ -595,7 +604,16 @@ export default function AdminDashboard() {
       if (customersSearch) params.append('search', customersSearch)
       if (customersSortBy) params.append('sortBy', customersSortBy)
       if (customersSortOrder) params.append('sortOrder', customersSortOrder)
-      if (customersLocationFilter) params.append('locationFilter', 'true')
+      
+      // For non-super admins, always apply location filter (20km radius)
+      // For super admins, use the checkbox value
+      const isSuperAdmin = user?.superAdmin === true || user?.superAdmin === 'true'
+      if (isSuperAdmin) {
+        if (customersLocationFilter) params.append('locationFilter', 'true')
+      } else {
+        // Regular admins always see customers within 20km radius
+        params.append('locationFilter', 'true')
+      }
       
       const response = await axios.get(`${API_URL}/admin/customers?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
