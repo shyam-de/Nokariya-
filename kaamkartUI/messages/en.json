@@ -492,6 +492,7 @@
     "updateProfile": "Update Profile",
     "name": "Name",
     "email": "Email",
+    "emailCannotBeChanged": "Email cannot be changed",
     "phone": "Phone",
     "secondaryPhone": "Secondary Phone",
     "profileUpdated": "Profile updated successfully",

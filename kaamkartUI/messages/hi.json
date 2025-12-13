@@ -490,6 +490,7 @@
     "updateProfile": "प्रोफ़ाइल अपडेट करें",
     "name": "नाम",
     "email": "ईमेल",
+    "emailCannotBeChanged": "ईमेल नहीं बदला जा सकता",
     "phone": "फोन",
     "secondaryPhone": "द्वितीयक फोन",
     "profileUpdated": "प्रोफ़ाइल सफलतापूर्वक अपडेट की गई",
