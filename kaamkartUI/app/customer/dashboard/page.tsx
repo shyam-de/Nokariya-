@@ -1243,13 +1243,13 @@ export default function CustomerDashboard() {
                                             address: location.address || prev.location.address
                                           }
                                         }))
-                                        toast.success(t('customer.pinCodeDetectedSuccess') || 'Location detected from Pin Code!')
+                                        toast.success(t('customer.pinCodeDetectedSuccess') || 'Location detected from Pin Code!', { id: 'pin-code-detected' })
                                       } else {
-                                        toast.error(t('customer.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
+                                        toast.error(t('customer.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.', { id: 'pin-code-not-found' })
                                       }
                                     } catch (error) {
                                       logger.error('Error fetching location from pin code:', error)
-                                      toast.error(t('customer.pinCodeError') || 'Error detecting location from Pin Code. Please try again.')
+                                      toast.error(t('customer.pinCodeError') || 'Error detecting location from Pin Code. Please try again.', { id: 'pin-code-error' })
                                     }
                                   }
                                 }
