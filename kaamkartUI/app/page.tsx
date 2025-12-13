@@ -1,7 +1,6 @@
 'use client'
 
 import Link from 'next/link'
-import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState, useMemo } from 'react'
 import { useLanguage } from '@/contexts/LanguageContext'
@@ -275,15 +274,8 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-14 md:h-16">
             <div className="flex items-center">
-              <Link href="/" className="flex items-center gap-2 text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate hover:scale-105 transition-transform">
-                <Image 
-                  src="/logo.svg" 
-                  alt="KaamKart Logo" 
-                  width={40} 
-                  height={40}
-                  className="w-8 h-8 md:w-10 md:h-10"
-                />
-                <span className="hidden sm:inline">KaamKart</span>
+              <Link href="/" className="text-xl md:text-2xl lg:text-3xl font-bold bg-gradient-to-r from-primary-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent truncate hover:scale-105 transition-transform">
+                KaamKart
               </Link>
               <span className="ml-2 md:ml-3 text-xs md:text-sm text-gray-500 hidden md:inline whitespace-nowrap" lang={language}>{t('home.subtitle')}</span>
             </div>
@@ -970,18 +962,9 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
-              <div className="flex items-center gap-3 mb-4">
-                <Image 
-                  src="/logo.svg" 
-                  alt="KaamKart Logo" 
-                  width={50} 
-                  height={50}
-                  className="w-12 h-12"
-                />
-                <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-indigo-400 bg-clip-text text-transparent">
-                  KaamKart
-                </h3>
-              </div>
+              <h3 className="text-2xl font-bold bg-gradient-to-r from-primary-400 to-indigo-400 bg-clip-text text-transparent mb-4">
+                KaamKart
+              </h3>
               <p className="text-gray-400" lang={language}>
                 {t('home.footerTagline') || 'Your trusted platform for connecting with skilled workers and getting work done efficiently.'}
               </p>
