@@ -928,8 +928,7 @@ export default function CustomerDashboard() {
               lang={language}
             >
               <span className="text-lg sm:text-xl">+</span>
-              <span className="hidden xs:inline">{t('customer.createRequest')}</span>
-              <span className="xs:hidden">+</span>
+              <span>{t('customer.createRequest')}</span>
             </button>
           )}
         </div>

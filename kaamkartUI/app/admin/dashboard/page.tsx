@@ -1985,8 +1985,8 @@ export default function AdminDashboard() {
                     
                     <div className="space-y-2 text-sm mb-4">
                       <div className="flex items-center gap-2 text-gray-600 flex-wrap">
-                        <span>⚡</span>
-                        <div className="flex flex-wrap gap-1">
+                        <span className="flex-shrink-0">⚡</span>
+                        <div className="flex flex-wrap gap-1 min-w-0">
                           {request.workerTypes && request.workerTypes.length > 0 ? (
                             request.workerTypes.map((type: string, idx: number) => (
                               <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
@@ -1999,10 +1999,10 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                       {request.startDate && request.endDate && (
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span>📅</span>
-                          <span>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
-                          <span className="text-xs">
+                        <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                          <span className="flex-shrink-0">📅</span>
+                          <span className="break-words min-w-0">{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
+                          <span className="text-xs break-words min-w-0">
                             ({Math.ceil((new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1} days)
                           </span>
                         </div>

@@ -332,43 +332,26 @@ export default function WorkerDashboard() {
   const fetchActiveWork = async () => {
     setIsLoadingActiveWork(true)
     try {
+      // Fetch from work history and filter for active/deployed work
+      // Since /api/workers/active-work endpoint doesn't exist, we use history endpoint
       const token = SessionStorage.getToken()
-      const response = await axios.get(`${API_URL}/workers/active-work`, {
+      const historyResponse = await axios.get(`${API_URL}/workers/history`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setActiveWork(response.data || [])
+      // Filter for active work: DEPLOYED, CONFIRMED, or ADMIN_APPROVED statuses
+      const deployedWork = (historyResponse.data || []).filter((work: any) => 
+        work.status === 'DEPLOYED' || work.status === 'CONFIRMED' || work.status === 'ADMIN_APPROVED'
+      )
+      setActiveWork(deployedWork)
       setDataLoaded(prev => ({ ...prev, activeWork: true }))
     } catch (error: any) {
-      // If endpoint returns 500 or doesn't exist, fallback to work history
-      // Don't show error toast for 500 errors - silently fallback
-      if (error.response?.status === 500 || error.response?.status >= 500) {
-        // Server error - use fallback
-        try {
-          const token = SessionStorage.getToken()
-          const historyResponse = await axios.get(`${API_URL}/workers/history`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-          const deployedWork = (historyResponse.data || []).filter((work: any) => 
-            work.status === 'DEPLOYED' || work.status === 'CONFIRMED' || work.status === 'ADMIN_APPROVED'
-          )
-          setActiveWork(deployedWork)
-          setDataLoaded(prev => ({ ...prev, activeWork: true }))
-        } catch (historyError: any) {
-          // Only show error if fallback also fails
-          logger.error('Error fetching work history for active work:', historyError)
-          if (historyError.response?.status !== 500) {
-            toast.error(t('worker.error') || 'Failed to fetch active work', { id: 'active-work-error' })
-          }
-          setActiveWork([])
-          setDataLoaded(prev => ({ ...prev, activeWork: true }))
-        }
-      } else {
-        // Other errors (401, 403, etc.) - show error
-        logger.error('Error fetching active work:', error)
+      logger.error('Error fetching active work from history:', error)
+      // Only show error for non-500 errors (401, 403, etc.)
+      if (error.response?.status !== 500 && error.response?.status !== 404) {
         toast.error(error.response?.data?.message || t('worker.error') || 'Failed to fetch active work', { id: 'active-work-error' })
-        setActiveWork([])
-        setDataLoaded(prev => ({ ...prev, activeWork: true }))
       }
+      setActiveWork([])
+      setDataLoaded(prev => ({ ...prev, activeWork: true }))
     } finally {
       setIsLoadingActiveWork(false)
     }

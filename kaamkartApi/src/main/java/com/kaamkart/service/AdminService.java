@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.ArrayList;
 
 @Service
 public class AdminService {
@@ -657,16 +658,25 @@ public class AdminService {
     public List<Map<String, Object>> getAllWorkers(Long adminId, String search, String sortBy, String sortOrder, Boolean locationFilter) {
         List<Worker> workers = workerRepository.findAll();
         
-        // Filter by admin radius if adminId is provided and admin is not a super admin
-        // OR if locationFilter is true (for super admins who want to filter by location)
+        // Filter by admin radius if adminId is provided
         if (adminId != null) {
-            if (!isSuperAdmin(adminId)) {
-                // Non-super admin: always filter by radius
+            boolean isSuper = isSuperAdmin(adminId);
+            logger.debug("getAllWorkers - adminId: {}, isSuperAdmin: {}, locationFilter: {}", adminId, isSuper, locationFilter);
+            
+            if (!isSuper) {
+                // Non-super admin: ALWAYS filter by radius (20km)
+                logger.debug("Non-super admin detected, filtering workers by 20km radius");
                 workers = filterWorkersByAdminRadius(workers, adminId);
             } else if (locationFilter != null && locationFilter) {
-                // Super admin: filter by location only if locationFilter is true
+                // Super admin: filter by location only if locationFilter is explicitly true
+                logger.debug("Super admin with locationFilter=true, filtering workers by 20km radius");
                 workers = filterWorkersByAdminRadius(workers, adminId);
+            } else {
+                // Super admin without locationFilter: return all workers
+                logger.debug("Super admin without locationFilter, returning all workers");
             }
+        } else {
+            logger.warn("getAllWorkers called with null adminId - returning all workers (this should not happen)");
         }
         
         // Apply search filter
@@ -747,16 +757,25 @@ public class AdminService {
                 .filter(user -> user.getRole() == User.UserRole.CUSTOMER)
                 .collect(Collectors.toList());
         
-        // Filter by admin radius if adminId is provided and admin is not a super admin
-        // OR if locationFilter is true (for super admins who want to filter by location)
+        // Filter by admin radius if adminId is provided
         if (adminId != null) {
-            if (!isSuperAdmin(adminId)) {
-                // Non-super admin: always filter by radius
+            boolean isSuper = isSuperAdmin(adminId);
+            logger.debug("getAllCustomers - adminId: {}, isSuperAdmin: {}, locationFilter: {}", adminId, isSuper, locationFilter);
+            
+            if (!isSuper) {
+                // Non-super admin: ALWAYS filter by radius (20km)
+                logger.debug("Non-super admin detected, filtering customers by 20km radius");
                 customers = filterCustomersByAdminRadius(customers, adminId);
             } else if (locationFilter != null && locationFilter) {
-                // Super admin: filter by location only if locationFilter is true
+                // Super admin: filter by location only if locationFilter is explicitly true
+                logger.debug("Super admin with locationFilter=true, filtering customers by 20km radius");
                 customers = filterCustomersByAdminRadius(customers, adminId);
+            } else {
+                // Super admin without locationFilter: return all customers
+                logger.debug("Super admin without locationFilter, returning all customers");
             }
+        } else {
+            logger.warn("getAllCustomers called with null adminId - returning all customers (this should not happen)");
         }
         
         // Apply search filter
@@ -913,9 +932,10 @@ public class AdminService {
             adminLocation = admin.getLocation();
         }
         
-        // If admin has no location, return all workers
+        // If admin has no location, return empty list (can't filter without location)
         if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
-            return workers;
+            logger.warn("Admin {} has no location, returning empty worker list", adminId);
+            return new ArrayList<>();
         }
         
         double adminLat = adminLocation.getLatitude();
@@ -954,9 +974,10 @@ public class AdminService {
             adminLocation = admin.getLocation();
         }
         
-        // If admin has no location, return all customers
+        // If admin has no location, return empty list (can't filter without location)
         if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
-            return customers;
+            logger.warn("Admin {} has no location, returning empty customer list", adminId);
+            return new ArrayList<>();
         }
         
         double adminLat = adminLocation.getLatitude();
