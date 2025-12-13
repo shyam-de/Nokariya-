@@ -1,33 +1,30 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Vibrant gradient -->
-    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
+    <!-- Clean gradient -->
+    <linearGradient id="brandGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Main badge/card shape - rounded square representing a card -->
-  <rect x="6" y="6" width="48" height="48" rx="12" fill="url(#logoGradient)"/>
+  <!-- Main card/badge shape - represents "Kart" (card) -->
+  <rect x="8" y="8" width="44" height="44" rx="10" fill="url(#brandGradient)"/>
   
-  <!-- Inner card border -->
-  <rect x="10" y="10" width="40" height="40" rx="8" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
-  
-  <!-- Work tool - hammer icon (simple and recognizable) -->
-  <g transform="translate(30, 20)">
-    <!-- Hammer head -->
-    <rect x="-5" y="-3" width="10" height="6" rx="1" fill="white" opacity="0.95"/>
-    <!-- Hammer handle -->
-    <rect x="-1.5" y="3" width="3" height="8" rx="1.5" fill="white" opacity="0.95"/>
+  <!-- Work icon - simple wrench/tool (represents "Kaam" - work) -->
+  <g transform="translate(30, 25)">
+    <!-- Wrench head -->
+    <rect x="-4" y="-2" width="8" height="4" rx="1" fill="white" opacity="0.95"/>
+    <!-- Wrench handle -->
+    <rect x="-1.5" y="2" width="3" height="10" rx="1.5" fill="white" opacity="0.95"/>
   </g>
   
-  <!-- Connection symbol - two linked circles -->
-  <g transform="translate(30, 40)">
-    <!-- Left circle -->
-    <circle cx="-6" cy="0" r="4" fill="white" opacity="0.9"/>
-    <!-- Right circle -->
-    <circle cx="6" cy="0" r="4" fill="white" opacity="0.9"/>
-    <!-- Connection line -->
-    <line x1="-2" y1="0" x2="2" y2="0" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
+  <!-- Connection symbol - two people/workers connected (represents platform connecting workers & customers) -->
+  <g transform="translate(30, 42)">
+    <!-- Left person/worker -->
+    <circle cx="-5" cy="0" r="3" fill="white" opacity="0.9"/>
+    <!-- Right person/customer -->
+    <circle cx="5" cy="0" r="3" fill="white" opacity="0.9"/>
+    <!-- Connection bridge -->
+    <line x1="-2" y1="0" x2="2" y2="0" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>
   </g>
 </svg>
