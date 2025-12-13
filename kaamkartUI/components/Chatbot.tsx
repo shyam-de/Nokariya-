@@ -552,22 +552,8 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           "Great! What dates work for you?",
           "Excellent! When should the workers start?"
         ]
-        const today = new Date()
-        const tomorrow = new Date(today)
-        tomorrow.setDate(tomorrow.getDate() + 1)
-        const nextWeek = new Date(today)
-        nextWeek.setDate(nextWeek.getDate() + 7)
-        const formatDate = (d: Date) => d.toISOString().split('T')[0]
         
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}`, 300)
-        setTimeout(() => {
-          addMessage('', 'bot', [
-            `1. Today (${formatDate(today)})`,
-            `2. Tomorrow (${formatDate(tomorrow)})`,
-            `3. Next Week (${formatDate(nextWeek)})`,
-            '4. Custom Date'
-          ])
-        }, 500)
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nPlease provide your start date in YYYY-MM-DD format (e.g., 2025-12-15) or type "skip" to continue without dates.`, 300)
         setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
@@ -591,21 +577,8 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           "Great! What's your preferred start date?",
           "Excellent! When should the work begin?"
         ]
-        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}`, 300)
-        setTimeout(() => {
-          const today = new Date()
-          const tomorrow = new Date(today)
-          tomorrow.setDate(tomorrow.getDate() + 1)
-          const nextWeek = new Date(today)
-          nextWeek.setDate(nextWeek.getDate() + 7)
-          const formatDate = (d: Date) => d.toISOString().split('T')[0]
-          addMessage('', 'bot', [
-            `1. Today (${formatDate(today)})`,
-            `2. Tomorrow (${formatDate(tomorrow)})`,
-            `3. Next Week (${formatDate(nextWeek)})`,
-            '4. Custom Date'
-          ])
-        }, 500)
+        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}\n\nPlease provide your start date in YYYY-MM-DD format (e.g., 2025-12-15) or type "skip" to continue without dates.`, 300)
+        setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
       case 'startDate':
@@ -622,34 +595,16 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           break
         }
         
-        // Define formatDate function for this scope
-        const formatDateLocal = (d: Date) => d.toISOString().split('T')[0]
-        
-        // Handle start date selection
+        // Handle start date input - accept YYYY-MM-DD format or natural language
         let selectedStartDate: string | null = null
         
-        if (lowerDateInput.includes('1') || lowerDateInput.includes('today') || lowerDateInput.includes('आज')) {
-          selectedStartDate = formatDateLocal(new Date())
-        } else if (lowerDateInput.includes('2') || lowerDateInput.includes('tomorrow') || lowerDateInput.includes('कल')) {
-          const tomorrow = new Date()
-          tomorrow.setDate(tomorrow.getDate() + 1)
-          selectedStartDate = formatDateLocal(tomorrow)
-        } else if (lowerDateInput.includes('3') || lowerDateInput.includes('next week') || lowerDateInput.includes('अगले सप्ताह')) {
-          const nextWeek = new Date()
-          nextWeek.setDate(nextWeek.getDate() + 7)
-          selectedStartDate = formatDateLocal(nextWeek)
-        } else if (lowerDateInput.includes('4') || lowerDateInput.includes('custom')) {
-          addBotMessage("Please enter your custom start date in YYYY-MM-DD format (e.g., 2024-12-20):")
-          return
+        // Try to parse the date - support YYYY-MM-DD format or natural language
+        const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+        if (parsed) {
+          selectedStartDate = parsed
         } else {
-          // Try to parse the date
-          const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-          if (parsed) {
-            selectedStartDate = parsed
-          } else {
-            addBotMessage(getEmpatheticResponse('confusion') + " Please select a start date from the options above or enter a date in YYYY-MM-DD format.")
-            return
-          }
+          addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid date in YYYY-MM-DD format (e.g., 2025-12-15) or type 'skip' to continue without dates.")
+          return
         }
         
         if (selectedStartDate) {
@@ -700,42 +655,22 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           break
         }
         
-        // Handle end date selection
+        // Handle end date input - accept YYYY-MM-DD format or natural language
         let selectedEndDate: string | null = null
         const requestStartDate = requestData.startDate
         
-        // Define formatDate function for this scope
-        const formatDateForEnd = (d: Date) => d.toISOString().split('T')[0]
-        
         if (!requestStartDate) {
-          addBotMessage("Please select a start date first.")
+          addBotMessage("Please provide a start date first.")
           return
         }
         
-        if (lowerEndInput.includes('1') || lowerEndInput.includes('day after')) {
-          const dayAfter = new Date(requestStartDate)
-          dayAfter.setDate(dayAfter.getDate() + 1)
-          selectedEndDate = formatDateForEnd(dayAfter)
-        } else if (lowerEndInput.includes('2') || lowerEndInput.includes('week after')) {
-          const weekAfter = new Date(requestStartDate)
-          weekAfter.setDate(weekAfter.getDate() + 7)
-          selectedEndDate = formatDateForEnd(weekAfter)
-        } else if (lowerEndInput.includes('3') || lowerEndInput.includes('two weeks')) {
-          const twoWeeksAfter = new Date(requestStartDate)
-          twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
-          selectedEndDate = formatDateForEnd(twoWeeksAfter)
-        } else if (lowerEndInput.includes('4') || lowerEndInput.includes('custom')) {
-          addBotMessage("Please enter your custom end date in YYYY-MM-DD format (e.g., 2024-12-25):")
-          return
+        // Try to parse the date - support YYYY-MM-DD format or natural language
+        const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+        if (parsed) {
+          selectedEndDate = parsed
         } else {
-          // Try to parse the date
-          const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
-          if (parsed) {
-            selectedEndDate = parsed
-          } else {
-            addBotMessage(getEmpatheticResponse('confusion') + " Please select an end date from the options above or enter a date in YYYY-MM-DD format.")
-            return
-          }
+          addBotMessage(getEmpatheticResponse('confusion') + " Please enter a valid end date in YYYY-MM-DD format (e.g., 2025-12-20) or type 'skip' to continue without end date.")
+          return
         }
         
         if (selectedEndDate) {
