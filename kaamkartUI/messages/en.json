@@ -56,7 +56,8 @@
     "nameRequired": "Name is required",
     "phoneRequired": "Phone is required",
     "invalidEmail": "Please enter a valid email address",
-    "invalidPhone": "Please enter a valid phone number (10-15 digits)"
+    "invalidPhone": "Please enter a valid phone number (10-15 digits)",
+    "nameNoNumbers": "Name cannot contain numbers. Please use only letters, spaces, apostrophes, hyphens, and dots."
   },
   "forgotPassword": {
     "title": "Forgot Password",
@@ -169,6 +170,12 @@
     "oldestFirst": "Oldest First",
     "filterByStatus": "Filter by Status",
     "all": "All",
+    "statuspendingadminapproval": "Pending Approval",
+    "statusnotified": "Notified",
+    "statusconfirmed": "Confirmed",
+    "statusdeployed": "Deployed",
+    "statuscompleted": "Completed",
+    "statusrejected": "Rejected",
     "allConcerns": "All Concerns",
     "refreshing": "Refreshing...",
     "refresh": "Refresh",

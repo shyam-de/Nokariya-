@@ -284,9 +284,26 @@ export default function Login() {
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  onChange={(e) => {
+                    // Validate name - no numbers allowed
+                    const value = e.target.value
+                    // Allow only letters, spaces, and common name characters (apostrophes, hyphens, dots)
+                    const nameRegex = /^[a-zA-Z\s'\-\.]*$/
+                    if (nameRegex.test(value) || value === '') {
+                      setFormData({ ...formData, name: value })
+                    }
+                  }}
+                  onBlur={(e) => {
+                    // Show error if name contains numbers
+                    const value = e.target.value.trim()
+                    if (value && /\d/.test(value)) {
+                      toast.error(t('login.nameNoNumbers') || 'Name cannot contain numbers')
+                    }
+                  }}
                   className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-200"
                   placeholder={t('common.name')}
+                  pattern="[a-zA-Z\s'\-\.]+"
+                  title={t('login.nameNoNumbers') || 'Name should only contain letters, spaces, apostrophes, hyphens, and dots'}
                 />
               </div>
               <div className="space-y-2">

@@ -294,8 +294,7 @@ export default function Home() {
                   <button
                     onClick={() => {
                       if (typeof window !== 'undefined') {
-                        localStorage.removeItem('token')
-                        localStorage.removeItem('user')
+                        SessionStorage.clear()
                         window.location.href = '/'
                       }
                     }}
@@ -362,9 +361,10 @@ export default function Home() {
                   </Link>
                   <button
                     onClick={() => {
-                      localStorage.removeItem('token')
-                      localStorage.removeItem('user')
-                      window.location.href = '/'
+                      if (typeof window !== 'undefined') {
+                        SessionStorage.clear()
+                        window.location.href = '/'
+                      }
                     }}
                     className="block w-full px-4 py-3 text-left text-sm text-gray-700 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-all duration-200 font-medium"
                     lang={language}

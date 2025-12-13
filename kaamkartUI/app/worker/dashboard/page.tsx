@@ -785,9 +785,23 @@ export default function WorkerDashboard() {
                   <input
                     type="text"
                     value={profileData.name}
-                    onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const nameRegex = /^[a-zA-Z\s'\-\.]*$/
+                      if (nameRegex.test(value) || value === '') {
+                        setProfileData({ ...profileData, name: value })
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim()
+                      if (value && /\d/.test(value)) {
+                        toast.error(t('login.nameNoNumbers') || 'Name cannot contain numbers')
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    pattern="[a-zA-Z\s'\-\.]+"
+                    title={t('login.nameNoNumbers') || 'Name should only contain letters, spaces, apostrophes, hyphens, and dots'}
                     lang={language}
                   />
                 </div>
@@ -797,8 +811,10 @@ export default function WorkerDashboard() {
                     type="email"
                     value={profileData.email}
                     onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                    title={t('login.invalidEmail') || 'Please enter a valid email address'}
                     lang={language}
                   />
                 </div>
@@ -807,9 +823,16 @@ export default function WorkerDashboard() {
                   <input
                     type="tel"
                     value={profileData.phone}
-                    onChange={(e) => setProfileData({ ...profileData, phone: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '')
+                      if (cleaned.length <= 15) {
+                        setProfileData({ ...profileData, phone: cleaned })
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    pattern="[0-9]{10,15}"
+                    title={t('login.invalidPhone') || 'Please enter a valid phone number (10-15 digits)'}
                     lang={language}
                   />
                 </div>
@@ -818,8 +841,15 @@ export default function WorkerDashboard() {
                   <input
                     type="tel"
                     value={profileData.secondaryPhone}
-                    onChange={(e) => setProfileData({ ...profileData, secondaryPhone: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '')
+                      if (cleaned.length <= 15) {
+                        setProfileData({ ...profileData, secondaryPhone: cleaned })
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    pattern="[0-9]{10,15}"
+                    title={t('login.invalidPhone') || 'Please enter a valid phone number (10-15 digits)'}
                     lang={language}
                   />
                 </div>
@@ -838,8 +868,8 @@ export default function WorkerDashboard() {
 
         {/* Rating Modal */}
         {showRatingModal && selectedRequest && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-xl shadow-2xl p-4 md:p-6 lg:p-8 w-full max-w-lg relative">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-lg relative my-auto max-h-[95vh] overflow-y-auto">
               <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6" lang={language}>{t('worker.rateCustomer')}</h3>
               <button
                 onClick={() => {

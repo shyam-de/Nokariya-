@@ -143,6 +143,9 @@ export default function AdminDashboard() {
   useAutoLogout()
 
   useEffect(() => {
+    // Guard for SSR
+    if (typeof window === 'undefined') return
+
     const token = SessionStorage.getToken()
     const userData = SessionStorage.getUser()
     
@@ -151,20 +154,29 @@ export default function AdminDashboard() {
       return
     }
 
-    const userObj = JSON.parse(userData)
-    setUser(userObj)
-    
-    if (userObj.role?.toLowerCase() !== 'admin') {
-      toast.error('Access denied. Admin only.')
+    try {
+      // Handle both string and object cases
+      const userObj = typeof userData === 'string' ? JSON.parse(userData) : userData
+      setUser(userObj)
+      
+      if (userObj.role?.toLowerCase() !== 'admin') {
+        toast.error('Access denied. Admin only.')
+        router.push('/')
+        return
+      }
+
+      // Debug: Log user object to check superAdmin field
+      console.log('Admin user object:', userObj)
+      console.log('SuperAdmin flag:', userObj.superAdmin)
+
+      fetchPendingRequests()
+    } catch (error) {
+      console.error('Error parsing user data:', error)
+      // Clear invalid data and redirect
+      SessionStorage.clear()
       router.push('/')
-      return
     }
-
-    // Debug: Log user object to check superAdmin field
-    console.log('Admin user object:', userObj)
-    console.log('SuperAdmin flag:', userObj.superAdmin)
-
-    fetchPendingRequests()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const fetchSuccessStories = async () => {
@@ -881,19 +893,33 @@ export default function AdminDashboard() {
 
         {/* Create User Form */}
         {showCreateUser && (
-          <div className="bg-white rounded-xl shadow-lg p-8 mb-8 border-2 border-green-200 animate-slide-down relative z-10">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('admin.createNewUser')}</h2>
-            <form onSubmit={handleCreateUser} className="space-y-5 max-h-[80vh] overflow-y-auto pr-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 mb-8 border-2 border-green-200 animate-slide-down relative z-10">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6" lang={language}>{t('admin.createNewUser')}</h2>
+            <form onSubmit={handleCreateUser} className="space-y-4 sm:space-y-5 max-h-[80vh] overflow-y-auto pr-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.name')}</label>
                   <input
                     type="text"
                     required
                     value={userFormData.name}
-                    onChange={(e) => setUserFormData({ ...userFormData, name: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                    onChange={(e) => {
+                      const value = e.target.value
+                      const nameRegex = /^[a-zA-Z\s'\-\.]*$/
+                      if (nameRegex.test(value) || value === '') {
+                        setUserFormData({ ...userFormData, name: value })
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim()
+                      if (value && /\d/.test(value)) {
+                        toast.error(t('login.nameNoNumbers') || 'Name cannot contain numbers')
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                     placeholder={t('admin.namePlaceholder')}
+                    pattern="[a-zA-Z\s'\-\.]+"
+                    title={t('login.nameNoNumbers') || 'Name should only contain letters, spaces, apostrophes, hyphens, and dots'}
                     lang={language}
                   />
                 </div>
@@ -904,8 +930,10 @@ export default function AdminDashboard() {
                     required
                     value={userFormData.email}
                     onChange={(e) => setUserFormData({ ...userFormData, email: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                     placeholder={t('admin.emailPlaceholder')}
+                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
+                    title={t('login.invalidEmail') || 'Please enter a valid email address'}
                     lang={language}
                   />
                 </div>
@@ -915,9 +943,16 @@ export default function AdminDashboard() {
                     type="tel"
                     required
                     value={userFormData.phone}
-                    onChange={(e) => setUserFormData({ ...userFormData, phone: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/\D/g, '')
+                      if (cleaned.length <= 15) {
+                        setUserFormData({ ...userFormData, phone: cleaned })
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
                     placeholder={t('admin.phonePlaceholder')}
+                    pattern="[0-9]{10,15}"
+                    title={t('login.invalidPhone') || 'Please enter a valid phone number (10-15 digits)'}
                     lang={language}
                   />
                 </div>
@@ -2112,8 +2147,8 @@ export default function AdminDashboard() {
 
       {/* Concern Review Modal */}
       {selectedConcern && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-2xl p-8 w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-lg relative my-auto max-h-[95vh] overflow-y-auto">
             <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Concern #{selectedConcern.id}</h3>
             <button
               onClick={() => {
@@ -2973,16 +3008,18 @@ export default function AdminDashboard() {
       )}
       
       {/* Chatbot - Always visible */}
-      <Chatbot 
-        user={user} 
-        adminStats={{
-          pendingRequests: requests.length,
-          activeRequests: activeRequests.length,
-          totalWorkers: workers.length,
-          totalCustomers: customers.length,
-          pendingConcerns: concerns.filter((c: any) => c.status === 'PENDING' || c.status === 'OPEN').length
-        }}
-      />
+      {user && (
+        <Chatbot 
+          user={user} 
+          adminStats={{
+            pendingRequests: requests.length,
+            activeRequests: activeRequests.length,
+            totalWorkers: workers.length,
+            totalCustomers: customers.length,
+            pendingConcerns: concerns.filter((c: any) => c.status === 'PENDING' || c.status === 'OPEN').length
+          }}
+        />
+      )}
     </div>
   )
 }
