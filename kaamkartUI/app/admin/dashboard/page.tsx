@@ -728,7 +728,7 @@ export default function AdminDashboard() {
 
   const handleAddMessage = async (concernId: string) => {
     if (!newMessage || !newMessage.trim()) {
-      toast.error('Please enter a message')
+                        toast.error(t('admin.pleaseEnterMessage') || 'Please enter a message', { id: 'please-enter-message' })
       return
     }
     
@@ -774,10 +774,15 @@ export default function AdminDashboard() {
       'REJECTED': { bg: 'bg-red-100', text: 'text-red-800', icon: '🚫' }
     }
     const config = statusConfig[status] || { bg: 'bg-gray-100', text: 'text-gray-800', icon: '📋' }
+    
+    // Get translated status text
+    const statusKey = `admin.status${status.toLowerCase().replace(/_/g, '')}`
+    const statusText = t(statusKey) || status.replace(/_/g, ' ')
+    
     return (
-      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} flex items-center gap-1`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${config.bg} ${config.text} flex items-center gap-1`} lang={language}>
         <span>{config.icon}</span>
-        {status.replace(/_/g, ' ')}
+        {statusText}
       </span>
     )
   }
@@ -1852,25 +1857,27 @@ export default function AdminDashboard() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
                   <select
                     value={systemUsersSortBy}
                     onChange={(e) => setSystemUsersSortBy(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    lang={language}
                   >
-                    <option value="date">Date</option>
-                    <option value="name">Name</option>
+                    <option value="date" lang={language}>{t('admin.sortByDate')}</option>
+                    <option value="name" lang={language}>{t('admin.sortByName')}</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
                   <select
                     value={systemUsersSortOrder}
                     onChange={(e) => setSystemUsersSortOrder(e.target.value)}
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    lang={language}
                   >
-                    <option value="desc">Newest First</option>
-                    <option value="asc">Oldest First</option>
+                    <option value="desc" lang={language}>{t('admin.newestFirst')}</option>
+                    <option value="asc" lang={language}>{t('admin.oldestFirst')}</option>
                   </select>
                 </div>
               </div>
@@ -2051,7 +2058,7 @@ export default function AdminDashboard() {
                             disabled={isLoadingConfirmation[request.id]}
                             className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200 disabled:opacity-50"
                           >
-                            {isLoadingConfirmation[request.id] ? 'Loading...' : '🔄 Refresh'}
+                            {isLoadingConfirmation[request.id] ? t('admin.loading') : `🔄 ${t('admin.refresh')}`}
                           </button>
                         </div>
                         {isLoadingConfirmation[request.id] ? (
@@ -2085,7 +2092,7 @@ export default function AdminDashboard() {
                             {/* Per Labor Type Status */}
                             {confirmationStatus[request.id].workerTypeStatus && (
                               <div className="space-y-2">
-                                <div className="text-xs font-semibold text-gray-700 mb-1">Per Labor Type:</div>
+                                <div className="text-xs font-semibold text-gray-700 mb-1" lang={language}>{t('admin.perLaborType')}</div>
                                 {confirmationStatus[request.id].workerTypeStatus.map((ltStatus: any, idx: number) => (
                                   <div key={idx} className="bg-white rounded p-2 border border-blue-200">
                                     <div className="flex justify-between items-center mb-1">
@@ -2216,7 +2223,7 @@ export default function AdminDashboard() {
       {selectedConcern && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
           <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-lg relative my-auto max-h-[95vh] overflow-y-auto">
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">Review Concern #{selectedConcern.id}</h3>
+            <h3 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>{t('admin.reviewConcern')} #{selectedConcern.id}</h3>
             <button
               onClick={() => {
                 setSelectedConcern(null)
@@ -2321,39 +2328,41 @@ export default function AdminDashboard() {
                     })}
                   </div>
                 ) : (
-                  <p className="text-gray-500 text-sm italic mb-4">No messages yet.</p>
+                  <p className="text-gray-500 text-sm italic mb-4" lang={language}>{t('admin.noMessagesYet')}</p>
                 )}
                 
                 {/* Add Message Section - Available for all admins (system and regular) */}
                 <div className="border-t border-gray-200 pt-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Add Message:</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.addMessage')}:</label>
                   <textarea
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     onBlur={(e) => {
                       if (!e.target.value.trim()) {
-                        toast.error('Please enter a message')
+                        toast.error(t('admin.pleaseEnterMessage') || 'Please enter a message', { id: 'please-enter-message' })
                       }
                     }}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
                     rows={3}
-                    placeholder="Type your message here..."
+                    placeholder={t('admin.messagePlaceholder') || 'Type your message here...'}
                     minLength={1}
                     required
+                    lang={language}
                   />
                   <button
                     onClick={() => handleAddMessage(selectedConcern.id)}
                     disabled={isUpdatingConcern || !newMessage.trim()}
                     className="w-full bg-gradient-to-r from-red-500 to-pink-500 text-white py-2 rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50"
+                    lang={language}
                   >
-                    {isUpdatingConcern ? 'Adding...' : 'Add Message'}
+                    {isUpdatingConcern ? t('admin.adding') : t('admin.addMessage')}
                   </button>
                 </div>
               </div>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Update Status:</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.updateStatus')}:</label>
                 <select
                   value={selectedConcern.status}
                   onChange={(e) => {
@@ -2560,12 +2569,12 @@ export default function AdminDashboard() {
                         await axios.put(`${API_URL}/admin/success-stories/${editingStory.id}`, dataToSend, {
                           headers: { Authorization: `Bearer ${token}` }
                         })
-                        toast.success('Success story updated!')
+                        toast.success(t('admin.successStoryUpdated') || 'Success story updated!', { id: 'success-story-updated' })
                       } else {
                         await axios.post(`${API_URL}/admin/success-stories`, dataToSend, {
                           headers: { Authorization: `Bearer ${token}` }
                         })
-                        toast.success('Success story created!')
+                        toast.success(t('admin.successStoryCreated') || 'Success story created!', { id: 'success-story-created' })
                       }
                       setShowStoryForm(false)
                       fetchSuccessStories()
@@ -2591,9 +2600,9 @@ export default function AdminDashboard() {
           )}
 
           {isLoadingStories ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="text-center py-8" lang={language}>{t('admin.loading')}</div>
           ) : successStories.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No success stories yet. Add one to get started!</div>
+            <div className="text-center py-8 text-gray-500" lang={language}>{t('admin.noSuccessStoriesYet')}</div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {successStories.map((story) => (
@@ -2644,7 +2653,7 @@ export default function AdminDashboard() {
                           await axios.delete(`${API_URL}/admin/success-stories/${story.id}`, {
                             headers: { Authorization: `Bearer ${token}` }
                           })
-                          toast.success('Success story deleted!')
+                          toast.success(t('admin.successStoryDeleted') || 'Success story deleted!', { id: 'success-story-deleted' })
                           fetchSuccessStories()
                         } catch (error: any) {
                           toast.error(error.response?.data?.message || 'Failed to delete success story')
@@ -2827,9 +2836,9 @@ export default function AdminDashboard() {
           )}
 
           {isLoadingAds ? (
-            <div className="text-center py-8">Loading...</div>
+            <div className="text-center py-8" lang={language}>{t('admin.loading')}</div>
           ) : advertisements.length === 0 ? (
-            <div className="text-center py-8 text-gray-500">No advertisements yet. Add one to get started!</div>
+            <div className="text-center py-8 text-gray-500" lang={language}>{t('admin.noAdvertisementsYet')}</div>
           ) : (
             <div className="space-y-4">
               {advertisements.map((ad) => (
