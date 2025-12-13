@@ -1465,8 +1465,8 @@ export default function WorkerDashboard() {
                         </button>
                       )}
                       {work.status === 'COMPLETED' && ratedRequests.has(work.requestId) && (
-                        <div className="w-full mt-3 md:mt-4 bg-green-50 border-2 border-green-200 text-green-800 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-semibold text-center">
-                          ✓ Rated
+                        <div className="w-full mt-3 md:mt-4 bg-green-50 border-2 border-green-200 text-green-800 py-2 md:py-2.5 rounded-lg text-sm md:text-base font-semibold text-center" lang={language}>
+                          ✓ {t('worker.rated') || 'Rated'}
                         </div>
                       )}
                     </div>

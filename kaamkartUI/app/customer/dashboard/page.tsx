@@ -1910,7 +1910,7 @@ export default function CustomerDashboard() {
                         </button>
                       ) : (
                         <div className="flex-1 bg-green-50 border-2 border-green-200 text-green-800 py-2 rounded-lg font-semibold text-center">
-                          ✓ Rated
+                          ✓ {t('customer.rated') || 'Rated'}
                         </div>
                       )}
                       <button
