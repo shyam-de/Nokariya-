@@ -1,59 +1,33 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Modern gradient -->
-    <linearGradient id="modernGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
-      <stop offset="50%" style="stop-color:#8b5cf6;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#ec4899;stop-opacity:1" />
+    <!-- Vibrant gradient -->
+    <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4f46e5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#7c3aed;stop-opacity:1" />
     </linearGradient>
-    <!-- Shadow effect -->
-    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur in="SourceAlpha" stdDeviation="2"/>
-      <feOffset dx="0" dy="2" result="offsetblur"/>
-      <feComponentTransfer>
-        <feFuncA type="linear" slope="0.3"/>
-      </feComponentTransfer>
-      <feMerge>
-        <feMergeNode/>
-        <feMergeNode in="SourceGraphic"/>
-      </feMerge>
-    </filter>
   </defs>
   
-  <!-- Main container -->
-  <g transform="translate(30, 30)">
-    <!-- Outer circle with gradient -->
-    <circle cx="0" cy="0" r="24" fill="url(#modernGradient)" opacity="1"/>
-    
-    <!-- Inner decorative ring -->
-    <circle cx="0" cy="0" r="20" fill="none" stroke="white" stroke-width="1.5" opacity="0.4"/>
-    
-    <!-- Modern tool icon - simplified and stylized -->
-    <g transform="translate(0, -6)">
-      <!-- Tool head - modern geometric shape -->
-      <rect x="-4" y="-2" width="8" height="4" fill="white" opacity="0.95" rx="0.5" transform="rotate(45 0 0)"/>
-      <!-- Tool handle - sleek line -->
-      <line x1="0" y1="2" x2="0" y2="8" stroke="white" stroke-width="2.5" stroke-linecap="round" opacity="0.95"/>
-      <!-- Center dot for connection -->
-      <circle cx="0" cy="0" r="1.5" fill="white" opacity="0.9"/>
-    </g>
-    
-    <!-- Modern connection network - three nodes -->
-    <g transform="translate(0, 8)">
-      <!-- Left node -->
-      <circle cx="-5" cy="0" r="2.5" fill="white" opacity="0.9"/>
-      <!-- Center node -->
-      <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.9"/>
-      <!-- Right node -->
-      <circle cx="5" cy="0" r="2.5" fill="white" opacity="0.9"/>
-      <!-- Connection lines - modern network style -->
-      <line x1="-2.5" y1="0" x2="2.5" y2="0" stroke="white" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-    </g>
-    
-    <!-- Accent dots for visual interest -->
-    <circle cx="-8" cy="-8" r="1.5" fill="white" opacity="0.5"/>
-    <circle cx="8" cy="-8" r="1.5" fill="white" opacity="0.5"/>
-    <circle cx="-8" cy="8" r="1.5" fill="white" opacity="0.5"/>
-    <circle cx="8" cy="8" r="1.5" fill="white" opacity="0.5"/>
+  <!-- Main badge/card shape - rounded square representing a card -->
+  <rect x="6" y="6" width="48" height="48" rx="12" fill="url(#logoGradient)"/>
+  
+  <!-- Inner card border -->
+  <rect x="10" y="10" width="40" height="40" rx="8" fill="none" stroke="white" stroke-width="2" opacity="0.3"/>
+  
+  <!-- Work tool - hammer icon (simple and recognizable) -->
+  <g transform="translate(30, 20)">
+    <!-- Hammer head -->
+    <rect x="-5" y="-3" width="10" height="6" rx="1" fill="white" opacity="0.95"/>
+    <!-- Hammer handle -->
+    <rect x="-1.5" y="3" width="3" height="8" rx="1.5" fill="white" opacity="0.95"/>
+  </g>
+  
+  <!-- Connection symbol - two linked circles -->
+  <g transform="translate(30, 40)">
+    <!-- Left circle -->
+    <circle cx="-6" cy="0" r="4" fill="white" opacity="0.9"/>
+    <!-- Right circle -->
+    <circle cx="6" cy="0" r="4" fill="white" opacity="0.9"/>
+    <!-- Connection line -->
+    <line x1="-2" y1="0" x2="2" y2="0" stroke="white" stroke-width="3" stroke-linecap="round" opacity="0.9"/>
   </g>
 </svg>
