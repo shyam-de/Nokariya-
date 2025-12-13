@@ -323,7 +323,11 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       return
     }
     
-    if (reply.includes('Create') || reply.includes('create') || reply.includes('request') || reply.includes('नया अनुरोध')) {
+    // Check for admin-specific quick replies first (before generic "request" check)
+    if ((reply.includes('Pending') || reply.includes('pending') || reply.includes('लंबित')) && user?.role?.toLowerCase() === 'admin') {
+      showPendingRequests()
+      return
+    } else if (reply.includes('Create') || reply.includes('create') || (reply.includes('request') && !reply.includes('pending')) || reply.includes('नया अनुरोध')) {
       if (!user || user.role?.toLowerCase() !== 'customer') {
         addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer to create requests.')
         if (!user) {
