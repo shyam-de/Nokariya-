@@ -301,6 +301,25 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const handleQuickReply = async (reply: string) => {
     addMessage(reply, 'user')
     
+    // Handle worker FAQ questions FIRST, before other checks
+    if (reply.includes('Why not able to make available') || reply.includes('why not able to make available') || (reply.includes('available') && reply.includes('why'))) {
+      // FAQ: Why not able to make available - Only for workers
+      if (!user || user.role?.toLowerCase() !== 'worker') {
+        addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to make yourself available.')
+        return
+      }
+      addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+      return
+    } else if (reply.includes('Why unable to accept new request') || reply.includes('why unable to accept new request') || (reply.includes('accept') && reply.includes('why') && reply.includes('request'))) {
+      // FAQ: Why unable to accept new request - Only for workers
+      if (!user || user.role?.toLowerCase() !== 'worker') {
+        addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to accept new requests.')
+        return
+      }
+      addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+      return
+    }
+    
     if (reply.includes('Create') || reply.includes('create') || reply.includes('request') || reply.includes('नया अनुरोध')) {
       if (!user || user.role?.toLowerCase() !== 'customer') {
         addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer to create requests.')
@@ -364,20 +383,6 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       }
     } else if (reply.includes('Help') || reply.includes('help') || reply.includes('मदद')) {
       showHelp()
-    } else if (reply.includes('Why not able to make available') || reply.includes('why not able to make available') || (reply.includes('available') && reply.includes('why'))) {
-      // FAQ: Why not able to make available - Only for workers
-      if (!user || user.role?.toLowerCase() !== 'worker') {
-        addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to make yourself available.')
-        return
-      }
-      addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
-    } else if (reply.includes('Why unable to accept new request') || reply.includes('why unable to accept new request') || (reply.includes('accept') && reply.includes('why') && reply.includes('request'))) {
-      // FAQ: Why unable to accept new request - Only for workers
-      if (!user || user.role?.toLowerCase() !== 'worker') {
-        addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to accept new requests.')
-        return
-      }
-      addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
     } else if (reply.includes('Try Again') || reply.includes('try again')) {
       // Retry concern submission
       if (concernData.type && concernData.description) {
