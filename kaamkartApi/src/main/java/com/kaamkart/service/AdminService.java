@@ -1141,7 +1141,29 @@ public class AdminService {
                             worker.getCurrentLocation().getLatitude(),
                             worker.getCurrentLocation().getLongitude()
                     );
-                    return distance <= ADMIN_RADIUS_KM;
+                    // Validate distance calculation
+                    if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
+                        logger.warn("Invalid distance calculated for worker {} (ID: {}) - excluding", 
+                                worker.getUser().getName(), worker.getUser().getId());
+                        return false;
+                    }
+                    // Strict check: worker must be within 20km radius
+                    // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
+                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
+                    if (!withinRadius) {
+                        logger.debug("Worker {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
+                                worker.getUser().getName(), worker.getUser().getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false; // Explicitly return false
+                    }
+                    // Double-check: if distance exceeds limit, block it
+                    if (distance > ADMIN_RADIUS_KM) {
+                        logger.warn("Worker {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
+                                worker.getUser().getName(), worker.getUser().getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false; // Block if somehow exceeded
+                    }
+                    return true;
                 })
                 .collect(Collectors.toList());
     }
