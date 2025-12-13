@@ -627,8 +627,14 @@ public class AdminService {
             }
         }
         
-        logger.info("Total workers notified: {} (skipped {} deployed workers, {} unverified workers, {} blocked workers) out of {} available workers", 
-                notifiedCount, skippedDeployedCount, skippedUnverifiedCount, skippedBlockedCount, workersWithDistance.size());
+        logger.info("📊 NOTIFICATION SUMMARY for Request {} (Location: lat={}, lon={}):", 
+                finalRequest.getId(), requestLat, requestLon);
+        logger.info("   ✅ Notified: {} workers (all within {} km radius)", notifiedCount, WORKER_NOTIFICATION_RADIUS_KM);
+        logger.info("   🚫 Skipped (deployed): {} workers", skippedDeployedCount);
+        logger.info("   🚫 Skipped (unverified): {} workers", skippedUnverifiedCount);
+        logger.info("   🚫 Skipped (blocked/unavailable): {} workers", skippedBlockedCount);
+        logger.info("   📍 Total workers found within {} km radius: {}", WORKER_NOTIFICATION_RADIUS_KM, workersWithDistance.size());
+        logger.info("   ⚠️  If any worker outside {} km received notification, this is a CRITICAL BUG!", WORKER_NOTIFICATION_RADIUS_KM);
 
         // Update status to NOTIFIED after sending to workers
         finalRequest.setStatus(Request.RequestStatus.NOTIFIED);
