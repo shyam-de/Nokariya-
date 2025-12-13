@@ -159,6 +159,19 @@ public class AdminService {
         // CRITICAL: Only include verified workers - unverified workers should NEVER receive notifications
         // CRITICAL: Only include workers within 20km radius of the request location
         final Request finalRequest = savedRequest;
+        
+        // Validate request location first
+        if (finalRequest.getLocation() == null || finalRequest.getLocation().getLatitude() == null || finalRequest.getLocation().getLongitude() == null) {
+            logger.error("❌ CRITICAL: Request {} has no valid location (lat/long). Cannot calculate distances. Skipping worker notifications.", 
+                    finalRequest.getId());
+            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
+            return requestRepository.save(savedRequest);
+        }
+        
+        double requestLat = finalRequest.getLocation().getLatitude();
+        double requestLon = finalRequest.getLocation().getLongitude();
+        logger.info("📍 Request location: lat={}, lon={} (Request ID: {})", requestLat, requestLon, finalRequest.getId());
+        
         List<WorkerDistance> workersWithDistance = availableWorkers.stream()
                 .filter(worker -> {
                     // First check: Worker MUST be verified by admin
@@ -169,33 +182,36 @@ public class AdminService {
                         return false;
                     }
                     // Second check: Worker must have location
-                    if (worker.getCurrentLocation() == null || worker.getCurrentLocation().getLatitude() == null) {
-                        return false;
-                    }
-                    // Third check: Request must have location
-                    if (finalRequest.getLocation() == null || finalRequest.getLocation().getLatitude() == null) {
+                    if (worker.getCurrentLocation() == null || worker.getCurrentLocation().getLatitude() == null || worker.getCurrentLocation().getLongitude() == null) {
+                        logger.debug("Excluding worker {} (ID: {}) - no valid location (lat/long)", 
+                                worker.getUser().getName(), worker.getUser().getId());
                         return false;
                     }
                     return true;
                 })
                 .map(worker -> {
-                    double distance = calculateDistance(
-                            finalRequest.getLocation().getLatitude(),
-                            finalRequest.getLocation().getLongitude(),
-                            worker.getCurrentLocation().getLatitude(),
-                            worker.getCurrentLocation().getLongitude()
-                    );
+                    double workerLat = worker.getCurrentLocation().getLatitude();
+                    double workerLon = worker.getCurrentLocation().getLongitude();
+                    double distance = calculateDistance(requestLat, requestLon, workerLat, workerLon);
+                    logger.debug("Worker {} (ID: {}) distance: {} km from request location", 
+                            worker.getUser().getName(), worker.getUser().getId(), String.format("%.2f", distance));
                     return new WorkerDistance(worker, distance);
                 })
                 .filter(wd -> {
                     // CRITICAL: Only include workers within 20km radius
                     boolean withinRadius = wd.getDistance() <= WORKER_NOTIFICATION_RADIUS_KM;
                     if (!withinRadius) {
-                        logger.debug("Excluding worker {} (ID: {}) - distance {} km exceeds {} km radius", 
+                        logger.info("🚫 Excluding worker {} (ID: {}) - distance {} km exceeds {} km radius", 
                                 wd.getWorker().getUser().getName(), 
                                 wd.getWorker().getUser().getId(),
                                 String.format("%.2f", wd.getDistance()),
                                 WORKER_NOTIFICATION_RADIUS_KM);
+                    } else {
+                        logger.info("✅ Worker {} (ID: {}) is within {} km radius - distance: {} km", 
+                                wd.getWorker().getUser().getName(), 
+                                wd.getWorker().getUser().getId(),
+                                WORKER_NOTIFICATION_RADIUS_KM,
+                                String.format("%.2f", wd.getDistance()));
                     }
                     return withinRadius;
                 })
@@ -512,18 +528,30 @@ public class AdminService {
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
                 
+                // CRITICAL: Final distance check before sending notification
+                // Double-check that worker is within 20km radius
+                double finalDistance = wd.getDistance();
+                if (finalDistance > WORKER_NOTIFICATION_RADIUS_KM) {
+                    logger.error("🚫🚫🚫 DISTANCE CHECK FAILED: Worker {} (ID: {}, Email: {}) is {} km away (exceeds {} km limit) - NOTIFICATION BLOCKED!", 
+                            worker.getUser().getName(), worker.getUser().getId(), workerEmail, 
+                            String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
+                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                }
+                
                 // Final safety check - log before sending notification
-                logger.info("✅ SENDING NOTIFICATION to worker {} (ID: {}, Email: {}) for request {} (dates: {} to {})", 
+                logger.info("✅ SENDING NOTIFICATION to worker {} (ID: {}, Email: {}) for request {} (dates: {} to {}). Distance: {} km (within {} km limit)", 
                         worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalRequest.getId(),
-                        finalRequest.getStartDate(), finalRequest.getEndDate());
+                        finalRequest.getStartDate(), finalRequest.getEndDate(), 
+                        String.format("%.2f", finalDistance), WORKER_NOTIFICATION_RADIUS_KM);
                 
                 messagingTemplate.convertAndSend(
                         "/topic/worker/" + worker.getUser().getId(),
                         notificationData
                 );
                 notifiedCount++;
-                logger.info("✓✓✓ NOTIFIED worker: {} (ID: {}, Email: {}) for request: {}", 
-                        worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalRequest.getId());
+                logger.info("✓✓✓ NOTIFIED worker: {} (ID: {}, Email: {}) for request: {} at distance: {} km", 
+                        worker.getUser().getName(), worker.getUser().getId(), workerEmail, finalRequest.getId(),
+                        String.format("%.2f", finalDistance));
                 
                 // Special logging for problematic worker
                 if (workerEmail != null && workerEmail.toLowerCase().contains("elctician")) {
