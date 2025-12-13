@@ -245,6 +245,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       setTimeout(() => {
         addMessage('', 'bot', [
           t('chatbot.quickReplyRaiseConcern') || 'Raise a concern',
+          t('chatbot.quickReplyContact') || 'Contact support',
           t('chatbot.quickReplyHelp') || 'How to use KaamKart'
         ])
       }, 600)
@@ -300,6 +301,21 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         return
       }
       startConcernFlow()
+    } else if (reply.includes('Contact') || reply.includes('contact') || reply.includes('support') || reply.includes('सहायता') || reply.includes('संपर्क')) {
+      // Contact support should trigger concern flow
+      if (!user || (user.role?.toLowerCase() !== 'customer' && user.role?.toLowerCase() !== 'worker')) {
+        addBotMessage(t('chatbot.loginRequired') || 'Please login as a customer or worker to contact support.')
+        if (!user) {
+          setTimeout(() => {
+            addBotMessage(t('chatbot.loginPrompt') || 'Would you like to sign up or login? Type "sign up" or "login" to get started!')
+          }, 1000)
+        }
+        return
+      }
+      addBotMessage(t('chatbot.contactSupportMessage') || 'I\'m here to help! Let me guide you through raising a concern so we can assist you better.')
+      setTimeout(() => {
+        startConcernFlow()
+      }, 1000)
     } else if (reply.includes('About') || reply.includes('about') || reply.includes('क्या है') || reply.includes('कामकार्ट')) {
       showAboutKaamKart()
     } else if (reply.includes('How') && reply.includes('work') || reply.includes('कैसे काम')) {
