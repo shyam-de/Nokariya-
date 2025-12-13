@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import { apiClient } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { getLocationFromPinCode } from '@/lib/indianLocationValidation'
 
 interface Message {
   id: string
@@ -505,11 +506,41 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here')) {
           setRequestData({ ...requestData, useCurrentLocation: true, optionalFieldsAsked: false })
           addBotMessage("Perfect! I'll use your current location. Would you like to add any additional details to help workers find you easily?\n\nOptional details:\n• Landmark (e.g., 'Near City Mall')\n• Area (e.g., 'Downtown')\n• State, City, Pin Code\n\nOr just type 'skip' to continue!")
-        } else if (userInput.trim().length < 5) {
-          addBotMessage(getEmpatheticResponse('confusion') + " That seems too short for an address. Could you provide a bit more detail? For example: '123 Main Street, Mumbai' or type 'use current location' for GPS.")
         } else {
-          setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
-          addBotMessage("Great! I've noted your location. Would you like to add any additional details to help workers find you?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area, State, City, Pin Code\n\nOr type 'skip' to proceed!")
+          // Check if user provided a pin code (6 digits)
+          const pinCodeMatch = userInput.match(/\b(\d{6})\b/)
+          if (pinCodeMatch) {
+            const pinCode = pinCodeMatch[1]
+            addBotMessage("I see you provided a pin code. Let me fetch the location details...")
+            setIsTyping(true)
+            try {
+              const locationData = await getLocationFromPinCode(pinCode)
+              if (locationData) {
+                setRequestData({ 
+                  ...requestData, 
+                  location: locationData.address,
+                  pinCode: pinCode,
+                  state: locationData.state,
+                  city: locationData.city,
+                  useCurrentLocation: false,
+                  optionalFieldsAsked: false
+                })
+                setIsTyping(false)
+                addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\nWould you like to add any additional details?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area\n\nOr type 'skip' to proceed!`)
+              } else {
+                setIsTyping(false)
+                addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Could you provide the full address instead?`)
+              }
+            } catch (error) {
+              setIsTyping(false)
+              addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Could you provide the full address instead?")
+            }
+          } else if (userInput.trim().length < 5) {
+            addBotMessage(getEmpatheticResponse('confusion') + " That seems too short for an address. Could you provide:\n• A full address (e.g., '123 Main Street, Mumbai')\n• A 6-digit pin code\n• Or type 'use current location' for GPS")
+          } else {
+            setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
+            addBotMessage("Great! I've noted your location. Would you like to add any additional details to help workers find you?\n\nOptional:\n• Landmark (e.g., 'Near City Mall')\n• Area, State, City, Pin Code\n\nOr type 'skip' to proceed!")
+          }
         }
         break
 
@@ -562,11 +593,41 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           const pinMatch = userInput.match(/(?:pin|pincode)[:\s]*(\d{4,6})/i)
           if (pinMatch) {
             pinCode = pinMatch[1].trim()
+            // If pin code is 6 digits, try to fetch location details
+            if (pinCode.length === 6) {
+              try {
+                const locationData = await getLocationFromPinCode(pinCode)
+                if (locationData) {
+                  state = locationData.state || state
+                  city = locationData.city || city
+                  if (!requestData.location || requestData.location === '') {
+                    setRequestData((prev: any) => ({ ...prev, location: locationData.address }))
+                  }
+                }
+              } catch (error) {
+                console.error('Error fetching location from pin code:', error)
+              }
+            }
           } else {
-            // Try to find 4-6 digit number as pin code
-            const digitMatch = userInput.match(/\b(\d{4,6})\b/)
+            // Try to find 6-digit number as pin code
+            const digitMatch = userInput.match(/\b(\d{6})\b/)
             if (digitMatch && !pinCode) {
               pinCode = digitMatch[1]
+              // Auto-fetch location from pin code
+              if (pinCode.length === 6) {
+                try {
+                  const locationData = await getLocationFromPinCode(pinCode)
+                  if (locationData) {
+                    state = locationData.state || state
+                    city = locationData.city || city
+                  if (!requestData.location || requestData.location === '') {
+                    setRequestData((prev: any) => ({ ...prev, location: locationData.address }))
+                  }
+                  }
+                } catch (error) {
+                  console.error('Error fetching location from pin code:', error)
+                }
+              }
             }
           }
           

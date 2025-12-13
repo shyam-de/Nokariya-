@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
 import { SessionStorage } from '@/lib/session'
 import { useAutoLogout } from '@/hooks/useAutoLogout'
-// Removed validation imports - just use pin code detection
+import { getLocationFromPinCode } from '@/lib/indianLocationValidation'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -72,6 +72,10 @@ export default function CustomerDashboard() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState({
+    requests: false,
+    concerns: false
+  })
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -139,6 +143,70 @@ export default function CustomerDashboard() {
     fetchRequests()
     fetchProfile()
     fetchLaborTypes()
+    
+    // Check if coming from chatbot with pre-filled data
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search)
+      const action = urlParams.get('action')
+      
+      if (action === 'createRequest') {
+        const chatbotData = sessionStorage.getItem('chatbotRequestData')
+        if (chatbotData) {
+          try {
+            const data = JSON.parse(chatbotData)
+            // Pre-fill form with chatbot data
+            setFormData(prev => ({
+              ...prev,
+              workType: data.workType || prev.workType,
+              workerTypeRequirements: data.workerTypes ? data.workerTypes.map((type: string) => ({
+                laborType: type.toUpperCase(),
+                numberOfWorkers: 1
+              })) : prev.workerTypeRequirements,
+              startDate: data.startDate || prev.startDate,
+              endDate: data.endDate || prev.endDate,
+              location: {
+                ...prev.location,
+                address: data.location || data.address || prev.location.address,
+                landmark: data.landmark || prev.location.landmark,
+                area: data.area || prev.location.area,
+                state: data.state || prev.location.state,
+                city: data.city || prev.location.city,
+                pinCode: data.pinCode || prev.location.pinCode,
+                latitude: data.useCurrentLocation ? prev.location.latitude : 0,
+                longitude: data.useCurrentLocation ? prev.location.longitude : 0
+              }
+            }))
+            // Show request form
+            setShowRequestForm(true)
+            toast.success(t('customer.chatbotDataLoaded') || 'Request details loaded from chat!')
+            // Clear chatbot data
+            sessionStorage.removeItem('chatbotRequestData')
+            // Remove action from URL
+            window.history.replaceState({}, '', '/customer/dashboard')
+          } catch (error) {
+            console.error('Error parsing chatbot data:', error)
+          }
+        }
+      } else if (action === 'raiseConcern') {
+        const chatbotData = sessionStorage.getItem('chatbotConcernData')
+        if (chatbotData) {
+          try {
+            const data = JSON.parse(chatbotData)
+            setConcernData({
+              ...concernData,
+              type: data.type || 'OTHER',
+              description: data.description || ''
+            })
+            setShowConcernModal(true)
+            toast.success(t('customer.chatbotConcernLoaded') || 'Concern details loaded from chat!')
+            sessionStorage.removeItem('chatbotConcernData')
+            window.history.replaceState({}, '', '/customer/dashboard')
+          } catch (error) {
+            console.error('Error parsing chatbot concern data:', error)
+          }
+        }
+      }
+    }
     // Location will only be detected when user clicks "Detect Current Location" button
   }, [])
 
@@ -226,30 +294,7 @@ export default function CustomerDashboard() {
     }
   }
 
-  // Get state and city from pin code
-  const getLocationFromPinCode = async (pinCode: string): Promise<{ state: string; city: string } | null> => {
-    if (!pinCode || pinCode.length !== 6) return null
-    
-    try {
-      // Using India Post Pin Code API (free, no API key required)
-      const response = await fetch(`https://api.postalpincode.in/pincode/${pinCode}`)
-      const data = await response.json()
-      
-      if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
-        const postOffice = data[0].PostOffice[0]
-        const state = postOffice.State || ''
-        const city = postOffice.District || postOffice.Name || ''
-        
-        if (state && city) {
-          return { state, city }
-        }
-      }
-      return null
-    } catch (error) {
-      console.error('Error fetching location from pin code:', error)
-      return null
-    }
-  }
+  // Removed local function - using library function that returns address too
 
   const getLocation = () => {
     if (navigator.geolocation) {
@@ -302,6 +347,7 @@ export default function CustomerDashboard() {
       if (!token) {
         toast.error(t('common.error'))
         router.push('/login')
+        setDataLoaded(prev => ({ ...prev, requests: true }))
         return
       }
       
@@ -311,6 +357,7 @@ export default function CustomerDashboard() {
         if (healthError.code === 'ECONNREFUSED' || healthError.code === 'ERR_NETWORK') {
           toast.error('Cannot connect to server. Please check if API is running on port 8585.')
         }
+        setDataLoaded(prev => ({ ...prev, requests: true }))
         return
       }
       
@@ -340,11 +387,13 @@ export default function CustomerDashboard() {
         }
       }
       setRatedRequests(ratedSet)
+      setDataLoaded(prev => ({ ...prev, requests: true }))
     } catch (error: any) {
       if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED' || !error.response) {
         toast.error('Cannot connect to server. Please check if API is running on port 8585.')
       } else if (error.response?.status === 401 || error.response?.status === 403) {
         toast.error('Session expired. Please login again.')
+        setDataLoaded(prev => ({ ...prev, requests: true }))
         SessionStorage.clear()
         router.push('/login')
       } else {
@@ -673,6 +722,7 @@ export default function CustomerDashboard() {
       const response = await apiClient.get('/concerns/my-concerns', {
       })
       setMyConcerns(response.data)
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
       // Fetch messages for all concerns
       response.data.forEach((concern: any) => {
         fetchConcernMessages(concern.id)
@@ -680,6 +730,7 @@ export default function CustomerDashboard() {
     } catch (error) {
       console.error('Error fetching concerns:', error)
       toast.error(t('customer.error'))
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
       setIsLoadingConcerns(false)
     }
@@ -887,7 +938,7 @@ export default function CustomerDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">📋 </span>{t('customer.myRequests')} ({requests.length})
+              <span className="hidden sm:inline">📋 </span>{t('customer.myRequests')}{dataLoaded.requests && ` (${requests.length})`}
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -898,7 +949,7 @@ export default function CustomerDashboard() {
               }`}
               lang={language}
             >
-              <span className="hidden sm:inline">📢 </span>{t('customer.concerns')} ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
+              <span className="hidden sm:inline">📢 </span>{t('customer.concerns')}{dataLoaded.concerns && ` (${myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})`}
             </button>
           </div>
         </div>
@@ -1145,45 +1196,9 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
 
-                  {/* Address Fields */}
+                  {/* Location Details First */}
                   <div className="space-y-4">
-                    <div>
-                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
-                        {t('customer.fullAddress')}
-                      </label>
-                      <input
-                        type="text"
-                        id="address"
-                        value={formData.location.address}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          location: { ...formData.location, address: e.target.value }
-                        })}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder={t('customer.addressPlaceholder')}
-                        lang={language}
-                      />
-                    </div>
-                    
-                    <div>
-                      <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
-                        {t('customer.landmark')}
-                      </label>
-                      <input
-                        type="text"
-                        id="landmark"
-                        value={formData.location.landmark || ''}
-                        onChange={(e) => setFormData({ 
-                          ...formData, 
-                          location: { ...formData.location, landmark: e.target.value }
-                        })}
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
-                        placeholder={t('customer.landmarkPlaceholder')}
-                        lang={language}
-                      />
-                    </div>
-
-                    {/* Only show address details if current location is NOT detected */}
+                    {/* Only show location details if current location is NOT detected */}
                     {formData.location.latitude === 0 || formData.location.longitude === 0 ? (
                       <div>
                         <p className="text-xs font-medium text-gray-700 mb-2" lang={language}>
@@ -1208,7 +1223,7 @@ export default function CustomerDashboard() {
                                     location: { ...formData.location, pinCode: value }
                                   })
                                   
-                                  // Auto-detect state and city when 6 digits are entered
+                                  // Auto-detect state, city, and address when 6 digits are entered
                                   if (value.length === 6) {
                                     try {
                                       const location = await getLocationFromPinCode(value)
@@ -1219,10 +1234,11 @@ export default function CustomerDashboard() {
                                             ...prev.location,
                                             pinCode: value,
                                             state: location.state || prev.location.state,
-                                            city: location.city || prev.location.city
+                                            city: location.city || prev.location.city,
+                                            address: location.address || prev.location.address
                                           }
                                         }))
-                                        toast.success(t('customer.pinCodeDetectedSuccess') || 'State and City detected from Pin Code!')
+                                        toast.success(t('customer.pinCodeDetectedSuccess') || 'Location detected from Pin Code!')
                                       } else {
                                         toast.error(t('customer.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
                                       }
@@ -1311,6 +1327,48 @@ export default function CustomerDashboard() {
                         </div>
                       </div>
                     ) : null}
+
+                    {/* Address Field - After Location Details */}
+                    <div>
+                      <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.fullAddress')} <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        id="address"
+                        required
+                        value={formData.location.address}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          location: { ...formData.location, address: e.target.value }
+                        })}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all resize-none"
+                        placeholder={t('customer.addressPlaceholder') || 'Enter your full address (auto-filled from Pin Code, but you can edit)'}
+                        rows={3}
+                        lang={language}
+                      />
+                      <p className="text-xs text-gray-500 mt-1" lang={language}>
+                        {t('customer.addressHelp') || 'Address will be auto-filled when you enter pin code, but you can edit it if needed'}
+                      </p>
+                    </div>
+                    
+                    {/* Landmark Field */}
+                    <div>
+                      <label htmlFor="landmark" className="block text-sm font-medium text-gray-700 mb-1" lang={language}>
+                        {t('customer.landmark')}
+                      </label>
+                      <input
+                        type="text"
+                        id="landmark"
+                        value={formData.location.landmark || ''}
+                        onChange={(e) => setFormData({ 
+                          ...formData, 
+                          location: { ...formData.location, landmark: e.target.value }
+                        })}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                        placeholder={t('customer.landmarkPlaceholder')}
+                        lang={language}
+                      />
+                    </div>
                   </div>
                 </div>
                 <button

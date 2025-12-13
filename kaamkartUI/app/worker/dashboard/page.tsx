@@ -98,6 +98,12 @@ export default function WorkerDashboard() {
   const [myConcerns, setMyConcerns] = useState<any[]>([])
   const [user, setUser] = useState<User | null>(null)
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
+  const [dataLoaded, setDataLoaded] = useState({
+    requests: false,
+    activeWork: false,
+    workHistory: false,
+    concerns: false
+  })
   const [isUpdatingConcernStatus, setIsUpdatingConcernStatus] = useState(false)
   const [editingConcern, setEditingConcern] = useState<{id: string, status: string, message: string} | null>(null)
   const [concernMessages, setConcernMessages] = useState<{[key: string]: any[]}>({})
@@ -273,9 +279,11 @@ export default function WorkerDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setRequests(response.data)
+      setDataLoaded(prev => ({ ...prev, requests: true }))
     } catch (error) {
       console.error('Error fetching requests:', error)
       toast.error(t('worker.error'))
+      setDataLoaded(prev => ({ ...prev, requests: true }))
     } finally {
       setIsLoading(false)
     }
@@ -289,6 +297,7 @@ export default function WorkerDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setWorkHistory(response.data)
+      setDataLoaded(prev => ({ ...prev, workHistory: true }))
       
       // Check which completed requests have been rated
       const ratedSet = new Set<string>()
@@ -323,6 +332,7 @@ export default function WorkerDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setActiveWork(response.data || [])
+      setDataLoaded(prev => ({ ...prev, activeWork: true }))
     } catch (error: any) {
       console.error('Error fetching active work:', error)
       // If endpoint doesn't exist, try to get from work history with DEPLOYED status
@@ -335,9 +345,11 @@ export default function WorkerDashboard() {
           work.status === 'DEPLOYED' || work.status === 'CONFIRMED'
         )
         setActiveWork(deployedWork)
+        setDataLoaded(prev => ({ ...prev, activeWork: true }))
       } catch (historyError) {
         console.error('Error fetching work history for active work:', historyError)
         toast.error(t('worker.error') || 'Failed to fetch active work')
+        setDataLoaded(prev => ({ ...prev, activeWork: true }))
       }
     } finally {
       setIsLoadingActiveWork(false)
@@ -352,6 +364,7 @@ export default function WorkerDashboard() {
         headers: { Authorization: `Bearer ${token}` }
       })
       setMyConcerns(response.data)
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
       // Fetch messages for all concerns
       response.data.forEach((concern: any) => {
         fetchConcernMessages(concern.id)
@@ -359,6 +372,7 @@ export default function WorkerDashboard() {
     } catch (error) {
       console.error('Error fetching concerns:', error)
       toast.error(t('worker.error'))
+      setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
       setIsLoadingConcerns(false)
     }
@@ -799,7 +813,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">🔔 </span>{t('worker.availableRequests')} ({requests.length})
+              <span className="hidden sm:inline">🔔 </span>{t('worker.availableRequests')}{dataLoaded.requests && ` (${requests.length})`}
             </button>
             <button
               onClick={() => {
@@ -812,7 +826,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">📍 </span>{t('worker.activeWork')} ({activeWork.length})
+              <span className="hidden sm:inline">📍 </span>{t('worker.activeWork')}{dataLoaded.activeWork && ` (${activeWork.length})`}
             </button>
             <button
               onClick={() => setActiveTab('history')}
@@ -822,7 +836,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">📜 </span>{t('worker.workHistory')} ({workHistory.length})
+              <span className="hidden sm:inline">📜 </span>{t('worker.workHistory')}{dataLoaded.workHistory && ` (${workHistory.length})`}
             </button>
             <button
               onClick={() => setActiveTab('concerns')}
@@ -832,7 +846,7 @@ export default function WorkerDashboard() {
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
               }`}
             >
-              <span className="hidden sm:inline">📢 </span>{t('worker.concerns')} ({myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})
+              <span className="hidden sm:inline">📢 </span>{t('worker.concerns')}{dataLoaded.concerns && ` (${myConcerns.filter((c: any) => c.status === 'PENDING').length > 0 ? myConcerns.filter((c: any) => c.status === 'PENDING').length : myConcerns.length})`}
             </button>
           </div>
         </div>
@@ -1243,8 +1257,15 @@ export default function WorkerDashboard() {
                               )}
                             </div>
                             <div className="flex-shrink-0">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800">
-                                {t('worker.active') || 'Active'}
+                              <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                                work.status === 'DEPLOYED' 
+                                  ? 'bg-green-100 text-green-800' 
+                                  : 'bg-orange-100 text-orange-800'
+                              }`}>
+                                {work.status === 'DEPLOYED' 
+                                  ? (t('worker.deployed') || 'Deployed')
+                                  : (t('worker.confirmed') || 'Confirmed')
+                                }
                               </span>
                             </div>
                           </div>
@@ -1308,17 +1329,39 @@ export default function WorkerDashboard() {
                             </a>
                           )}
                           
-                          {work.requestId && (
+                          <div className="flex flex-col gap-2 mt-4">
+                            {work.requestId && (
+                              <button
+                                onClick={() => {
+                                  setSelectedRequest(work.request || work)
+                                  setShowRatingModal(true)
+                                }}
+                                className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-all"
+                              >
+                                {t('worker.viewDetails') || 'View Details'}
+                              </button>
+                            )}
+                            
+                            {/* Raise Concern Button */}
                             <button
                               onClick={() => {
-                                setSelectedRequest(work.request || work)
-                                setShowRatingModal(true)
+                                setConcernData({
+                                  ...concernData,
+                                  requestId: work.requestId || work.id || '',
+                                  relatedToUserId: customer?.id || '',
+                                  type: 'OTHER',
+                                  description: ''
+                                })
+                                setShowConcernModal(true)
                               }}
-                              className="w-full mt-2 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-all"
+                              className="w-full bg-red-50 text-red-700 py-2 px-4 rounded-lg font-medium hover:bg-red-100 transition-all border border-red-200"
                             >
-                              {t('worker.viewDetails') || 'View Details'}
+                              <span className="flex items-center justify-center gap-2">
+                                <span>⚠️</span>
+                                <span lang={language}>{t('worker.raiseConcern') || 'Raise Concern'}</span>
+                              </span>
                             </button>
-                          )}
+                          </div>
                         </div>
                       </div>
                     )

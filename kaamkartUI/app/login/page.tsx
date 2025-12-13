@@ -31,7 +31,8 @@ export default function Login() {
     workerTypes: [] as string[],
     state: '',
     city: '',
-    pinCode: ''
+    pinCode: '',
+    address: ''
   })
 
   useEffect(() => {
@@ -72,9 +73,9 @@ export default function Login() {
           return
         }
         
-        // Validate state, city, and pin code
-        if (!formData.state || !formData.city || !formData.pinCode) {
-          toast.error(t('login.stateCityPinRequired') || 'State, City, and Pin Code are required')
+        // Validate state, city, pin code, and address
+        if (!formData.state || !formData.city || !formData.pinCode || !formData.address) {
+          toast.error(t('login.stateCityPinAddressRequired') || 'State, City, Pin Code, and Address are required')
           setIsLoading(false)
           return
         }
@@ -158,7 +159,8 @@ export default function Login() {
           location: {
             state: formData.state.trim(),
             city: formData.city.trim(),
-            pinCode: formData.pinCode.trim()
+            pinCode: formData.pinCode.trim(),
+            address: formData.address.trim()
           }
         }
       }
@@ -482,7 +484,7 @@ export default function Login() {
                     if (value.length <= 6) {
                       setFormData({ ...formData, pinCode: value })
                       
-                      // Auto-fill state and city when pin code is complete
+                      // Auto-fill state, city, and address when pin code is complete
                       if (value.length === 6) {
                         try {
                           const location = await getLocationFromPinCode(value)
@@ -491,9 +493,10 @@ export default function Login() {
                               ...prev,
                               pinCode: value,
                               state: location.state || prev.state,
-                              city: location.city || prev.city
+                              city: location.city || prev.city,
+                              address: location.address || prev.address
                             }))
-                            toast.success(t('login.pinCodeDetected') || 'State and City detected from Pin Code!')
+                            toast.success(t('login.pinCodeDetected') || 'Location detected from Pin Code!')
                           } else {
                             toast.error(t('login.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
                           }
@@ -516,6 +519,25 @@ export default function Login() {
                   title={t('login.pinCodeValidation') || 'Pin Code must be exactly 6 digits'}
                   lang={language}
                 />
+              </div>
+              
+              {/* Address - Editable, auto-filled from Pin Code but can be modified */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1" lang={language}>
+                  {t('login.address') || 'Full Address'} <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  required
+                  value={formData.address}
+                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                  className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm resize-none"
+                  placeholder={t('login.addressPlaceholder') || 'Enter your full address (auto-filled from Pin Code, but you can edit)'}
+                  rows={3}
+                  lang={language}
+                />
+                <p className="text-xs text-gray-500 mt-1" lang={language}>
+                  {t('login.addressHelp') || 'Address will be auto-filled when you enter pin code, but you can edit it if needed'}
+                </p>
               </div>
               
               {/* State and City - Read Only */}
@@ -665,7 +687,8 @@ export default function Login() {
                       workerTypes: [],
                       state: '',
                       city: '',
-                      pinCode: ''
+                      pinCode: '',
+                      address: ''
                     })
                   }
                 }}
