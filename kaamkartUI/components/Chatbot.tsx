@@ -622,19 +622,22 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           break
         }
         
+        // Define formatDate function for this scope
+        const formatDateLocal = (d: Date) => d.toISOString().split('T')[0]
+        
         // Handle start date selection
         let selectedStartDate: string | null = null
         
         if (lowerDateInput.includes('1') || lowerDateInput.includes('today') || lowerDateInput.includes('आज')) {
-          selectedStartDate = formatDate(new Date())
+          selectedStartDate = formatDateLocal(new Date())
         } else if (lowerDateInput.includes('2') || lowerDateInput.includes('tomorrow') || lowerDateInput.includes('कल')) {
           const tomorrow = new Date()
           tomorrow.setDate(tomorrow.getDate() + 1)
-          selectedStartDate = formatDate(tomorrow)
+          selectedStartDate = formatDateLocal(tomorrow)
         } else if (lowerDateInput.includes('3') || lowerDateInput.includes('next week') || lowerDateInput.includes('अगले सप्ताह')) {
           const nextWeek = new Date()
           nextWeek.setDate(nextWeek.getDate() + 7)
-          selectedStartDate = formatDate(nextWeek)
+          selectedStartDate = formatDateLocal(nextWeek)
         } else if (lowerDateInput.includes('4') || lowerDateInput.includes('custom')) {
           addBotMessage("Please enter your custom start date in YYYY-MM-DD format (e.g., 2024-12-20):")
           return
@@ -701,6 +704,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         let selectedEndDate: string | null = null
         const requestStartDate = requestData.startDate
         
+        // Define formatDate function for this scope
+        const formatDateForEnd = (d: Date) => d.toISOString().split('T')[0]
+        
         if (!requestStartDate) {
           addBotMessage("Please select a start date first.")
           return
@@ -709,15 +715,15 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         if (lowerEndInput.includes('1') || lowerEndInput.includes('day after')) {
           const dayAfter = new Date(requestStartDate)
           dayAfter.setDate(dayAfter.getDate() + 1)
-          selectedEndDate = formatDate(dayAfter)
+          selectedEndDate = formatDateForEnd(dayAfter)
         } else if (lowerEndInput.includes('2') || lowerEndInput.includes('week after')) {
           const weekAfter = new Date(requestStartDate)
           weekAfter.setDate(weekAfter.getDate() + 7)
-          selectedEndDate = formatDate(weekAfter)
+          selectedEndDate = formatDateForEnd(weekAfter)
         } else if (lowerEndInput.includes('3') || lowerEndInput.includes('two weeks')) {
           const twoWeeksAfter = new Date(requestStartDate)
           twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
-          selectedEndDate = formatDate(twoWeeksAfter)
+          selectedEndDate = formatDateForEnd(twoWeeksAfter)
         } else if (lowerEndInput.includes('4') || lowerEndInput.includes('custom')) {
           addBotMessage("Please enter your custom end date in YYYY-MM-DD format (e.g., 2024-12-25):")
           return
