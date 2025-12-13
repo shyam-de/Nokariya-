@@ -229,6 +229,7 @@
     "relatedRequest": "संबंधित अनुरोध (वैकल्पिक)",
     "none": "कोई नहीं",
     "concernDescriptionPlaceholder": "कृपया अपनी चिंता का विस्तार से वर्णन करें...",
+    "concernDescriptionRequired": "कृपया अपनी चिंता के लिए एक विवरण दर्ज करें (कम से कम 10 अक्षर)",
     "safety": "सुरक्षा",
     "statuspending": "लंबित",
     "statuspendingadminapproval": "प्रशासनिक अनुमोदन लंबित",

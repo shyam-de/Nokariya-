@@ -304,6 +304,7 @@
     "relatedRequest": "Related Request (Optional)",
     "none": "None",
     "concernDescriptionPlaceholder": "Please describe your concern in detail...",
+    "concernDescriptionRequired": "Please enter a description for your concern (at least 10 characters)",
     "safety": "Safety",
     "statuspending": "Pending",
     "statuspendingadminapproval": "Pending Admin Approval",

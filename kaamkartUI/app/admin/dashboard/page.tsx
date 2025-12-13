@@ -2254,9 +2254,16 @@ export default function AdminDashboard() {
                   <textarea
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
+                    onBlur={(e) => {
+                      if (!e.target.value.trim()) {
+                        toast.error('Please enter a message')
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 mb-2"
                     rows={3}
                     placeholder="Type your message here..."
+                    minLength={1}
+                    required
                   />
                   <button
                     onClick={() => handleAddMessage(selectedConcern.id)}
