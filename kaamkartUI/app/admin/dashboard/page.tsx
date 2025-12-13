@@ -2970,7 +2970,16 @@ export default function AdminDashboard() {
       )}
       
       {/* Chatbot - Always visible */}
-      <Chatbot user={user} />
+      <Chatbot 
+        user={user} 
+        adminStats={{
+          pendingRequests: requests.length,
+          activeRequests: activeRequests.length,
+          totalWorkers: workers.length,
+          totalCustomers: customers.length,
+          pendingConcerns: concerns.filter((c: any) => c.status === 'PENDING' || c.status === 'OPEN').length
+        }}
+      />
     </div>
   )
 }

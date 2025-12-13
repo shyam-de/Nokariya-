@@ -20,11 +20,18 @@ interface ChatbotProps {
     role: string
     name: string
   } | null
+  adminStats?: {
+    pendingRequests?: number
+    activeRequests?: number
+    totalWorkers?: number
+    totalCustomers?: number
+    pendingConcerns?: number
+  }
 }
 
 type FlowType = 'none' | 'request' | 'concern'
 
-export default function Chatbot({ user }: ChatbotProps) {
+export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const { language, t } = useLanguage()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
@@ -110,8 +117,7 @@ export default function Chatbot({ user }: ChatbotProps) {
       setTimeout(() => {
         addMessage('', 'bot', [
           t('chatbot.quickReplyRaiseConcern') || 'Raise a concern',
-          t('chatbot.quickReplyHelp') || 'How to use KaamKart',
-          t('chatbot.quickReplyContact') || 'Contact support'
+          t('chatbot.quickReplyHelp') || 'How to use KaamKart'
         ])
       }, 600)
     } else if (user?.role?.toLowerCase() === 'admin') {
@@ -243,10 +249,10 @@ export default function Chatbot({ user }: ChatbotProps) {
       case 'location':
         if (userInput.toLowerCase().includes('current') || userInput.toLowerCase().includes('gps') || userInput.toLowerCase().includes('location')) {
           setRequestData({ ...requestData, useCurrentLocation: true, optionalFieldsAsked: false })
-          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- Or type "skip" to proceed without optional details')
+          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- State (e.g., "Maharashtra")\n- City (e.g., "Mumbai")\n- Pin Code (e.g., "400001")\n\nOr type "skip" to proceed without optional details')
         } else {
           setRequestData({ ...requestData, location: userInput, useCurrentLocation: false, optionalFieldsAsked: false })
-          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- Or type "skip" to proceed without optional details')
+          addBotMessage(t('chatbot.requestFlowOptionalFields') || 'Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., "Near City Mall")\n- Area (e.g., "Downtown Area")\n- State (e.g., "Maharashtra")\n- City (e.g., "Mumbai")\n- Pin Code (e.g., "400001")\n\nOr type "skip" to proceed without optional details')
         }
         break
 
@@ -255,36 +261,83 @@ export default function Chatbot({ user }: ChatbotProps) {
         if (userInput.toLowerCase().includes('skip') || userInput.toLowerCase().trim() === '') {
           addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
         } else {
-          // Try to parse landmark and area from user input
+          // Try to parse all optional fields from user input
           const lowerInput = userInput.toLowerCase()
-          let landmark = ''
-          let area = ''
+          let landmark = requestData.landmark || ''
+          let area = requestData.area || ''
+          let state = requestData.state || ''
+          let city = requestData.city || ''
+          let pinCode = requestData.pinCode || ''
           
-          // Simple parsing - look for keywords
+          // Parse landmark
           if (lowerInput.includes('landmark') || lowerInput.includes('near') || lowerInput.includes('beside')) {
-            const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+area|$)/i)
+            const landmarkMatch = userInput.match(/(?:landmark|near|beside)[:\s]+(.+?)(?:\s+(?:area|state|city|pin|pincode)|$)/i)
             if (landmarkMatch) {
               landmark = landmarkMatch[1].trim()
             }
           }
+          
+          // Parse area
           if (lowerInput.includes('area')) {
-            const areaMatch = userInput.match(/area[:\s]+(.+)/i)
+            const areaMatch = userInput.match(/area[:\s]+(.+?)(?:\s+(?:state|city|pin|pincode)|$)/i)
             if (areaMatch) {
               area = areaMatch[1].trim()
             }
           }
           
-          // If no specific keywords, treat as landmark
-          if (!landmark && !area) {
-            landmark = userInput.trim()
+          // Parse state
+          if (lowerInput.includes('state')) {
+            const stateMatch = userInput.match(/state[:\s]+(.+?)(?:\s+(?:city|pin|pincode)|$)/i)
+            if (stateMatch) {
+              state = stateMatch[1].trim()
+            }
+          }
+          
+          // Parse city
+          if (lowerInput.includes('city')) {
+            const cityMatch = userInput.match(/city[:\s]+(.+?)(?:\s+(?:pin|pincode)|$)/i)
+            if (cityMatch) {
+              city = cityMatch[1].trim()
+            }
+          }
+          
+          // Parse pin code
+          const pinMatch = userInput.match(/(?:pin|pincode)[:\s]*(\d{4,6})/i)
+          if (pinMatch) {
+            pinCode = pinMatch[1].trim()
+          } else {
+            // Try to find 4-6 digit number as pin code
+            const digitMatch = userInput.match(/\b(\d{4,6})\b/)
+            if (digitMatch && !pinCode) {
+              pinCode = digitMatch[1]
+            }
+          }
+          
+          // If no specific keywords found, try to extract from comma-separated values
+          if (!landmark && !area && !state && !city && !pinCode) {
+            const parts = userInput.split(',').map(p => p.trim()).filter(p => p)
+            if (parts.length > 0) {
+              landmark = parts[0]
+              if (parts.length > 1) area = parts[1]
+              if (parts.length > 2) state = parts[2]
+              if (parts.length > 3) city = parts[3]
+              if (parts.length > 4) pinCode = parts[4]
+            } else {
+              landmark = userInput.trim()
+            }
           }
           
           setRequestData({ 
             ...requestData, 
-            landmark: landmark || requestData.landmark,
-            area: area || requestData.area
+            landmark: landmark || requestData.landmark || '',
+            area: area || requestData.area || '',
+            state: state || requestData.state || '',
+            city: city || requestData.city || '',
+            pinCode: pinCode || requestData.pinCode || ''
           })
-          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}\nLandmark: ${landmark || 'None'}\nArea: ${area || 'None'}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          
+          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate} to ${requestData.endDate}\nLocation: ${requestData.location || 'Current Location'}${landmark ? `\nLandmark: ${landmark}` : ''}${area ? `\nArea: ${area}` : ''}${state ? `\nState: ${state}` : ''}${city ? `\nCity: ${city}` : ''}${pinCode ? `\nPin Code: ${pinCode}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
+          addBotMessage(t('chatbot.requestFlowConfirm') || confirmText)
         }
         break
 
@@ -396,13 +449,20 @@ export default function Chatbot({ user }: ChatbotProps) {
   const showAdminStats = async () => {
     try {
       addBotMessage(t('chatbot.fetchingStats') || 'Fetching statistics...')
-      // Calculate stats from available data or use a simple message
-      const statsText = t('chatbot.adminStats')?.replace('{pending}', '?')
-        ?.replace('{active}', '?')
-        ?.replace('{workers}', '?')
-        ?.replace('{customers}', '?')
-        ?.replace('{concerns}', '?')
-        || `📊 Statistics:\n\n• Pending Requests: Check dashboard\n• Active Requests: Check dashboard\n• Total Workers: Check dashboard\n• Total Customers: Check dashboard\n• Pending Concerns: Check dashboard\n\nVisit your dashboard for detailed information.`
+      
+      // Use real stats if available, otherwise show placeholder
+      const pending = adminStats?.pendingRequests ?? 0
+      const active = adminStats?.activeRequests ?? 0
+      const workers = adminStats?.totalWorkers ?? 0
+      const customers = adminStats?.totalCustomers ?? 0
+      const concerns = adminStats?.pendingConcerns ?? 0
+      
+      const statsText = t('chatbot.adminStats')?.replace('{pending}', pending.toString())
+        ?.replace('{active}', active.toString())
+        ?.replace('{workers}', workers.toString())
+        ?.replace('{customers}', customers.toString())
+        ?.replace('{concerns}', concerns.toString())
+        || `📊 Current Statistics:\n\n• Pending Requests: ${pending}\n• Active Requests: ${active}\n• Total Workers: ${workers}\n• Total Customers: ${customers}\n• Pending Concerns: ${concerns}\n\nVisit your dashboard for detailed information.`
       
       addBotMessage(statsText)
     } catch (error: any) {

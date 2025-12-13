@@ -442,7 +442,6 @@
     "quickReplyCreateRequest": "Create a new request",
     "quickReplyRaiseConcern": "Raise a concern",
     "quickReplyHelp": "How to use KaamKart",
-    "quickReplyContact": "Contact support",
     "loginRequired": "Please login as a customer to use this feature.",
     "greeting": "Hello! How can I help you today?",
     "defaultResponse": "I'm here to help! You can ask me about creating requests, raising concerns, or general help. Type \"help\" for more options.",
@@ -474,13 +473,13 @@
     "signUpPrompt": "Ready to get started? Type \"sign up\" to create an account or \"login\" if you already have one!",
     "navigateToLogin": "Would you like me to take you to the login page? Type \"yes\" to navigate there.",
     "navigatingToLogin": "Taking you to the login page...",
-    "requestFlowOptionalFields": "Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., \"Near City Mall\")\n- Area (e.g., \"Downtown Area\")\n- Or type \"skip\" to proceed without optional details",
+    "requestFlowOptionalFields": "Great! Now, would you like to add any optional details?\n\nYou can provide:\n- Landmark (e.g., \"Near City Mall\")\n- Area (e.g., \"Downtown Area\")\n- State (e.g., \"Maharashtra\")\n- City (e.g., \"Mumbai\")\n- Pin Code (e.g., \"400001\")\n\nOr type \"skip\" to proceed without optional details",
     "quickReplyViewStats": "View statistics",
     "quickReplyPendingRequests": "Pending requests",
     "quickReplyManageWorkers": "Manage workers",
     "helpAdmin": "As an admin, you can:\n\n1. Approve/reject customer requests\n2. Manage worker verifications\n3. Deploy workers to jobs\n4. Manage concerns and issues\n5. View statistics and reports\n6. Manage worker types and advertisements\n\nType \"view stats\" for statistics or \"pending requests\" to see pending items.",
     "fetchingStats": "Fetching statistics...",
-    "adminStats": "📊 Statistics:\n\n• Pending Requests: Check dashboard\n• Active Requests: Check dashboard\n• Total Workers: Check dashboard\n• Total Customers: Check dashboard\n• Pending Concerns: Check dashboard\n\nVisit your dashboard for detailed information.",
+    "adminStats": "📊 Current Statistics:\n\n• Pending Requests: {pending}\n• Active Requests: {active}\n• Total Workers: {workers}\n• Total Customers: {customers}\n• Pending Concerns: {concerns}\n\nVisit your dashboard for detailed information.",
     "statsError": "Could not fetch statistics. Please try again later.",
     "adminOnly": "This feature is only available for admins."
   }
