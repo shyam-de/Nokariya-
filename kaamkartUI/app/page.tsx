@@ -810,7 +810,8 @@ export default function Home() {
                     className="flex-shrink-0"
                     style={{ 
                       width: `calc((100% - ${(storiesPerPage - 1) * 1.5}rem) / ${storiesPerPage})`,
-                      minWidth: `calc((100% - ${(storiesPerPage - 1) * 1.5}rem) / ${storiesPerPage})`
+                      minWidth: `calc((100% - ${(storiesPerPage - 1) * 1.5}rem) / ${storiesPerPage})`,
+                      flexBasis: `calc((100% - ${(storiesPerPage - 1) * 1.5}rem) / ${storiesPerPage})`
                     }}
                   >
                     <div className="bg-white rounded-2xl shadow-xl p-4 md:p-6 lg:p-8 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-2 border-gray-100 h-full flex flex-col">

@@ -3,6 +3,7 @@ import { Inter, Noto_Sans_Devanagari } from 'next/font/google'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { LanguageProvider } from '@/contexts/LanguageContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 
 const inter = Inter({ 
   subsets: ['latin'],
@@ -30,10 +31,35 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${notoSansDevanagari.variable} font-sans`}>
-        <LanguageProvider>
-          {children}
-          <Toaster position="top-right" />
-        </LanguageProvider>
+        <ErrorBoundary>
+          <LanguageProvider>
+            {children}
+            <Toaster 
+              position="top-right"
+              reverseOrder={false}
+              gutter={8}
+              toastOptions={{
+                duration: 4000,
+                error: {
+                  duration: 5000,
+                  style: {
+                    background: '#fee2e2',
+                    color: '#991b1b',
+                  },
+                },
+                style: {
+                  borderRadius: '10px',
+                  background: '#fff',
+                  color: '#363636',
+                },
+              }}
+              containerStyle={{
+                top: 20,
+                right: 20,
+              }}
+            />
+          </LanguageProvider>
+        </ErrorBoundary>
       </body>
     </html>
   )

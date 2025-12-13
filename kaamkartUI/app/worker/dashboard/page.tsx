@@ -897,13 +897,12 @@ export default function WorkerDashboard() {
                   <input
                     type="email"
                     value={profileData.email}
-                    onChange={(e) => setProfileData({ ...profileData, email: e.target.value })}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-                    required
-                    pattern="[^\s@]+@[^\s@]+\.[^\s@]+"
-                    title={t('login.invalidEmail') || 'Please enter a valid email address'}
+                    readOnly
+                    disabled
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed"
                     lang={language}
                   />
+                  <p className="text-xs text-gray-500 mt-1" lang={language}>{t('worker.emailCannotBeChanged') || 'Email cannot be changed'}</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.phone')}</label>
@@ -916,8 +915,16 @@ export default function WorkerDashboard() {
                         setProfileData({ ...profileData, phone: cleaned })
                       }
                     }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim()
+                      if (value && (value.length < 10 || value.length > 15)) {
+                        toast.error(t('login.invalidPhone') || 'Please enter a valid phone number (10-15 digits)')
+                      }
+                    }}
                     className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    minLength={10}
+                    maxLength={15}
                     pattern="[0-9]{10,15}"
                     title={t('login.invalidPhone') || 'Please enter a valid phone number (10-15 digits)'}
                     lang={language}

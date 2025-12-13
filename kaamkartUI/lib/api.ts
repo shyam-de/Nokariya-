@@ -41,8 +41,9 @@ apiClient.interceptors.response.use(
   (error: AxiosError) => {
     // Handle network errors
     if (!error.response) {
-      console.error('Network error:', error.message)
-      // Could show a toast notification here
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Network error:', error.message)
+      }
       return Promise.reject({
         message: 'Network error. Please check your connection.',
         isNetworkError: true,

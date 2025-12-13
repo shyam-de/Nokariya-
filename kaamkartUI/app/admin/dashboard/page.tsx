@@ -11,6 +11,7 @@ import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Chatbot from '@/components/Chatbot'
+import { logger } from '@/lib/logger'
 
 interface Request {
   id: string
@@ -84,6 +85,8 @@ export default function AdminDashboard() {
   const [confirmationStatus, setConfirmationStatus] = useState<{[key: string]: any}>({})
   const [isLoadingConfirmation, setIsLoadingConfirmation] = useState<{[key: string]: boolean}>({})
   const [isDeploying, setIsDeploying] = useState<{[key: string]: boolean}>({})
+  const [showDeployModal, setShowDeployModal] = useState<{show: boolean, requestId: string | null}>({show: false, requestId: null})
+  const [showApproveModal, setShowApproveModal] = useState<{show: boolean, requestId: string | null}>({show: false, requestId: null})
   // Success Stories and Advertisements
   const [successStories, setSuccessStories] = useState<any[]>([])
   const [advertisements, setAdvertisements] = useState<any[]>([])
@@ -177,13 +180,15 @@ export default function AdminDashboard() {
         return
       }
 
-      // Debug: Log user object to check superAdmin field
-      console.log('Admin user object:', userObj)
-      console.log('SuperAdmin flag:', userObj.superAdmin)
+      // Debug: Log user object to check superAdmin field (dev only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('Admin user object:', userObj)
+        console.log('SuperAdmin flag:', userObj.superAdmin)
+      }
 
       fetchPendingRequests()
     } catch (error) {
-      console.error('Error parsing user data:', error)
+      logger.error('Error parsing user data:', error)
       // Clear invalid data and redirect
       SessionStorage.clear()
       router.push('/')
@@ -202,7 +207,7 @@ export default function AdminDashboard() {
       setSuccessStories(response.data)
       setDataLoaded(prev => ({ ...prev, successStories: true }))
     } catch (error: any) {
-      console.error('Error fetching success stories:', error)
+      logger.error('Error fetching success stories:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch success stories')
       setDataLoaded(prev => ({ ...prev, successStories: true }))
     } finally {
@@ -221,7 +226,7 @@ export default function AdminDashboard() {
       setAdvertisements(response.data)
       setDataLoaded(prev => ({ ...prev, advertisements: true }))
     } catch (error: any) {
-      console.error('Error fetching advertisements:', error)
+      logger.error('Error fetching advertisements:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch advertisements')
       setDataLoaded(prev => ({ ...prev, advertisements: true }))
     } finally {
@@ -240,7 +245,7 @@ export default function AdminDashboard() {
       setWorkerTypes(response.data)
       setDataLoaded(prev => ({ ...prev, workerTypes: true }))
     } catch (error: any) {
-      console.error('Error fetching worker types:', error)
+      logger.error('Error fetching worker types:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch worker types')
       setDataLoaded(prev => ({ ...prev, workerTypes: true }))
     } finally {
@@ -255,7 +260,7 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/public/worker-types`)
       setWorkerTypes(response.data)
     } catch (error: any) {
-      console.error('Error fetching worker types:', error)
+      logger.error('Error fetching worker types:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch worker types')
     } finally {
       setIsLoadingWorkerTypes(false)
@@ -284,7 +289,7 @@ export default function AdminDashboard() {
       })
       fetchWorkerTypes()
     } catch (error: any) {
-      console.error('Error creating worker type:', error)
+      logger.error('Error creating worker type:', error)
       toast.error(error.response?.data?.message || 'Failed to create worker type')
     }
   }
@@ -312,7 +317,7 @@ export default function AdminDashboard() {
       })
       fetchWorkerTypes()
     } catch (error: any) {
-      console.error('Error updating worker type:', error)
+      logger.error('Error updating worker type:', error)
       toast.error(error.response?.data?.message || 'Failed to update worker type')
     }
   }
@@ -327,7 +332,7 @@ export default function AdminDashboard() {
       toast.success('Worker type deleted successfully')
       fetchWorkerTypes()
     } catch (error: any) {
-      console.error('Error deleting worker type:', error)
+      logger.error('Error deleting worker type:', error)
       toast.error(error.response?.data?.message || 'Failed to delete worker type')
     }
   }
@@ -341,7 +346,7 @@ export default function AdminDashboard() {
       toast.success('Worker type status updated')
       fetchWorkerTypes()
     } catch (error: any) {
-      console.error('Error toggling worker type status:', error)
+      logger.error('Error toggling worker type status:', error)
       toast.error(error.response?.data?.message || 'Failed to update worker type status')
     }
   }
@@ -373,22 +378,8 @@ export default function AdminDashboard() {
       customersSearch, customersSortBy, customersSortOrder, customersLocationFilter,
       systemUsersSearch, systemUsersSortBy, systemUsersSortOrder, systemUsersLocationFilter, user])
 
-  // Auto-refresh confirmation status for NOTIFIED/CONFIRMED requests
-  useEffect(() => {
-    if (activeTab === 'pending' || activeTab === 'active' || activeTab === 'history') {
-      const interval = setInterval(() => {
-        // Refresh confirmation status for all NOTIFIED/CONFIRMED requests
-        const requestsToCheck = activeTab === 'pending' ? requests : activeTab === 'active' ? activeRequests : allRequests
-        requestsToCheck.forEach((request: Request) => {
-          if (request.status === 'NOTIFIED' || request.status === 'CONFIRMED') {
-            fetchConfirmationStatus(request.id)
-          }
-        })
-      }, 10000) // Refresh every 10 seconds
-
-      return () => clearInterval(interval)
-    }
-  }, [activeTab, requests, activeRequests, allRequests])
+  // Fetch confirmation status only when tab is first loaded or when user manually refreshes
+  // Removed automatic interval to prevent unnecessary API calls
 
   const fetchPendingRequests = async () => {
     setIsLoading(true)
@@ -400,7 +391,7 @@ export default function AdminDashboard() {
       setRequests(response.data)
       setDataLoaded(prev => ({ ...prev, pendingRequests: true }))
     } catch (error: any) {
-      console.error('Error fetching requests:', error)
+      logger.error('Error fetching requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch requests')
       setDataLoaded(prev => ({ ...prev, pendingRequests: true }))
     } finally {
@@ -425,7 +416,7 @@ export default function AdminDashboard() {
         }
       })
     } catch (error: any) {
-      console.error('Error fetching active requests:', error)
+      logger.error('Error fetching active requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch active requests')
       setDataLoaded(prev => ({ ...prev, activeRequests: true }))
     } finally {
@@ -455,7 +446,7 @@ export default function AdminDashboard() {
       setAllRequests(filtered)
       setDataLoaded(prev => ({ ...prev, allRequests: true }))
     } catch (error: any) {
-      console.error('Error fetching all requests:', error)
+      logger.error('Error fetching all requests:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch requests')
       setDataLoaded(prev => ({ ...prev, allRequests: true }))
     } finally {
@@ -473,10 +464,11 @@ export default function AdminDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         }
       )
-      toast.success('Request approved! Workers have been notified.')
+      toast.success('Request approved! Workers have been notified.', { id: `approve-${requestId}` })
+      setShowApproveModal({ show: false, requestId: null })
       fetchPendingRequests()
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to approve request')
+      toast.error(error.response?.data?.message || 'Failed to approve request', { id: `approve-error-${requestId}` })
     }
   }
 
@@ -509,7 +501,7 @@ export default function AdminDashboard() {
       })
       setConfirmationStatus({ ...confirmationStatus, [requestId]: response.data })
     } catch (error: any) {
-      console.error('Error fetching confirmation status:', error)
+      logger.error('Error fetching confirmation status:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch confirmation status')
     } finally {
       setIsLoadingConfirmation({ ...isLoadingConfirmation, [requestId]: false })
@@ -517,9 +509,6 @@ export default function AdminDashboard() {
   }
 
   const handleDeploy = async (requestId: string) => {
-    if (!confirm('Are you sure you want to deploy workers to this customer?')) {
-      return
-    }
     setIsDeploying({ ...isDeploying, [requestId]: true })
     try {
       const token = SessionStorage.getToken()
@@ -530,13 +519,14 @@ export default function AdminDashboard() {
           headers: { Authorization: `Bearer ${token}` }
         }
       )
-      toast.success('Workers deployed successfully!')
+      toast.success('Workers deployed successfully!', { id: `deploy-${requestId}` })
+      setShowDeployModal({ show: false, requestId: null })
       fetchPendingRequests()
       fetchAllRequests()
       // Refresh confirmation status
       delete confirmationStatus[requestId]
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to deploy workers')
+      toast.error(error.response?.data?.message || 'Failed to deploy workers', { id: `deploy-error-${requestId}` })
     } finally {
       setIsDeploying({ ...isDeploying, [requestId]: false })
     }
@@ -565,7 +555,7 @@ export default function AdminDashboard() {
       }
       setDataLoaded(prev => ({ ...prev, concerns: true }))
     } catch (error: any) {
-      console.error('Error fetching concerns:', error)
+      logger.error('Error fetching concerns:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch concerns')
       setDataLoaded(prev => ({ ...prev, concerns: true }))
     } finally {
@@ -589,7 +579,7 @@ export default function AdminDashboard() {
       setWorkers(response.data)
       setDataLoaded(prev => ({ ...prev, workers: true }))
     } catch (error: any) {
-      console.error('Error fetching workers:', error)
+      logger.error('Error fetching workers:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch workers')
       setDataLoaded(prev => ({ ...prev, workers: true }))
     } finally {
@@ -613,7 +603,7 @@ export default function AdminDashboard() {
       setCustomers(response.data)
       setDataLoaded(prev => ({ ...prev, customers: true }))
     } catch (error: any) {
-      console.error('Error fetching customers:', error)
+      logger.error('Error fetching customers:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch customers')
       setDataLoaded(prev => ({ ...prev, customers: true }))
     } finally {
@@ -637,7 +627,7 @@ export default function AdminDashboard() {
       setSystemUsers(response.data)
       setDataLoaded(prev => ({ ...prev, systemUsers: true }))
     } catch (error: any) {
-      console.error('Error fetching system users:', error)
+      logger.error('Error fetching system users:', error)
       toast.error(error.response?.data?.message || 'Failed to fetch system users')
       setDataLoaded(prev => ({ ...prev, systemUsers: true }))
     } finally {
@@ -681,7 +671,7 @@ export default function AdminDashboard() {
       const response = await apiClient.get(`/concerns/${concernId}/messages`)
       setConcernMessages({ ...concernMessages, [concernId]: response.data })
     } catch (error) {
-      console.error('Error fetching messages:', error)
+      logger.error('Error fetching messages:', error)
     } finally {
       setIsLoadingMessages({ ...isLoadingMessages, [concernId]: false })
     }
@@ -1464,7 +1454,7 @@ export default function AdminDashboard() {
                             const activeConcerns = response.data.filter((c: any) => c.status !== 'RESOLVED')
                             setConcerns(activeConcerns)
                           } catch (error: any) {
-                            console.error('Error refreshing concern:', error)
+                            logger.error('Error refreshing concern:', error)
                             // Fallback to current concern if refresh fails
                             setSelectedConcern(concern)
                           }
@@ -1962,11 +1952,11 @@ export default function AdminDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
                 {displayedRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500"
+                    className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500 h-full flex flex-col"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
@@ -2132,7 +2122,7 @@ export default function AdminDashboard() {
                                       : '⚠️ Few workers are available to deploy. Check with customer to deploy'}
                                   </p>
                                   <button
-                                    onClick={() => handleDeploy(request.id)}
+                                    onClick={() => setShowDeployModal({ show: true, requestId: request.id })}
                                     disabled={isDeploying[request.id]}
                                     className="w-full mt-3 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
                                   >
@@ -2183,7 +2173,7 @@ export default function AdminDashboard() {
                     {activeTab === 'pending' && request.status === 'PENDING_ADMIN_APPROVAL' && (
                       <div className="flex gap-3 mt-4">
                         <button
-                          onClick={() => handleApprove(request.id)}
+                          onClick={() => setShowApproveModal({ show: true, requestId: request.id })}
                           className="flex-1 px-4 py-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
                         >
                           ✓ Approve
@@ -3104,6 +3094,90 @@ export default function AdminDashboard() {
             pendingConcerns: concerns.filter((c: any) => c.status === 'PENDING' || c.status === 'OPEN').length
           }}
         />
+      )}
+
+      {/* Deploy Confirmation Modal */}
+      {showDeployModal.show && showDeployModal.requestId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 w-full max-w-md relative">
+            <button
+              onClick={() => setShowDeployModal({ show: false, requestId: null })}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
+            >
+              &times;
+            </button>
+            <div className="text-center mb-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                <span className="text-4xl">🚀</span>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2" lang={language}>
+                {t('admin.deployWorkers') || 'Deploy Workers'}
+              </h3>
+              <p className="text-gray-600" lang={language}>
+                {t('admin.deployConfirmation') || 'Are you sure you want to deploy workers to this customer? This action will notify the customer and mark the request as deployed.'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleDeploy(showDeployModal.requestId!)}
+                disabled={isDeploying[showDeployModal.requestId!]}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+                lang={language}
+              >
+                {isDeploying[showDeployModal.requestId!] ? (t('admin.deploying') || 'Deploying...') : (t('admin.confirmDeploy') || 'Yes, Deploy')}
+              </button>
+              <button
+                onClick={() => setShowDeployModal({ show: false, requestId: null })}
+                disabled={isDeploying[showDeployModal.requestId!]}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold disabled:opacity-50"
+                lang={language}
+              >
+                {t('admin.cancel') || 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Approve Confirmation Modal */}
+      {showApproveModal.show && showApproveModal.requestId && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 w-full max-w-md relative">
+            <button
+              onClick={() => setShowApproveModal({ show: false, requestId: null })}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
+            >
+              &times;
+            </button>
+            <div className="text-center mb-6">
+              <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+                <span className="text-4xl">✓</span>
+              </div>
+              <h3 className="text-2xl font-bold text-gray-900 mb-2" lang={language}>
+                {t('admin.approveRequest') || 'Approve Request'}
+              </h3>
+              <p className="text-gray-600" lang={language}>
+                {t('admin.approveConfirmation') || 'Are you sure you want to approve this request? This will notify available workers about the job opportunity.'}
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleApprove(showApproveModal.requestId!)}
+                className="flex-1 px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+                lang={language}
+              >
+                {t('admin.confirmApprove') || 'Yes, Approve'}
+              </button>
+              <button
+                onClick={() => setShowApproveModal({ show: false, requestId: null })}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold"
+                lang={language}
+              >
+                {t('admin.cancel') || 'Cancel'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
