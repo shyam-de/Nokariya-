@@ -6,6 +6,7 @@ import { apiClient } from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
 import { getLocationFromPinCode } from '@/lib/indianLocationValidation'
+import { logger } from '@/lib/logger'
 
 interface Message {
   id: string
@@ -44,6 +45,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   const [concernData, setConcernData] = useState<any>({})
   const [conversationContext, setConversationContext] = useState<string[]>([])
   const [retryCount, setRetryCount] = useState<{[key: string]: number}>({})
+  const [workerTypes, setWorkerTypes] = useState<any[]>([])
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -264,7 +266,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       setTimeout(() => {
         addMessage('', 'bot', [
           t('chatbot.quickReplyRaiseConcern') || 'Raise a concern',
-          t('chatbot.quickReplyHelp') || 'How to use KaamKart'
+          t('chatbot.quickReplyHelp') || 'How to use KaamKart',
+          t('chatbot.quickReplyWhyNotAvailable') || 'Why not able to make available?',
+          t('chatbot.quickReplyWhyNotAccept') || 'Why unable to accept new request?'
         ])
       }, 600)
     } else if (user?.role?.toLowerCase() === 'admin') {
@@ -360,24 +364,88 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       }
     } else if (reply.includes('Help') || reply.includes('help') || reply.includes('मदद')) {
       showHelp()
+    } else if (reply.includes('Why not able to make available') || reply.includes('why not able to make available') || (reply.includes('available') && reply.includes('why'))) {
+      // FAQ: Why not able to make available
+      addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+    } else if (reply.includes('Why unable to accept new request') || reply.includes('why unable to accept new request') || (reply.includes('accept') && reply.includes('why') && reply.includes('request'))) {
+      // FAQ: Why unable to accept new request
+      addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
+    } else if (reply.includes('Try Again') || reply.includes('try again')) {
+      // Retry concern submission
+      if (concernData.type && concernData.description) {
+        navigateToConcernForm()
+      } else {
+        startConcernFlow()
+      }
+    } else if (reply.includes('Go to Dashboard') || reply.includes('go to dashboard')) {
+      // Navigate to dashboard
+      if (user?.role?.toLowerCase() === 'customer') {
+        router.push('/customer/dashboard?action=raiseConcern')
+      } else if (user?.role?.toLowerCase() === 'worker') {
+        router.push('/worker/dashboard?action=raiseConcern')
+      }
     } else {
       handleUserMessage(reply)
     }
   }
 
-  const startRequestFlow = () => {
+  const startRequestFlow = async () => {
     setCurrentFlow('request')
     setRequestData({})
     setRetryCount({})
+    
     const greetings = [
-      "Great! I'd be happy to help you create a request. What type of work do you need? (Optional)",
-      "Perfect! Let's get started. What kind of work are you looking for? (Optional)",
-      "Awesome! To help you find the right workers, what type of work do you need done? (Optional)"
+      "Great! I'd be happy to help you create a request. Please select the type of work:",
+      "Perfect! Let's get started. What kind of work do you need?",
+      "Awesome! To help you find the right workers, please select your work type:"
     ]
-    const examples = language === 'hi' 
-      ? "उदाहरण: प्लंबिंग, इलेक्ट्रिकल, क्लीनिंग, कंस्ट्रक्शन\nया 'skip' टाइप करें"
-      : "For example: Plumbing, Electrical, Cleaning, Construction, Painting, etc.\nOr type 'skip' to continue"
-    addBotMessage(`${greetings[Math.floor(Math.random() * greetings.length)]}\n\n${examples}`)
+    addBotMessage(`${greetings[Math.floor(Math.random() * greetings.length)]}`, 300)
+    
+    // Fetch worker types from API
+    try {
+      const response = await apiClient.get('/public/worker-types')
+      const types = response.data || []
+      const activeTypes = types.filter((t: any) => t.isActive).sort((a: any, b: any) => (a.displayOrder || 0) - (b.displayOrder || 0))
+      setWorkerTypes(activeTypes)
+      
+      setTimeout(() => {
+        if (activeTypes.length > 0) {
+          // Show all available worker types from API
+          const options = activeTypes.map((type: any, index: number) => 
+            `${index + 1}. ${type.icon || '🔧'} ${type.displayName || type.name}`
+          )
+          // Add "Other" option at the end
+          options.push(`${activeTypes.length + 1}. Other`)
+          addMessage('', 'bot', options)
+        } else {
+          // Fallback to default options if no active types
+          addMessage('', 'bot', [
+            '1. Plumbing',
+            '2. Electrical',
+            '3. Cleaning',
+            '4. Construction',
+            '5. Painting',
+            '6. Carpentry',
+            '7. Other'
+          ])
+        }
+      }, 500)
+    } catch (error) {
+      logger.error('Error fetching worker types:', error)
+      // Fallback to default types if API fails
+      setWorkerTypes([])
+      setTimeout(() => {
+        addMessage('', 'bot', [
+          '1. Plumbing',
+          '2. Electrical',
+          '3. Cleaning',
+          '4. Construction',
+          '5. Painting',
+          '6. Carpentry',
+          '7. Other'
+        ])
+      }, 500)
+    }
   }
 
   const startConcernFlow = () => {
@@ -400,32 +468,77 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     
     switch (step) {
       case 'workType':
-        if (userInput.toLowerCase().trim() === 'skip' || userInput.toLowerCase().trim() === 'no' || userInput.toLowerCase().trim() === 'not needed') {
-          setRequestData({ ...requestData, workType: '' })
-          const workerTypePrompts = [
-            "Got it! What type of workers do you need?",
-            "Perfect! Now, which workers would you like?",
-            "Great! What kind of workers are you looking for?"
-          ]
-          addBotMessage(`${workerTypePrompts[Math.floor(Math.random() * workerTypePrompts.length)]}\n\nYou can mention multiple types like: "Plumber, Electrician" or just one type.`)
-          break
+        let selectedWorkType = ''
+        const lowerInput = userInput.toLowerCase().trim()
+        
+        // Extract number from input (e.g., "1", "2", etc.)
+        const numberMatch = lowerInput.match(/^(\d+)/)
+        const selectedIndex = numberMatch ? parseInt(numberMatch[1]) - 1 : -1
+        
+        // Map numerical or text input to work type from API
+        if (workerTypes.length > 0) {
+          if (selectedIndex >= 0 && selectedIndex < workerTypes.length) {
+            // User selected a number from the list
+            selectedWorkType = workerTypes[selectedIndex].displayName || workerTypes[selectedIndex].name
+          } else if (selectedIndex === workerTypes.length) {
+            // User selected "Other" (last option)
+            selectedWorkType = 'Other'
+          } else {
+            // Try to match by name
+            const matchedType = workerTypes.find((type: any) => {
+              const typeName = (type.displayName || type.name).toLowerCase()
+              return lowerInput.includes(typeName) || typeName.includes(lowerInput)
+            })
+            if (matchedType) {
+              selectedWorkType = matchedType.displayName || matchedType.name
+            } else if (lowerInput.includes('other')) {
+              selectedWorkType = 'Other'
+            } else if (userInput.trim().length >= 2) {
+              // User typed custom work type
+              selectedWorkType = userInput.trim()
+            } else {
+              addBotMessage(getEmpatheticResponse('confusion') + ` I didn't understand that work type. Please select from the options above (1-${workerTypes.length + 1}) or type the name.`)
+              return
+            }
+          }
+        } else {
+          // Fallback to hardcoded types if API data not loaded
+          if (lowerInput.includes('1') || lowerInput.includes('plumbing') || lowerInput.includes('plumber')) {
+            selectedWorkType = 'Plumbing'
+          } else if (lowerInput.includes('2') || lowerInput.includes('electrical') || lowerInput.includes('electrician')) {
+            selectedWorkType = 'Electrical'
+          } else if (lowerInput.includes('3') || lowerInput.includes('cleaning') || lowerInput.includes('cleaner')) {
+            selectedWorkType = 'Cleaning'
+          } else if (lowerInput.includes('4') || lowerInput.includes('construction') || lowerInput.includes('builder')) {
+            selectedWorkType = 'Construction'
+          } else if (lowerInput.includes('5') || lowerInput.includes('painting') || lowerInput.includes('painter')) {
+            selectedWorkType = 'Painting'
+          } else if (lowerInput.includes('6') || lowerInput.includes('carpentry') || lowerInput.includes('carpenter')) {
+            selectedWorkType = 'Carpentry'
+          } else if (lowerInput.includes('7') || lowerInput.includes('other')) {
+            selectedWorkType = 'Other'
+          } else if (userInput.trim().length >= 2) {
+            // User typed custom work type
+            selectedWorkType = userInput.trim()
+          } else {
+            addBotMessage(getEmpatheticResponse('confusion') + " Please select a work type from the options above or type your custom work type.")
+            return
+          }
         }
-        if (userInput.trim().length < 2) {
-          addBotMessage(getEmpatheticResponse('confusion') + " Could you please provide more details about the type of work? For example: 'plumbing', 'electrical work', 'house cleaning', etc.\n\nOr type 'skip' to continue without work type.")
-          return
-        }
-        setRequestData({ ...requestData, workType: userInput })
-        const workerTypePrompts = [
-          "Got it! What type of workers do you need for this work?",
-          "Perfect! Now, which workers would you like?",
-          "Great! What kind of workers are you looking for?"
+        
+        setRequestData({ ...requestData, workType: selectedWorkType })
+        const datePrompts = [
+          "Perfect! When do you need this work done?",
+          "Great! What dates work for you?",
+          "Excellent! When should the workers start?"
         ]
-        addBotMessage(`${workerTypePrompts[Math.floor(Math.random() * workerTypePrompts.length)]}\n\nYou can mention multiple types like: "Plumber, Electrician" or just one type.`)
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\n${t('chatbot.requestFlowStartDateOptions') || 'Please select a start date:\n\n1. Today\n2. Tomorrow\n3. Next week\n4. Custom date (YYYY-MM-DD)'}`)
+        setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
         break
 
       case 'workerTypes':
-        const workerTypes = userInput.split(',').map(t => t.trim()).filter(t => t)
-        setRequestData({ ...requestData, workerTypes })
+        const selectedWorkerTypes = userInput.split(',').map(t => t.trim()).filter(t => t)
+        setRequestData({ ...requestData, workerTypes: selectedWorkerTypes })
         addBotMessage(t('chatbot.requestFlowWorkerCount') || 'How many workers do you need for each type? (e.g., "2 plumbers, 1 electrician")')
         break
 
@@ -437,12 +550,143 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           return
         }
         setRequestData({ ...requestData, workerCountText: userInput })
-        const datePrompts = [
-          "Perfect! When do you need this work done?",
-          "Great! What are your preferred dates?",
-          "Excellent! When would you like the work to start and end?"
+        // Ask for start date first
+        const startDatePrompts = [
+          "Perfect! When would you like the work to start?",
+          "Great! What's your preferred start date?",
+          "Excellent! When should the work begin?"
         ]
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}\n\nYou can say:\n• "Today to tomorrow"\n• "2024-12-20 to 2024-12-25"\n• "Next week"\n• Or any date format you prefer!\n\nOr type 'skip' to continue without dates (optional).`)
+        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}`, 300)
+        setTimeout(() => {
+          const today = new Date()
+          const tomorrow = new Date(today)
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          const nextWeek = new Date(today)
+          nextWeek.setDate(nextWeek.getDate() + 7)
+          const formatDate = (d: Date) => d.toISOString().split('T')[0]
+          addMessage('', 'bot', [
+            `1. Today (${formatDate(today)})`,
+            `2. Tomorrow (${formatDate(tomorrow)})`,
+            `3. Next Week (${formatDate(nextWeek)})`,
+            '4. Custom Date'
+          ])
+        }, 500)
+        break
+
+      case 'startDate':
+        // Handle start date selection
+        let selectedStartDate: string | null = null
+        const lowerDateInput = userInput.toLowerCase().trim()
+        
+        if (lowerDateInput.includes('1') || lowerDateInput.includes('today') || lowerDateInput.includes('आज')) {
+          selectedStartDate = formatDate(new Date())
+        } else if (lowerDateInput.includes('2') || lowerDateInput.includes('tomorrow') || lowerDateInput.includes('कल')) {
+          const tomorrow = new Date()
+          tomorrow.setDate(tomorrow.getDate() + 1)
+          selectedStartDate = formatDate(tomorrow)
+        } else if (lowerDateInput.includes('3') || lowerDateInput.includes('next week') || lowerDateInput.includes('अगले सप्ताह')) {
+          const nextWeek = new Date()
+          nextWeek.setDate(nextWeek.getDate() + 7)
+          selectedStartDate = formatDate(nextWeek)
+        } else if (lowerDateInput.includes('4') || lowerDateInput.includes('custom')) {
+          addBotMessage("Please enter your custom start date in YYYY-MM-DD format (e.g., 2024-12-20):")
+          return
+        } else {
+          // Try to parse the date
+          const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+          if (parsed) {
+            selectedStartDate = parsed
+          } else {
+            addBotMessage(getEmpatheticResponse('confusion') + " Please select a start date from the options above or enter a date in YYYY-MM-DD format.")
+            return
+          }
+        }
+        
+        if (selectedStartDate) {
+          setRequestData({ ...requestData, startDate: selectedStartDate })
+          // Now ask for end date
+          const endDatePrompts = [
+            "Great! When would you like the work to end?",
+            "Perfect! What's your preferred end date?",
+            "Excellent! When should the work be completed?"
+          ]
+          addBotMessage(`${endDatePrompts[Math.floor(Math.random() * endDatePrompts.length)]}`, 300)
+          setTimeout(() => {
+            const start = new Date(selectedStartDate!)
+            const dayAfter = new Date(start)
+            dayAfter.setDate(dayAfter.getDate() + 1)
+            const weekAfter = new Date(start)
+            weekAfter.setDate(weekAfter.getDate() + 7)
+            const twoWeeksAfter = new Date(start)
+            twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
+            addMessage('', 'bot', [
+              `1. Day After Start (${formatDate(dayAfter)})`,
+              `2. Week After Start (${formatDate(weekAfter)})`,
+              `3. Two Weeks After (${formatDate(twoWeeksAfter)})`,
+              '4. Custom Date'
+            ])
+          }, 500)
+        }
+        break
+
+      case 'endDate':
+        // Handle end date selection
+        let selectedEndDate: string | null = null
+        const lowerEndInput = userInput.toLowerCase().trim()
+        const requestStartDate = requestData.startDate
+        
+        if (!requestStartDate) {
+          addBotMessage("Please select a start date first.")
+          return
+        }
+        
+        if (lowerEndInput.includes('1') || lowerEndInput.includes('day after')) {
+          const dayAfter = new Date(requestStartDate)
+          dayAfter.setDate(dayAfter.getDate() + 1)
+          selectedEndDate = formatDate(dayAfter)
+        } else if (lowerEndInput.includes('2') || lowerEndInput.includes('week after')) {
+          const weekAfter = new Date(requestStartDate)
+          weekAfter.setDate(weekAfter.getDate() + 7)
+          selectedEndDate = formatDate(weekAfter)
+        } else if (lowerEndInput.includes('3') || lowerEndInput.includes('two weeks')) {
+          const twoWeeksAfter = new Date(requestStartDate)
+          twoWeeksAfter.setDate(twoWeeksAfter.getDate() + 14)
+          selectedEndDate = formatDate(twoWeeksAfter)
+        } else if (lowerEndInput.includes('4') || lowerEndInput.includes('custom')) {
+          addBotMessage("Please enter your custom end date in YYYY-MM-DD format (e.g., 2024-12-25):")
+          return
+        } else {
+          // Try to parse the date
+          const parsed = parseNaturalDate(userInput) || (userInput.match(/^\d{4}-\d{2}-\d{2}$/) ? userInput : null)
+          if (parsed) {
+            selectedEndDate = parsed
+          } else {
+            addBotMessage(getEmpatheticResponse('confusion') + " Please select an end date from the options above or enter a date in YYYY-MM-DD format.")
+            return
+          }
+        }
+        
+        if (selectedEndDate) {
+          // Validate dates
+          const start = new Date(requestStartDate)
+          const end = new Date(selectedEndDate)
+          if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+            addBotMessage(getEmpatheticResponse('error') + " I couldn't understand that date. Please enter a valid date in YYYY-MM-DD format.")
+            return
+          }
+          if (end < start) {
+            addBotMessage(getEmpatheticResponse('confusion') + " The end date must be after the start date. Please select a later date.")
+            return
+          }
+          
+          setRequestData({ ...requestData, endDate: selectedEndDate })
+          const locationPrompts = [
+            "Perfect! Now, I need your location details.",
+            "Great! Where do you need the work done?",
+            "Excellent! Where should the workers come?"
+          ]
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+        }
         break
 
       case 'dates':
@@ -458,28 +702,28 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           break
         }
         // Try natural language parsing first
-        let startDate: string | null = null
-        let endDate: string | null = null
+        let parsedStartDate: string | null = null
+        let parsedEndDate: string | null = null
         
         // Try to parse natural language dates
         const naturalStart = parseNaturalDate(userInput)
         if (naturalStart) {
-          startDate = naturalStart
+          parsedStartDate = naturalStart
           // Default end date to 7 days after start
           const end = new Date(naturalStart)
           end.setDate(end.getDate() + 7)
-          endDate = formatDate(end)
+          parsedEndDate = formatDate(end)
         } else {
           // Try comma-separated dates
           const dates = userInput.split(',').map(d => d.trim())
           if (dates.length >= 2) {
-            startDate = parseNaturalDate(dates[0]) || dates[0]
-            endDate = parseNaturalDate(dates[1]) || dates[1]
+            parsedStartDate = parseNaturalDate(dates[0]) || dates[0]
+            parsedEndDate = parseNaturalDate(dates[1]) || dates[1]
           } else if (dates.length === 1) {
-            startDate = parseNaturalDate(dates[0]) || dates[0]
+            parsedStartDate = parseNaturalDate(dates[0]) || dates[0]
             // If only one date provided, ask for end date
-            if (startDate && !endDate) {
-              addBotMessage(getEmpatheticResponse('confusion') + ` I see you mentioned ${startDate} as the start date. When would you like the work to end?`)
+            if (parsedStartDate && !parsedEndDate) {
+              addBotMessage(getEmpatheticResponse('confusion') + ` I see you mentioned ${parsedStartDate} as the start date. When would you like the work to end?`)
               return
             }
           } else {
@@ -487,20 +731,20 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             const datePattern = /(\d{4}-\d{2}-\d{2}|\d{1,2}[\/\-]\d{1,2}[\/\-]\d{4})/g
             const foundDates = userInput.match(datePattern)
             if (foundDates && foundDates.length >= 2) {
-              startDate = parseNaturalDate(foundDates[0]) || foundDates[0]
-              endDate = parseNaturalDate(foundDates[1]) || foundDates[1]
+              parsedStartDate = parseNaturalDate(foundDates[0]) || foundDates[0]
+              parsedEndDate = parseNaturalDate(foundDates[1]) || foundDates[1]
             } else if (foundDates && foundDates.length === 1) {
-              startDate = parseNaturalDate(foundDates[0]) || foundDates[0]
-              addBotMessage(getEmpatheticResponse('confusion') + ` I found a start date: ${startDate}. When would you like the work to end?`)
+              parsedStartDate = parseNaturalDate(foundDates[0]) || foundDates[0]
+              addBotMessage(getEmpatheticResponse('confusion') + ` I found a start date: ${parsedStartDate}. When would you like the work to end?`)
               return
             }
           }
         }
         
-        if (startDate && endDate) {
+        if (parsedStartDate && parsedEndDate) {
           // Validate dates
-          const start = new Date(startDate)
-          const end = new Date(endDate)
+          const start = new Date(parsedStartDate)
+          const end = new Date(parsedEndDate)
           if (isNaN(start.getTime()) || isNaN(end.getTime())) {
             addBotMessage(getEmpatheticResponse('error') + " I couldn't understand those dates. Could you try again? For example: '2024-12-20 to 2024-12-25' or 'today to tomorrow'")
             return
@@ -510,7 +754,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             return
           }
           
-          setRequestData({ ...requestData, startDate, endDate })
+          setRequestData({ ...requestData, startDate: parsedStartDate, endDate: parsedEndDate })
           const locationPrompts = [
             "Perfect! Now, I need your location details.",
             "Great! Where do you need the work done?",
@@ -788,9 +1032,23 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         break
 
       case 'description':
-        setConcernData({ ...concernData, description: userInput })
-        const typeName = concernData.typeName || concernData.type || 'Other'
-        addBotMessage(t('chatbot.concernFlowConfirm') || `Please confirm:\n\nConcern Type: ${typeName}\nDescription: ${userInput}`, 300)
+        // Get typeName from current concernData state (set in previous step)
+        const currentTypeName = concernData.typeName || (concernData.type === 'WORK_QUALITY' ? 'Work Quality' : 
+          concernData.type === 'PAYMENT_ISSUE' ? 'Payment Issue' :
+          concernData.type === 'BEHAVIOR' ? 'Behavior' :
+          concernData.type === 'SAFETY' ? 'Safety' : 'Other')
+        const finalDescription = userInput.trim()
+        const finalConcernData = { ...concernData, description: finalDescription, typeName: currentTypeName }
+        setConcernData(finalConcernData)
+        
+        // Replace placeholders in translation or use direct message
+        const confirmMessage = (t('chatbot.concernFlowConfirm') || 'Please confirm:\n\nConcern Type: {type}\nDescription: {description}\n\nClick the buttons below to confirm or cancel.')
+          .replace('{type}', finalConcernData.typeName || 'Other')
+          .replace('{description}', finalConcernData.description || finalDescription)
+          .replace('Type "confirm" to proceed to dashboard or "cancel" to start over.', 'Click the buttons below to confirm or cancel.')
+          .replace('डैशबोर्ड पर आगे बढ़ने के लिए "पुष्टि करें" टाइप करें या फिर से शुरू करने के लिए "रद्द करें"।', 'नीचे दिए गए बटन पर क्लिक करें।')
+        
+        addBotMessage(confirmMessage, 300)
         setTimeout(() => {
           addMessage('', 'bot', [
             'Confirm',
@@ -857,24 +1115,49 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     }, 1500)
   }
 
-  const navigateToConcernForm = () => {
-    addBotMessage(t('chatbot.navigatingToDashboard') || 'Redirecting you to the concern form...')
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        // Store concern data in sessionStorage with typeName
-        const concernDataToStore = {
-          ...concernData,
-          typeName: concernData.typeName || concernData.type || 'Other'
-        }
-        sessionStorage.setItem('chatbotConcernData', JSON.stringify(concernDataToStore))
-        // Navigate to appropriate dashboard based on user role
-        if (user?.role?.toLowerCase() === 'customer') {
-          router.push('/customer/dashboard?action=raiseConcern')
-        } else if (user?.role?.toLowerCase() === 'worker') {
-          router.push('/worker/dashboard?action=raiseConcern')
-        }
+  const navigateToConcernForm = async () => {
+    // Create concern directly from chatbot
+    setIsTyping(true)
+    addBotMessage(t('chatbot.creatingConcern') || 'Creating your concern...', 300)
+    
+    try {
+      const data: any = {
+        description: concernData.description?.trim() || '',
+        type: concernData.type || 'OTHER'
       }
-    }, 1500)
+      
+      if (concernData.requestId) {
+        data.requestId = parseInt(concernData.requestId)
+      }
+      
+      if (concernData.relatedToUserId) {
+        data.relatedToUserId = parseInt(concernData.relatedToUserId)
+      }
+      
+      await apiClient.post('/concerns', data)
+      
+      setIsTyping(false)
+      addBotMessage(t('chatbot.concernCreatedSuccess') || '✅ Your concern has been submitted successfully! Our admin team will review it and get back to you soon.', 300)
+      
+      // Reset concern flow
+      setCurrentFlow('none')
+      setConcernData({})
+      
+      setTimeout(() => {
+        showQuickReplies()
+      }, 2000)
+    } catch (error: any) {
+      setIsTyping(false)
+      const errorMessage = error.response?.data?.message || t('chatbot.concernError') || 'Failed to submit concern. Please try again.'
+      addBotMessage(t('chatbot.concernError') || `❌ ${errorMessage}\n\nWould you like to try again or visit your dashboard to submit it manually?`, 300)
+      
+      setTimeout(() => {
+        addMessage('', 'bot', [
+          'Try Again',
+          'Go to Dashboard'
+        ])
+      }, 500)
+    }
   }
 
   const showAdminStats = async () => {

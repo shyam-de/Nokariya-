@@ -917,18 +917,19 @@ export default function CustomerDashboard() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-2" lang={language}>{t('customer.title')}</h2>
-            <p className="text-gray-600" lang={language}>{t('dashboard.welcome')}</p>
+          <div className="flex-1 min-w-0">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 truncate" lang={language}>{t('customer.title')}</h2>
+            <p className="text-sm sm:text-base text-gray-600 truncate" lang={language}>{t('dashboard.welcome')}</p>
           </div>
           {activeTab === 'requests' && (
             <button
               onClick={() => setShowRequestForm(true)}
-              className="px-6 py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-2 whitespace-nowrap"
+              className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-2 sm:py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base whitespace-nowrap"
               lang={language}
             >
-              <span className="text-xl">+</span>
-              {t('customer.createRequest')}
+              <span className="text-lg sm:text-xl">+</span>
+              <span className="hidden xs:inline">{t('customer.createRequest')}</span>
+              <span className="xs:hidden">+</span>
             </button>
           )}
         </div>
@@ -1040,15 +1041,15 @@ export default function CustomerDashboard() {
                             min="1"
                             max="999"
                             step="1"
-                            value={req.numberOfWorkers || 1}
+                            value={req.numberOfWorkers > 0 ? req.numberOfWorkers : ''}
                             onChange={(e) => {
                               const inputValue = e.target.value
-                              // Allow empty string during typing
+                              // Allow empty string during typing - don't set to 1 immediately
                               if (inputValue === '') {
                                 const updated = [...formData.workerTypeRequirements]
                                 updated[index] = {
                                   ...updated[index],
-                                  numberOfWorkers: 1
+                                  numberOfWorkers: 0 // Use 0 as placeholder, will be validated on blur
                                 }
                                 setFormData({ ...formData, workerTypeRequirements: updated })
                                 return
@@ -1850,11 +1851,11 @@ export default function CustomerDashboard() {
                       <h3 className="text-xl font-bold capitalize text-gray-900 mb-2">{request.workType}</h3>
                       <div className="space-y-1 text-sm">
                         <div className="flex items-center gap-2 text-gray-600 flex-wrap">
-                          <span>⚡</span>
+                          <span className="flex-shrink-0">⚡</span>
                           {request.workerTypes && request.workerTypes.length > 0 ? (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-1 min-w-0">
                               {request.workerTypes.map((type: string, idx: number) => (
-                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize break-words">
                                   {type.toLowerCase()}
                                 </span>
                               ))}
@@ -1873,13 +1874,13 @@ export default function CustomerDashboard() {
                           <span>👥</span>
                           <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''} needed</span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span>📍</span>
-                          <span>{request.location?.address || 'N/A'}</span>
+                        <div className="flex items-start gap-2 text-gray-600">
+                          <span className="flex-shrink-0">📍</span>
+                          <span className="break-words min-w-0">{request.location?.address || 'N/A'}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span>🕒</span>
-                          <span>{new Date(request.createdAt).toLocaleString()}</span>
+                        <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                          <span className="flex-shrink-0">🕒</span>
+                          <span className="break-words min-w-0">{new Date(request.createdAt).toLocaleString()}</span>
                         </div>
                       </div>
                     </div>

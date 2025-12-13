@@ -418,13 +418,13 @@ export default function Home() {
                     {item.icon}
                   </span>
                   <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 md:gap-4 min-w-0 flex-1">
-                    <span className={`font-bold text-xs sm:text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} whitespace-nowrap truncate`}>
+                    <span className={`font-bold text-xs sm:text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} break-words min-w-0`}>
                       {item.title}
                     </span>
                     {item.description && (
                       <>
-                        <span className="hidden sm:inline text-white/80">•</span>
-                        <span className="text-[10px] sm:text-xs md:text-sm text-white/90 text-center sm:text-left line-clamp-1">{item.description}</span>
+                        <span className="hidden sm:inline text-white/80 flex-shrink-0">•</span>
+                        <span className="text-[10px] sm:text-xs md:text-sm text-white/90 text-center sm:text-left line-clamp-1 break-words min-w-0">{item.description}</span>
                       </>
                     )}
                   </div>
@@ -519,15 +519,15 @@ export default function Home() {
                         className="h-12 w-12 md:h-16 md:w-16 object-cover rounded-lg flex-shrink-0"
                       />
                     )}
-                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 flex-1">
-                      <div className="text-center md:text-left">
+                    <div className="flex flex-col md:flex-row items-center gap-2 md:gap-4 flex-1 min-w-0">
+                      <div className="text-center md:text-left min-w-0 flex-1">
                         {currentAd.title && (
-                          <h3 className="text-sm md:text-base font-bold text-gray-900 mb-1">{currentAd.title}</h3>
+                          <h3 className="text-sm md:text-base font-bold text-gray-900 mb-1 break-words">{currentAd.title}</h3>
                         )}
-                        <p className="text-xs md:text-sm text-gray-700 font-medium">{currentAd.text}</p>
+                        <p className="text-xs md:text-sm text-gray-700 font-medium break-words">{currentAd.text}</p>
                       </div>
                       {currentAd.linkUrl && currentAd.linkText && (
-                        <span className="px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs md:text-sm font-semibold rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all whitespace-nowrap">
+                        <span className="px-2 sm:px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-orange-500 text-white text-xs md:text-sm font-semibold rounded-lg hover:from-yellow-600 hover:to-orange-600 transition-all whitespace-nowrap flex-shrink-0">
                           {currentAd.linkText} →
                         </span>
                       )}
@@ -845,16 +845,16 @@ export default function Home() {
                           </span>
                         )}
                       </div>
-                      <h3 className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2 md:mb-3 line-clamp-2">{story.title}</h3>
-                      <p className="text-xs md:text-sm lg:text-base text-gray-600 mb-3 md:mb-4 leading-relaxed line-clamp-3 flex-grow">{story.description}</p>
+                      <h3 className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-900 mb-2 md:mb-3 line-clamp-2 break-words">{story.title}</h3>
+                      <p className="text-xs md:text-sm lg:text-base text-gray-600 mb-3 md:mb-4 leading-relaxed line-clamp-3 flex-grow break-words">{story.description}</p>
                       {(story.customerName || story.workerName) && (
                         <div className="pt-4 border-t border-gray-200">
                           {story.customerName ? (
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 break-words">
                               <span className="font-semibold" lang={language}>{t('home.customerLabel')}:</span> {story.customerName}
                             </p>
                           ) : (
-                            <p className="text-sm text-gray-500">
+                            <p className="text-sm text-gray-500 break-words">
                               <span className="font-semibold" lang={language}>{t('home.workerLabel')}:</span> {story.workerName}
                             </p>
                           )}

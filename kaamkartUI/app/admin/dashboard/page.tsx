@@ -1595,11 +1595,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noWorkersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
                 {workers.map((worker: any) => (
                   <div
                     key={worker.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
                       worker.blocked ? 'border-red-500' : worker.verified ? 'border-green-500' : 'border-yellow-500'
                     }`}
                   >
@@ -1772,11 +1772,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noCustomersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
                 {customers.map((customer: any) => (
                   <div
                     key={customer.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
                       customer.blocked ? 'border-red-500' : 'border-purple-500'
                     }`}
                   >
@@ -1897,11 +1897,11 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noSystemUsersFound')}</p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
                 {systemUsers.map((systemUser: any) => (
                   <div
                     key={systemUser.id}
-                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col ${
+                    className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
                       systemUser.blocked ? 'border-red-500' : systemUser.superAdmin ? 'border-purple-500' : 'border-blue-500'
                     }`}
                   >
@@ -1970,11 +1970,11 @@ export default function AdminDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
                 {displayedRequests.map((request) => (
                   <div
                     key={request.id}
-                    className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500 h-full flex flex-col"
+                    className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500 h-full flex flex-col min-w-0"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex-1">
@@ -2011,25 +2011,25 @@ export default function AdminDashboard() {
                         <span>👥</span>
                         <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span>📍</span>
-                        <span className="truncate">{request.location?.address || 'N/A'}</span>
+                      <div className="flex items-start gap-2 text-gray-600">
+                        <span className="flex-shrink-0">📍</span>
+                        <span className="break-words min-w-0">{request.location?.address || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <span>👤</span>
-                        <span>{request.customer?.name}</span>
+                        <span className="flex-shrink-0">👤</span>
+                        <span className="break-words min-w-0">{request.customer?.name || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <span>📧</span>
-                        <span className="truncate">{request.customer?.email}</span>
+                        <span className="flex-shrink-0">📧</span>
+                        <span className="break-words min-w-0">{request.customer?.email || 'N/A'}</span>
                       </div>
                       <div className="flex items-center gap-2 text-gray-600">
-                        <span>📞</span>
-                        <span>{request.customer?.phone}</span>
+                        <span className="flex-shrink-0">📞</span>
+                        <span className="break-words min-w-0">{request.customer?.phone || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span>🕒</span>
-                        <span>{formatDate(request.createdAt)}</span>
+                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                        <span className="flex-shrink-0">🕒</span>
+                        <span className="break-words min-w-0">{formatDate(request.createdAt)}</span>
                       </div>
                       {request.completedAt && (
                         <div className="flex items-center gap-2 text-purple-600">
