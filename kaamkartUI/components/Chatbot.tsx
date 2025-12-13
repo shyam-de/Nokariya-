@@ -864,7 +864,12 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             "Great! Where do you need the work done?",
             "Excellent! Where should the workers come?"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\nPlease provide your 6-digit pin code (required):\n\nYou can also:\n• Type "use current location" or "my location" for GPS (you'll still need to provide pin code)`)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              t('chatbot.useCurrentLocation') || 'Use Current Location'
+            ])
+          }, 500)
         }
         break
 
