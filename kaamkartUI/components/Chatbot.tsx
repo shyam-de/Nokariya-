@@ -1017,6 +1017,11 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             return
           }
           
+          // If user input doesn't match any pattern, treat it as landmark
+          if (!landmark && !area && userInput.trim() && !userInput.toLowerCase().includes('skip')) {
+            landmark = userInput.trim()
+          }
+          
           // Update request data with all fields - accept any text input as landmark/area
           setRequestData({ 
             ...requestData, 
@@ -1035,7 +1040,13 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           const finalCity = city || requestData.city || ''
           
           const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ') || 'Not specified'}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${finalPinCode}${finalLandmark ? `\nLandmark: ${finalLandmark}` : ''}${finalArea ? `\nArea: ${finalArea}` : ''}${finalState ? `\nState: ${finalState}` : ''}${finalCity ? `\nCity: ${finalCity}` : ''}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`
-          addBotMessage(t('chatbot.requestFlowConfirm') || confirmText)
+          addBotMessage(t('chatbot.requestFlowConfirm') || confirmText, 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              'Confirm',
+              'Cancel'
+            ])
+          }, 500)
         }
         break
 
