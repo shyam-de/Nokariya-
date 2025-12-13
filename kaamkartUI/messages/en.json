@@ -278,6 +278,7 @@
     "workerTypeActive": "Active (Show in registration and requests)",
     "workerTypeCode": "Code",
     "noWorkerTypesFound": "No worker types found. Create your first worker type!",
+    "active": "Active",
     "inactive": "Inactive",
     "deactivate": "Deactivate",
     "activate": "Activate"
