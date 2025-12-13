@@ -192,7 +192,7 @@ export default function ResetPassword() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600" lang={language}>{t('common.loading')}</p>
+          <p className="mt-4 text-gray-600">Loading...</p>
         </div>
       </div>
     }>
