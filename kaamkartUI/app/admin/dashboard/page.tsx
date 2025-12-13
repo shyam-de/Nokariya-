@@ -1512,6 +1512,13 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
+              {!(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm text-blue-700" lang={language}>
+                    📍 {t('admin.viewingWorkersWithin20km') || 'You are viewing workers within 20 km radius of your location'}
+                  </p>
+                </div>
+              )}
               {(user?.superAdmin === true || user?.superAdmin === 'true') && (
                 <div className="mt-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -1521,7 +1528,9 @@ export default function AdminDashboard() {
                       onChange={(e) => setWorkersLocationFilter(e.target.checked)}
                       className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
                     />
-                    <span className="text-sm font-medium text-gray-700">📍 Filter by my location (within 50km radius)</span>
+                    <span className="text-sm font-medium text-gray-700" lang={language}>
+                      📍 {t('admin.filterByMyLocation') || 'Filter by my location (within 20 km radius)'}
+                    </span>
                   </label>
                 </div>
               )}
@@ -1680,6 +1689,13 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
+              {!(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                <div className="mt-4 p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                  <p className="text-sm text-purple-700" lang={language}>
+                    📍 {t('admin.viewingCustomersWithin20km') || 'You are viewing customers within 20 km radius of your location'}
+                  </p>
+                </div>
+              )}
               {(user?.superAdmin === true || user?.superAdmin === 'true') && (
                 <div className="mt-4">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -1689,7 +1705,9 @@ export default function AdminDashboard() {
                       onChange={(e) => setCustomersLocationFilter(e.target.checked)}
                       className="w-5 h-5 text-purple-600 rounded focus:ring-purple-500"
                     />
-                    <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.filterByMyLocation')}</span>
+                    <span className="text-sm font-medium text-gray-700" lang={language}>
+                      📍 {t('admin.filterByMyLocation') || 'Filter by my location (within 20 km radius)'}
+                    </span>
                   </label>
                 </div>
               )}

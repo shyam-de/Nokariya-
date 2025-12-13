@@ -6,6 +6,7 @@ import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
 import { SessionStorage } from '@/lib/session'
 import { useAutoLogout } from '@/hooks/useAutoLogout'
+import { isValidIndianState, isValidIndianCity, getNearestCities } from '@/lib/indianLocationValidation'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
@@ -117,6 +118,10 @@ export default function CustomerDashboard() {
   const [editingConcern, setEditingConcern] = useState<{id: string, status: string, message: string} | null>(null)
   const [concernMessages, setConcernMessages] = useState<{[key: string]: any[]}>({})
   const [isLoadingMessages, setIsLoadingMessages] = useState<{[key: string]: boolean}>({})
+  const [showNearestCitiesModal, setShowNearestCitiesModal] = useState(false)
+  const [nearestCities, setNearestCities] = useState<Array<{ city: string; distance: number }>>([])
+  const [gpsCoordinates, setGpsCoordinates] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [isLoadingNearestCities, setIsLoadingNearestCities] = useState(false)
   const [userMessage, setUserMessage] = useState('')
   const [isSubmittingMessage, setIsSubmittingMessage] = useState(false)
 
@@ -192,6 +197,21 @@ export default function CustomerDashboard() {
         const pinCode = address.postcode || ''
         const fullAddress = data.display_name || ''
         
+        // Validate detected state and city
+        let stateValid = true
+        let cityValid = true
+        let warnings: string[] = []
+        
+        if (state && !isValidIndianState(state)) {
+          stateValid = false
+          warnings.push(t('customer.invalidIndianState') || 'Detected state may not be valid')
+        }
+        
+        if (city && !isValidIndianCity(city)) {
+          cityValid = false
+          warnings.push(t('customer.invalidIndianCity') || 'Detected city may not be valid. Please verify or enter manually.')
+        }
+        
         setFormData({
           ...formData,
           location: {
@@ -206,7 +226,40 @@ export default function CustomerDashboard() {
         })
         
         if (state && city) {
-          toast.success(t('customer.locationDetected') || 'Location detected successfully!')
+          if (stateValid && cityValid) {
+            toast.success(t('customer.locationDetected') || 'Location detected successfully!')
+          } else {
+            // If city is invalid, find nearest cities and show popup
+            if (!cityValid && city) {
+              setGpsCoordinates({ latitude, longitude })
+              setIsLoadingNearestCities(true)
+              try {
+                const nearest = await getNearestCities(latitude, longitude, 5)
+                setIsLoadingNearestCities(false)
+                if (nearest && nearest.length > 0) {
+                  setNearestCities(nearest)
+                  setShowNearestCitiesModal(true)
+                } else {
+                  toast.error(
+                    t('customer.cityNotInList') || 
+                    'The detected city is not in our database. Please enter a valid city name manually.'
+                  )
+                }
+              } catch (error) {
+                console.error('Error finding nearest cities:', error)
+                setIsLoadingNearestCities(false)
+                toast.error(
+                  t('customer.cityNotInList') || 
+                  'The detected city is not in our database. Please enter a valid city name manually.'
+                )
+              }
+            } else {
+              toast.error(
+                (warnings.join(' ') || t('customer.locationDetectedWithWarnings') || 'Location detected, but please verify state/city') + 
+                ' ' + (t('customer.pleaseVerifyLocation') || 'You can edit the fields if needed.')
+              )
+            }
+          }
         }
       }
     } catch (error) {
@@ -224,8 +277,8 @@ export default function CustomerDashboard() {
   }
 
   // Get state and city from pin code
-  const getLocationFromPinCode = async (pinCode: string) => {
-    if (!pinCode || pinCode.length !== 6) return
+  const getLocationFromPinCode = async (pinCode: string): Promise<{ state: string; city: string } | null> => {
+    if (!pinCode || pinCode.length !== 6) return null
     
     try {
       // Using India Post Pin Code API (free, no API key required)
@@ -238,21 +291,13 @@ export default function CustomerDashboard() {
         const city = postOffice.District || postOffice.Name || ''
         
         if (state && city) {
-          setFormData({
-            ...formData,
-            location: {
-              ...formData.location,
-              state: state,
-              city: city,
-              pinCode: pinCode
-            }
-          })
-          toast.success(t('customer.locationFromPinCode') || 'State and City detected from Pin Code!')
+          return { state, city }
         }
       }
+      return null
     } catch (error) {
-      console.error('Pin code lookup error:', error)
-      // Silently fail - user can still enter manually
+      console.error('Error fetching location from pin code:', error)
+      return null
     }
   }
 
@@ -411,44 +456,108 @@ export default function CustomerDashboard() {
       return
     }
     
-    // Validate location: either current location (lat/long) OR address fields (State, City, Pin Code) required
+    // Validate location: either current location (lat/long) OR pin code required
     const hasCurrentLocation = formData.location.latitude !== 0 && formData.location.longitude !== 0
-    const hasAddressFields = formData.location.state && formData.location.city && formData.location.pinCode
+    const hasPinCode = formData.location.pinCode && formData.location.pinCode.trim().length === 6
     
-    if (!hasCurrentLocation && !hasAddressFields) {
-      toast.error(t('customer.locationRequired') || 'Please either use current location or fill in State, City, and Pin Code')
+    if (!hasCurrentLocation && !hasPinCode) {
+      toast.error(t('customer.locationRequired') || 'Please either use current location or enter Pin Code')
       return
     }
     
-    // Validate state, city, and pin code format if address fields are provided
-    if (!hasCurrentLocation && hasAddressFields) {
-      // Validate State: Only letters, spaces, hyphens, and apostrophes allowed
-      const stateRegex = /^[a-zA-Z\s'\-\.]+$/
-      if (!stateRegex.test(formData.location.state.trim())) {
-        toast.error(t('customer.invalidState') || 'State should contain only letters, spaces, hyphens, and apostrophes')
-        return
-      }
-      if (formData.location.state.trim().length < 2) {
-        toast.error(t('customer.stateMinLength') || 'State must be at least 2 characters long')
-        return
-      }
-      
-      // Validate City: Only letters, spaces, hyphens, and apostrophes allowed
-      const cityRegex = /^[a-zA-Z\s'\-\.]+$/
-      if (!cityRegex.test(formData.location.city.trim())) {
-        toast.error(t('customer.invalidCity') || 'City should contain only letters, spaces, hyphens, and apostrophes')
-        return
-      }
-      if (formData.location.city.trim().length < 2) {
-        toast.error(t('customer.cityMinLength') || 'City must be at least 2 characters long')
-        return
-      }
-      
-      // Validate Pin Code: Must be exactly 6 digits (Indian pin code format)
+    // If using pin code (not GPS), validate pin code and ensure state/city are detected
+    if (!hasCurrentLocation && hasPinCode) {
+      // Validate pin code format
       const pinCodeRegex = /^\d{6}$/
       if (!pinCodeRegex.test(formData.location.pinCode.trim())) {
         toast.error(t('customer.invalidPinCode') || 'Pin Code must be exactly 6 digits')
         return
+      }
+      
+      // Ensure state and city are detected from pin code
+      if (!formData.location.state || !formData.location.city) {
+        toast.error(t('customer.stateCityNotDetected') || 'State and City could not be detected from Pin Code. Please enter a valid 6-digit pin code.')
+        return
+      }
+      
+      // Validate state: Must be a valid Indian state
+      if (!isValidIndianState(formData.location.state.trim())) {
+        toast.error(t('customer.invalidIndianState') || 'Please enter a valid Indian state name')
+        return
+      }
+      
+      // Validate city: Must be a valid Indian city
+      if (!isValidIndianCity(formData.location.city.trim())) {
+        toast.error(t('customer.invalidIndianCity') || 'Please enter a valid Indian city name')
+        return
+      }
+    }
+    
+    // Validate state and city if they are present (for GPS locations)
+    if (formData.location.state || formData.location.city) {
+      // Validate State if present
+      if (formData.location.state) {
+        const stateRegex = /^[a-zA-Z\s'\-\.]+$/
+        const stateValue = formData.location.state.trim()
+        if (!stateRegex.test(stateValue)) {
+          toast.error(t('customer.invalidState') || 'State should contain only letters, spaces, hyphens, and apostrophes')
+          return
+        }
+        if (stateValue.length < 2) {
+          toast.error(t('customer.stateMinLength') || 'State must be at least 2 characters long')
+          return
+        }
+        
+        // Validate State: Must be a valid Indian state
+        if (!isValidIndianState(stateValue)) {
+          toast.error(t('customer.invalidIndianState') || 'Please enter a valid Indian state name')
+          return
+        }
+      }
+      
+      // Validate City if present
+      if (formData.location.city) {
+        const cityRegex = /^[a-zA-Z\s'\-\.]+$/
+        const cityValue = formData.location.city.trim()
+        if (!cityRegex.test(cityValue)) {
+          toast.error(t('customer.invalidCity') || 'City should contain only letters, spaces, hyphens, and apostrophes')
+          return
+        }
+        if (cityValue.length < 2) {
+          toast.error(t('customer.cityMinLength') || 'City must be at least 2 characters long')
+          return
+        }
+        
+        // Validate City: Must be a valid Indian city
+        // If GPS was used and city is not in our list, show warning but allow if state is valid
+        if (!isValidIndianCity(cityValue)) {
+          if (hasCurrentLocation) {
+            // For GPS locations, if city is not in list but state is valid, allow with warning
+            if (formData.location.state && isValidIndianState(formData.location.state.trim())) {
+              toast.error(
+                t('customer.cityNotInList') || 
+                'The detected city is not in our database. Please verify or enter a valid city name manually.'
+              )
+              return
+            } else {
+              toast.error(t('customer.invalidIndianCity') || 'Please enter a valid Indian city name')
+              return
+            }
+          } else {
+            // For manually entered cities, strict validation
+            toast.error(t('customer.invalidIndianCity') || 'Please enter a valid Indian city name')
+            return
+          }
+        }
+      }
+      
+      // Validate Pin Code if present
+      if (formData.location.pinCode) {
+        const pinCodeRegex = /^\d{6}$/
+        if (!pinCodeRegex.test(formData.location.pinCode.trim())) {
+          toast.error(t('customer.invalidPinCode') || 'Pin Code must be exactly 6 digits')
+          return
+        }
       }
     }
     
@@ -1170,71 +1279,8 @@ export default function CustomerDashboard() {
                         <p className="text-xs font-medium text-gray-700 mb-2" lang={language}>
                           {t('customer.addressDetails')} <span className="text-red-500">*</span>
                         </p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label htmlFor="state" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
-                              {t('customer.state')} <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              id="state"
-                              value={formData.location.state || ''}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                // Allow only letters, spaces, hyphens, apostrophes, and dots
-                                if (value === '' || /^[a-zA-Z\s'\-\.]*$/.test(value)) {
-                                  setFormData({ 
-                                    ...formData, 
-                                    location: { ...formData.location, state: value }
-                                  })
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const value = e.target.value.trim()
-                                if (value && value.length < 2) {
-                                  toast.error(t('customer.stateMinLength') || 'State must be at least 2 characters long')
-                                }
-                              }}
-                              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder={t('customer.state')}
-                              pattern="[a-zA-Z\s'\-\.]+"
-                              title={t('customer.stateValidation') || 'State should contain only letters, spaces, hyphens, and apostrophes'}
-                              lang={language}
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="city" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
-                              {t('customer.city')} <span className="text-red-500">*</span>
-                            </label>
-                            <input
-                              type="text"
-                              id="city"
-                              value={formData.location.city || ''}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                // Allow only letters, spaces, hyphens, apostrophes, and dots
-                                if (value === '' || /^[a-zA-Z\s'\-\.]*$/.test(value)) {
-                                  setFormData({ 
-                                    ...formData, 
-                                    location: { ...formData.location, city: value }
-                                  })
-                                }
-                              }}
-                              onBlur={(e) => {
-                                const value = e.target.value.trim()
-                                if (value && value.length < 2) {
-                                  toast.error(t('customer.cityMinLength') || 'City must be at least 2 characters long')
-                                }
-                              }}
-                              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder={t('customer.city')}
-                              pattern="[a-zA-Z\s'\-\.]+"
-                              title={t('customer.cityValidation') || 'City should contain only letters, spaces, hyphens, and apostrophes'}
-                              lang={language}
-                            />
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
+                        <div className="space-y-3">
+                          {/* Pin Code First */}
                           <div>
                             <label htmlFor="pinCode" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
                               {t('customer.pinCode')} <span className="text-red-500">*</span>
@@ -1242,11 +1288,11 @@ export default function CustomerDashboard() {
                             <input
                               type="text"
                               id="pinCode"
+                              required
                               value={formData.location.pinCode || ''}
-                              onChange={(e) => {
-                                const value = e.target.value
-                                // Allow only digits, max 6 digits
-                                if (value === '' || /^\d{0,6}$/.test(value)) {
+                              onChange={async (e) => {
+                                const value = e.target.value.replace(/\D/g, '') // Only digits
+                                if (value.length <= 6) {
                                   setFormData({ 
                                     ...formData, 
                                     location: { ...formData.location, pinCode: value }
@@ -1254,7 +1300,26 @@ export default function CustomerDashboard() {
                                   
                                   // Auto-detect state and city when 6 digits are entered
                                   if (value.length === 6) {
-                                    getLocationFromPinCode(value)
+                                    try {
+                                      const location = await getLocationFromPinCode(value)
+                                      if (location) {
+                                        setFormData(prev => ({
+                                          ...prev,
+                                          location: {
+                                            ...prev.location,
+                                            pinCode: value,
+                                            state: location.state || prev.location.state,
+                                            city: location.city || prev.location.city
+                                          }
+                                        }))
+                                        toast.success(t('customer.pinCodeDetectedSuccess') || 'State and City detected from Pin Code!')
+                                      } else {
+                                        toast.error(t('customer.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
+                                      }
+                                    } catch (error) {
+                                      console.error('Error fetching location from pin code:', error)
+                                      toast.error(t('customer.pinCodeError') || 'Error detecting location from Pin Code. Please try again.')
+                                    }
                                   }
                                 }
                               }}
@@ -1270,13 +1335,52 @@ export default function CustomerDashboard() {
                                 }
                               }}
                               className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
-                              placeholder={t('customer.pinCode')}
+                              placeholder={t('customer.pinCode') || 'Enter 6-digit Pin Code'}
                               pattern="\d{6}"
                               title={t('customer.pinCodeValidation') || 'Pin Code must be exactly 6 digits'}
                               maxLength={6}
                               lang={language}
                             />
+                            <p className="text-xs text-gray-500 mt-1" lang={language}>
+                              {t('customer.pinCodeHelp') || 'Enter your pin code and state/city will be auto-detected'}
+                            </p>
                           </div>
+                          
+                          {/* State - Read Only */}
+                          <div>
+                            <label htmlFor="state" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.state')} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="state"
+                              required
+                              readOnly
+                              value={formData.location.state || ''}
+                              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg bg-gray-100 text-sm cursor-not-allowed"
+                              placeholder={t('customer.stateAutoDetected') || 'Will be auto-detected from Pin Code'}
+                              lang={language}
+                            />
+                          </div>
+                          
+                          {/* City - Read Only */}
+                          <div>
+                            <label htmlFor="city" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                              {t('customer.city')} <span className="text-red-500">*</span>
+                            </label>
+                            <input
+                              type="text"
+                              id="city"
+                              required
+                              readOnly
+                              value={formData.location.city || ''}
+                              className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg bg-gray-100 text-sm cursor-not-allowed"
+                              placeholder={t('customer.cityAutoDetected') || 'Will be auto-detected from Pin Code'}
+                              lang={language}
+                            />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-3">
                           <div>
                             <label htmlFor="area" className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
                               {t('customer.area')}
@@ -1904,6 +2008,84 @@ export default function CustomerDashboard() {
         )}
       </div>
       
+      {/* Nearest Cities Modal */}
+      {showNearestCitiesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-lg relative my-auto max-h-[95vh] overflow-y-auto">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4" lang={language}>
+              {t('customer.nearestCities') || 'Nearest Cities'}
+            </h3>
+            <p className="text-sm text-gray-600 mb-6" lang={language}>
+              {t('customer.selectNearestCity') || 'The detected city is not in our database. Please select the nearest city from the list below:'}
+            </p>
+            {isLoadingNearestCities ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                <span className="ml-3 text-gray-600" lang={language}>
+                  {t('customer.loadingNearestCities') || 'Finding nearest cities...'}
+                </span>
+              </div>
+            ) : nearestCities.length > 0 ? (
+              <>
+                <div className="space-y-3 mb-6">
+                  {nearestCities.map((item, index) => (
+                    <button
+                      key={index}
+                      onClick={() => {
+                        setFormData({
+                          ...formData,
+                          location: {
+                            ...formData.location,
+                            city: item.city
+                          }
+                        })
+                        setShowNearestCitiesModal(false)
+                        toast.success(
+                          (t('customer.citySelected') || 'City selected: ') + item.city
+                        )
+                      }}
+                      className="w-full p-4 text-left bg-gradient-to-r from-primary-50 to-indigo-50 hover:from-primary-100 hover:to-indigo-100 border-2 border-primary-200 hover:border-primary-400 rounded-lg transition-all duration-200 flex justify-between items-center"
+                    >
+                      <div>
+                        <p className="font-semibold text-gray-900" lang={language}>{item.city}</p>
+                        {item.distance > 0 && (
+                          <p className="text-xs text-gray-600 mt-1" lang={language}>
+                            {t('customer.distance') || 'Distance'}: ~{item.distance} km
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-primary-600 text-xl">→</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowNearestCitiesModal(false)}
+                    className="flex-1 px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                    lang={language}
+                  >
+                    {t('customer.enterManually') || 'Enter Manually'}
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600 mb-4" lang={language}>
+                  {t('customer.noCitiesFound') || 'No nearby cities found. Please enter a city name manually.'}
+                </p>
+                <button
+                  onClick={() => setShowNearestCitiesModal(false)}
+                  className="px-4 py-3 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                  lang={language}
+                >
+                  {t('customer.enterManually') || 'Enter Manually'}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Chatbot */}
       <Chatbot user={user} />
     </div>

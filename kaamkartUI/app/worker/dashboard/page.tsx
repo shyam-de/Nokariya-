@@ -801,7 +801,7 @@ export default function WorkerDashboard() {
               </button>
               <form onSubmit={handleUpdateProfile} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.name')}</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.name') || t('common.name')}</label>
                   <input
                     type="text"
                     value={profileData.name}
@@ -1331,18 +1331,19 @@ export default function WorkerDashboard() {
               </button>
               <form onSubmit={handleSubmitConcern} className="space-y-5">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Concern Type <span className="text-red-500">*</span></label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('worker.concernType')} <span className="text-red-500">*</span></label>
                   <select
                     value={concernData.type}
                     onChange={(e) => setConcernData({ ...concernData, type: e.target.value as any })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                     required
+                    lang={language}
                   >
-                    <option value="WORK_QUALITY">Work Quality</option>
-                    <option value="PAYMENT_ISSUE">Payment Issue</option>
-                    <option value="BEHAVIOR">Behavior</option>
-                    <option value="SAFETY">Safety</option>
-                    <option value="OTHER">Other</option>
+                    <option value="WORK_QUALITY" lang={language}>{t('worker.workQuality')}</option>
+                    <option value="PAYMENT_ISSUE" lang={language}>{t('worker.paymentIssue')}</option>
+                    <option value="BEHAVIOR" lang={language}>{t('worker.behavior')}</option>
+                    <option value="SAFETY" lang={language}>{t('worker.safety')}</option>
+                    <option value="OTHER" lang={language}>{t('worker.other')}</option>
                   </select>
                 </div>
                 {workHistory.length > 0 && (

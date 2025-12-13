@@ -8,6 +8,7 @@ import { SessionStorage } from '@/lib/session'
 import toast from 'react-hot-toast'
 import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
+import { isValidIndianState, isValidIndianCity, getLocationFromPinCode } from '@/lib/indianLocationValidation'
 
 export default function Login() {
   const router = useRouter()
@@ -27,7 +28,10 @@ export default function Login() {
     password: '',
     confirmPassword: '',
     role: 'customer',
-    workerTypes: [] as string[]
+    workerTypes: [] as string[],
+    state: '',
+    city: '',
+    pinCode: ''
   })
 
   useEffect(() => {
@@ -64,6 +68,51 @@ export default function Login() {
         // Validation for registration
         if (!formData.name || !formData.email || !formData.phone || !formData.password) {
           toast.error(t('login.nameRequired') + ', ' + t('login.emailRequired') + ', ' + t('login.phoneRequired') + ', ' + t('login.passwordRequired'))
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate state, city, and pin code
+        if (!formData.state || !formData.city || !formData.pinCode) {
+          toast.error(t('login.stateCityPinRequired') || 'State, City, and Pin Code are required')
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate state format
+        const stateRegex = /^[a-zA-Z\s'\-\.]+$/
+        if (!stateRegex.test(formData.state.trim()) || formData.state.trim().length < 2) {
+          toast.error(t('login.invalidState') || 'Please enter a valid state name')
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate state: Must be a valid Indian state
+        if (!isValidIndianState(formData.state.trim())) {
+          toast.error(t('login.invalidIndianState') || 'Please enter a valid Indian state name')
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate city format
+        const cityRegex = /^[a-zA-Z\s'\-\.]+$/
+        if (!cityRegex.test(formData.city.trim()) || formData.city.trim().length < 2) {
+          toast.error(t('login.invalidCity') || 'Please enter a valid city name')
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate city: Must be a valid Indian city
+        if (!isValidIndianCity(formData.city.trim())) {
+          toast.error(t('login.invalidIndianCity') || 'Please enter a valid Indian city name')
+          setIsLoading(false)
+          return
+        }
+        
+        // Validate pin code: Must be exactly 6 digits
+        const pinCodeRegex = /^\d{6}$/
+        if (!pinCodeRegex.test(formData.pinCode.trim())) {
+          toast.error(t('login.invalidPinCode') || 'Pin Code must be exactly 6 digits')
           setIsLoading(false)
           return
         }
@@ -122,7 +171,12 @@ export default function Login() {
           secondaryPhone: cleanedSecondaryPhone,
           password: formData.password,
           role: formData.role.toUpperCase(),
-          workerTypes: formData.workerTypes.map(type => type.toUpperCase())
+          workerTypes: formData.workerTypes.map(type => type.toUpperCase()),
+          location: {
+            state: formData.state.trim(),
+            city: formData.city.trim(),
+            pinCode: formData.pinCode.trim()
+          }
         }
       }
 
@@ -444,11 +498,107 @@ export default function Login() {
                     type="radio"
                     value="worker"
                     checked={formData.role === 'worker'}
-                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                    onChange={(e) => setFormData({ ...formData, role: e.target.value, workerTypes: [] })}
                     className="mr-2 w-4 h-4 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="group-hover:text-primary-600 transition-colors" lang={language}>{t('login.worker')}</span>
                 </label>
+              </div>
+            </div>
+          )}
+
+          {!isLogin && (
+            <div className="space-y-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-200">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3" lang={language}>
+                {t('login.locationDetails') || 'Location Details'} <span className="text-red-500">*</span>
+              </h3>
+              
+              <div className="space-y-3">
+                {/* Pin Code First */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                    {t('login.pinCode') || 'Pin Code'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={formData.pinCode}
+                    onChange={async (e) => {
+                      const value = e.target.value.replace(/\D/g, '') // Only digits
+                      if (value.length <= 6) {
+                        setFormData({ ...formData, pinCode: value })
+                        
+                        // Auto-fill state and city when pin code is complete
+                        if (value.length === 6) {
+                          try {
+                            const location = await getLocationFromPinCode(value)
+                            if (location) {
+                              setFormData(prev => ({
+                                ...prev,
+                                pinCode: value,
+                                state: location.state || prev.state,
+                                city: location.city || prev.city
+                              }))
+                              toast.success(t('login.pinCodeDetected') || 'State and City detected from Pin Code!')
+                            } else {
+                              toast.error(t('login.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.')
+                            }
+                          } catch (error) {
+                            console.error('Error fetching location from pin code:', error)
+                            toast.error(t('login.pinCodeError') || 'Error detecting location from Pin Code. Please try again.')
+                          }
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim()
+                      if (value && value.length !== 6) {
+                        toast.error(t('login.invalidPinCode') || 'Pin Code must be exactly 6 digits')
+                      }
+                    }}
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-sm"
+                    placeholder={t('login.pinCode') || 'Enter 6-digit Pin Code'}
+                    pattern="\d{6}"
+                    title={t('login.pinCodeValidation') || 'Pin Code must be exactly 6 digits'}
+                    lang={language}
+                  />
+                  <p className="text-xs text-gray-500 mt-1" lang={language}>
+                    {t('login.pinCodeHelp') || 'Enter your pin code and state/city will be auto-detected'}
+                  </p>
+                </div>
+                
+                {/* State - Read Only */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                    {t('login.state') || 'State'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    readOnly
+                    value={formData.state}
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg bg-gray-100 text-sm cursor-not-allowed"
+                    placeholder={t('login.stateAutoDetected') || 'Will be auto-detected from Pin Code'}
+                    lang={language}
+                  />
+                </div>
+                
+                {/* City - Read Only */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1" lang={language}>
+                    {t('login.city') || 'City'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    readOnly
+                    value={formData.city}
+                    className="w-full px-3 py-2 border-2 border-gray-300 rounded-lg bg-gray-100 text-sm cursor-not-allowed"
+                    placeholder={t('login.cityAutoDetected') || 'Will be auto-detected from Pin Code'}
+                    lang={language}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -518,7 +668,25 @@ export default function Login() {
                 </button>
               )}
               <button
-                onClick={() => setIsLogin(!isLogin)}
+                onClick={() => {
+                  setIsLogin(!isLogin)
+                  // Reset form data when switching between login and register
+                  if (!isLogin) {
+                    setFormData({
+                      name: '',
+                      email: '',
+                      phone: '',
+                      secondaryPhone: '',
+                      password: '',
+                      confirmPassword: '',
+                      role: 'customer',
+                      workerTypes: [],
+                      state: '',
+                      city: '',
+                      pinCode: ''
+                    })
+                  }
+                }}
                 className="text-primary-600 hover:text-primary-700 font-medium transition-all duration-200 hover:scale-105 transform"
                 lang={language}
               >
