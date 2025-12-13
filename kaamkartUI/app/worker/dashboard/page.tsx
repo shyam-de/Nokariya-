@@ -1592,13 +1592,14 @@ export default function WorkerDashboard() {
                 </div>
                 {workHistory.length > 0 && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Related Request (Optional)</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1" lang={language}>{t('customer.relatedRequest')}</label>
                     <select
                       value={concernData.requestId}
                       onChange={(e) => setConcernData({ ...concernData, requestId: e.target.value })}
                       className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      lang={language}
                     >
-                      <option value="">None</option>
+                      <option value="" lang={language}>{t('customer.none')}</option>
                       {workHistory.map((work: any) => (
                         <option key={work.requestId} value={work.requestId}>
                           {work.workType} - {work.status}
