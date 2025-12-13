@@ -1,66 +1,68 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Gradient for flowing lines -->
-    <linearGradient id="flowGradient1" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Gradient -->
+    <linearGradient id="handshakeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
       <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
     </linearGradient>
-    <linearGradient id="flowGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#818cf8;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#a78bfa;stop-opacity:1" />
-    </linearGradient>
-    <linearGradient id="flowGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#a78bfa;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#c084fc;stop-opacity:1" />
-    </linearGradient>
   </defs>
   
-  <!-- Circular outline -->
-  <circle cx="30" cy="30" r="28" fill="none" stroke="url(#flowGradient1)" stroke-width="2" opacity="0.6"/>
+  <!-- Background circle -->
+  <circle cx="30" cy="30" r="28" fill="url(#handshakeGradient)"/>
   
-  <!-- Flowing wavy lines forming Double K pattern -->
-  <g transform="translate(30, 30)">
-    <!-- Left side - First K formed by flowing lines -->
-    <!-- Top wavy line (lighter) -->
-    <path d="M -18 -12 Q -12 -8 -6 -4 Q 0 -2 0 0" 
-          stroke="url(#flowGradient1)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
-    <!-- Middle wavy line (medium) -->
-    <path d="M -18 -4 Q -12 0 -6 2 Q 0 4 0 0" 
-          stroke="url(#flowGradient2)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
-    <!-- Bottom wavy line (darker) -->
-    <path d="M -18 4 Q -12 8 -6 10 Q 0 12 0 0" 
-          stroke="url(#flowGradient3)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
+  <!-- Multiple handshakes at the top -->
+  <g transform="translate(30, 18)">
+    <!-- First handshake (left) -->
+    <g transform="translate(-8, 0)">
+      <!-- Left hand -->
+      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Right hand -->
+      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Connection/grip -->
+      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
+    </g>
     
-    <!-- Right side - Second K formed by flowing lines -->
-    <!-- Top wavy line (lighter) -->
-    <path d="M 18 -12 Q 12 -8 6 -4 Q 0 -2 0 0" 
-          stroke="url(#flowGradient1)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
-    <!-- Middle wavy line (medium) -->
-    <path d="M 18 -4 Q 12 0 6 2 Q 0 4 0 0" 
-          stroke="url(#flowGradient2)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
-    <!-- Bottom wavy line (darker) -->
-    <path d="M 18 4 Q 12 8 6 10 Q 0 12 0 0" 
-          stroke="url(#flowGradient3)" 
-          stroke-width="3.5" 
-          fill="none" 
-          stroke-linecap="round"/>
+    <!-- Second handshake (center) -->
+    <g transform="translate(0, 0)">
+      <!-- Left hand -->
+      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Right hand -->
+      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Connection/grip -->
+      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
+    </g>
     
-    <!-- Center connection point where lines meet -->
-    <circle cx="0" cy="0" r="3" fill="url(#flowGradient2)" opacity="0.9"/>
+    <!-- Third handshake (right) -->
+    <g transform="translate(8, 0)">
+      <!-- Left hand -->
+      <ellipse cx="-3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Right hand -->
+      <ellipse cx="3" cy="0" rx="2.5" ry="3.5" fill="white" opacity="0.9"/>
+      <!-- Connection/grip -->
+      <path d="M -1 0 Q 0 -1 1 0" stroke="white" stroke-width="2" fill="none" opacity="0.8"/>
+    </g>
+  </g>
+  
+  <!-- Double K below the handshakes -->
+  <g transform="translate(30, 38)">
+    <!-- First K -->
+    <g transform="translate(-5, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-6" x2="0" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <!-- Top diagonal -->
+      <line x1="0" y1="-2" x2="5" y2="-6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <!-- Bottom diagonal -->
+      <line x1="0" y1="2" x2="5" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    </g>
+    
+    <!-- Second K -->
+    <g transform="translate(5, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-6" x2="0" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <!-- Top diagonal -->
+      <line x1="0" y1="-2" x2="5" y2="-6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+      <!-- Bottom diagonal -->
+      <line x1="0" y1="2" x2="5" y2="6" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    </g>
   </g>
 </svg>
