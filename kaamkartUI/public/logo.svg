@@ -1,31 +1,35 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Modern gradient -->
-    <linearGradient id="kkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+    <!-- Flipkart-style gradient - clean and modern -->
+    <linearGradient id="flipkartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2874f0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2874f0;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Background circle -->
-  <circle cx="30" cy="30" r="28" fill="url(#kkGradient)"/>
+  <!-- Clean background - rounded square like Flipkart style -->
+  <rect x="4" y="4" width="52" height="52" rx="12" fill="url(#flipkartGradient)"/>
   
-  <!-- Innovative Double K - Sharing a common center stem -->
+  <!-- Double K Design - Simple and clean like Flipkart -->
   <g transform="translate(30, 30)">
-    <!-- Shared center vertical stem -->
-    <line x1="0" y1="-16" x2="0" y2="16" stroke="white" stroke-width="5" stroke-linecap="round"/>
+    <!-- First K - clean and bold -->
+    <g transform="translate(-8, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <!-- Top diagonal -->
+      <line x1="0" y1="-5" x2="9" y2="-14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <!-- Bottom diagonal -->
+      <line x1="0" y1="5" x2="9" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    </g>
     
-    <!-- Left K - top arm -->
-    <line x1="0" y1="-8" x2="-10" y2="-16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
-    <!-- Left K - bottom arm -->
-    <line x1="0" y1="8" x2="-10" y2="16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
-    
-    <!-- Right K - top arm -->
-    <line x1="0" y1="-8" x2="10" y2="-16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
-    <!-- Right K - bottom arm -->
-    <line x1="0" y1="8" x2="10" y2="16" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
-    
-    <!-- Center accent dot -->
-    <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.95"/>
+    <!-- Second K - overlapping slightly -->
+    <g transform="translate(8, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <!-- Top diagonal (mirrored) -->
+      <line x1="0" y1="-5" x2="-9" y2="-14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <!-- Bottom diagonal (mirrored) -->
+      <line x1="0" y1="5" x2="-9" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    </g>
   </g>
 </svg>
