@@ -1,35 +1,68 @@
 <svg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
   <defs>
-    <!-- Flipkart-style gradient -->
-    <linearGradient id="flipkartGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#2874f0;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#2874f0;stop-opacity:1" />
+    <!-- Gradient similar to the cleaning logo style -->
+    <linearGradient id="kkGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10b981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
+    </linearGradient>
+    <!-- Sparkle gradient -->
+    <linearGradient id="sparkleGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#34d399;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#059669;stop-opacity:1" />
     </linearGradient>
   </defs>
   
-  <!-- Clean background - rounded square -->
-  <rect x="4" y="4" width="52" height="52" rx="12" fill="url(#flipkartGradient)"/>
+  <!-- Background circle -->
+  <circle cx="30" cy="30" r="28" fill="url(#kkGradient)"/>
   
-  <!-- Overlapping Double K - Both facing same direction, overlapping -->
+  <!-- Double K Design with decorative elements -->
   <g transform="translate(30, 30)">
-    <!-- First K - base position -->
-    <g>
+    <!-- First K -->
+    <g transform="translate(-6, 0)">
       <!-- Vertical stem -->
-      <line x1="-4" y1="-14" x2="-4" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
       <!-- Top diagonal -->
-      <line x1="-4" y1="-5" x2="5" y2="-14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="0" y1="-4" x2="8" y2="-12" stroke="white" stroke-width="4" stroke-linecap="round"/>
       <!-- Bottom diagonal -->
-      <line x1="-4" y1="5" x2="5" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="0" y1="4" x2="8" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
     
-    <!-- Second K - overlapping, shifted right but same orientation -->
-    <g>
-      <!-- Vertical stem (overlaps with first) -->
-      <line x1="4" y1="-14" x2="4" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+    <!-- Second K - overlapping -->
+    <g transform="translate(6, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
       <!-- Top diagonal -->
-      <line x1="4" y1="-5" x2="13" y2="-14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="0" y1="-4" x2="8" y2="-12" stroke="white" stroke-width="4" stroke-linecap="round"/>
       <!-- Bottom diagonal -->
-      <line x1="4" y1="5" x2="13" y2="14" stroke="white" stroke-width="4.5" stroke-linecap="round"/>
+      <line x1="0" y1="4" x2="8" y2="12" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
+    
+    <!-- Decorative sparkles around the K's -->
+    <!-- Top sparkles -->
+    <g transform="translate(-10, -14)">
+      <path d="M 0 -3 L 1.5 0 L 0 3 L -1.5 0 Z M -3 0 L 0 -1.5 L 3 0 L 0 1.5 Z" fill="url(#sparkleGradient)" opacity="0.8"/>
+    </g>
+    <g transform="translate(10, -14)">
+      <path d="M 0 -3 L 1.5 0 L 0 3 L -1.5 0 Z M -3 0 L 0 -1.5 L 3 0 L 0 1.5 Z" fill="url(#sparkleGradient)" opacity="0.8"/>
+    </g>
+    
+    <!-- Side sparkles -->
+    <g transform="translate(-14, 0)">
+      <path d="M 0 -2 L 1 0 L 0 2 L -1 0 Z M -2 0 L 0 -1 L 2 0 L 0 1 Z" fill="url(#sparkleGradient)" opacity="0.7"/>
+    </g>
+    <g transform="translate(14, 0)">
+      <path d="M 0 -2 L 1 0 L 0 2 L -1 0 Z M -2 0 L 0 -1 L 2 0 L 0 1 Z" fill="url(#sparkleGradient)" opacity="0.7"/>
+    </g>
+    
+    <!-- Bottom decorative wave/swish elements -->
+    <g transform="translate(0, 10)">
+      <!-- Wave 1 -->
+      <path d="M -8 0 Q -4 -2 0 0 T 8 0" stroke="white" stroke-width="2" fill="none" opacity="0.6"/>
+      <!-- Wave 2 -->
+      <path d="M -6 2 Q -3 0 0 2 T 6 2" stroke="white" stroke-width="1.5" fill="none" opacity="0.5"/>
+    </g>
+    
+    <!-- Center connection dot -->
+    <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.9"/>
   </g>
 </svg>
