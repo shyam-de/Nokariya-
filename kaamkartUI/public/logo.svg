@@ -10,29 +10,34 @@
   <!-- Background circle -->
   <circle cx="30" cy="30" r="28" fill="url(#kkGradient)"/>
   
-  <!-- Double K design - two K's connected -->
+  <!-- Innovative Double K Design - K's forming a connection/bridge -->
   <g transform="translate(30, 30)">
-    <!-- Left K -->
-    <g transform="translate(-12, 0)">
-      <!-- Vertical line -->
-      <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-      <!-- Top diagonal -->
-      <line x1="0" y1="-4" x2="8" y2="-12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-      <!-- Bottom diagonal -->
-      <line x1="0" y1="4" x2="8" y2="12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Left K - stylized and modern -->
+    <g transform="translate(-10, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Top arm (angled upward) -->
+      <line x1="0" y1="-6" x2="7" y2="-14" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Bottom arm (angled downward) -->
+      <line x1="0" y1="6" x2="7" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
     
-    <!-- Right K (mirrored) -->
-    <g transform="translate(12, 0)">
-      <!-- Vertical line -->
-      <line x1="0" y1="-12" x2="0" y2="12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-      <!-- Top diagonal (mirrored) -->
-      <line x1="0" y1="-4" x2="-8" y2="-12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
-      <!-- Bottom diagonal (mirrored) -->
-      <line x1="0" y1="4" x2="-8" y2="12" stroke="white" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Right K - mirrored and connected -->
+    <g transform="translate(10, 0)">
+      <!-- Vertical stem -->
+      <line x1="0" y1="-14" x2="0" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Top arm (angled upward, mirrored) -->
+      <line x1="0" y1="-6" x2="-7" y2="-14" stroke="white" stroke-width="4" stroke-linecap="round"/>
+      <!-- Bottom arm (angled downward, mirrored) -->
+      <line x1="0" y1="6" x2="-7" y2="14" stroke="white" stroke-width="4" stroke-linecap="round"/>
     </g>
     
-    <!-- Connection element between K's - represents connection/platform -->
-    <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.9"/>
+    <!-- Innovative connection element - K's arms meet to form a bridge/connection -->
+    <!-- Top connection bridge -->
+    <line x1="3" y1="-10" x2="-3" y2="-10" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+    <!-- Bottom connection bridge -->
+    <line x1="3" y1="10" x2="-3" y2="10" stroke="white" stroke-width="3.5" stroke-linecap="round" opacity="0.9"/>
+    <!-- Center connection dot -->
+    <circle cx="0" cy="0" r="2.5" fill="white" opacity="0.95"/>
   </g>
 </svg>
