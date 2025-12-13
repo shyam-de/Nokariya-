@@ -1426,7 +1426,11 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             window.location.href = '/login'
           }, 1500)
         }
-      } else if (lowerText.includes('request') || lowerText.includes('create') || lowerText.includes('अनुरोध')) {
+      } else if (lowerText.includes('pending') && user?.role?.toLowerCase() === 'admin') {
+        // Admin checking pending requests - handle this before generic "request" check
+        showPendingRequests()
+      } else if ((lowerText.includes('request') || lowerText.includes('create') || lowerText.includes('अनुरोध')) && !lowerText.includes('pending')) {
+        // Only check for create request if it's not about pending requests
         if (user?.role?.toLowerCase() === 'customer') {
           startRequestFlow()
         } else {
