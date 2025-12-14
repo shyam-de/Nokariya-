@@ -1,11 +1,12 @@
 import type { Metadata } from 'next'
 import { Inter, Noto_Sans_Devanagari } from 'next/font/google'
+import Script from 'next/script'
 import './globals.css'
 import { Toaster } from 'react-hot-toast'
 import { LanguageProvider } from '@/contexts/LanguageContext'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 
-const inter = Inter({ 
+const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
@@ -23,6 +24,8 @@ export const metadata: Metadata = {
   description: 'Platform connecting labor workers with end users',
 }
 
+const GA_ID = 'G-0HD4VT5PN2'
+
 export default function RootLayout({
   children,
 }: {
@@ -30,11 +33,27 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        {/* Google Analytics */}
+        <Script
+          src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${GA_ID}');
+          `}
+        </Script>
+      </head>
+
       <body className={`${inter.variable} ${notoSansDevanagari.variable} font-sans`}>
         <ErrorBoundary>
           <LanguageProvider>
             {children}
-            <Toaster 
+            <Toaster
               position="top-right"
               reverseOrder={false}
               gutter={8}
@@ -64,4 +83,3 @@ export default function RootLayout({
     </html>
   )
 }
-

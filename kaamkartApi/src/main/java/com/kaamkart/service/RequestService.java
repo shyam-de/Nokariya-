@@ -123,25 +123,12 @@ public class RequestService {
                 location.setLongitude(dto.getLocation().getLongitude());
                 location.setAddress(dto.getLocation().getAddress());
             } else {
-                // Priority 2: Use address fields (State, City, Pin Code, Area) for geocoding
+                // Priority 2: Use address fields (State, City, Pin Code, Area) if provided
+                // Note: Geocoding is handled by the frontend. If lat/long are not provided,
+                // the address will be stored but location-based matching will be limited.
                 if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()
                         && dto.getLocation().getCity() != null && !dto.getLocation().getCity().trim().isEmpty()
                         && dto.getLocation().getPinCode() != null && !dto.getLocation().getPinCode().trim().isEmpty()) {
-                    
-                    // Geocode the address to get latitude and longitude
-                    double[] coordinates = geocodeAddress(
-                            dto.getLocation().getState(),
-                            dto.getLocation().getCity(),
-                            dto.getLocation().getPinCode(),
-                            dto.getLocation().getArea()
-                    );
-                    
-                    // Set coordinates if geocoding was successful, otherwise leave as null
-                    if (coordinates != null && coordinates.length == 2) {
-                        location.setLatitude(coordinates[0]);
-                        location.setLongitude(coordinates[1]);
-                    }
-                    // If geocoding fails, lat/long will remain null but address will be stored
                     
                     // Build address string from components
                     StringBuilder addressBuilder = new StringBuilder();
@@ -158,16 +145,14 @@ public class RequestService {
                         addressBuilder.append(dto.getLocation().getPinCode());
                     }
                     location.setAddress(addressBuilder.toString().trim());
+                    // Note: lat/long will remain null - location-based matching won't work
+                    logger.warn("Request created without lat/long coordinates. Address: {}", location.getAddress());
                 } else {
-                    // Fallback: Use provided address if available
+                    // Fallback: Use provided address string if available
                     if (dto.getLocation().getAddress() != null && !dto.getLocation().getAddress().trim().isEmpty()) {
                         location.setAddress(dto.getLocation().getAddress());
-                        // Try to geocode the address string
-                        double[] coordinates = geocodeAddressString(dto.getLocation().getAddress());
-                        if (coordinates != null) {
-                            location.setLatitude(coordinates[0]);
-                            location.setLongitude(coordinates[1]);
-                        }
+                        // Note: lat/long will remain null - location-based matching won't work
+                        logger.warn("Request created without lat/long coordinates. Address: {}", location.getAddress());
                     } else {
                         throw new RuntimeException("Either current location (latitude/longitude) or address fields (State, City, Pin Code) are required");
                     }
@@ -396,53 +381,6 @@ public class RequestService {
         return savedRequest;
     }
 
-    /**
-     * Geocode address components to get latitude and longitude
-     * This is a placeholder implementation. In production, integrate with a geocoding service
-     * like Google Maps Geocoding API, OpenStreetMap Nominatim, or similar.
-     * 
-     * @param state State name
-     * @param city City name
-     * @param pinCode Pin code
-     * @param area Area/locality (optional)
-     * @return double array with [latitude, longitude] or null if geocoding is not available
-     */
-    private double[] geocodeAddress(String state, String city, String pinCode, String area) {
-        // TODO: Integrate with a geocoding service (Google Maps, OpenStreetMap, etc.)
-        // 
-        // Example with OpenStreetMap Nominatim (free, no API key required):
-        // String query = String.format("%s, %s, %s, %s", 
-        //     area != null ? area : "", city, state, pinCode);
-        // String url = "https://nominatim.openstreetmap.org/search?q=" + 
-        //     URLEncoder.encode(query, StandardCharsets.UTF_8) + "&format=json&limit=1";
-        // Make HTTP request, parse JSON response to get lat/lon
-        //
-        // Example with Google Maps Geocoding API (requires API key):
-        // String address = String.format("%s, %s, %s %s", area, city, state, pinCode);
-        // String url = "https://maps.googleapis.com/maps/api/geocode/json?address=" + 
-        //     URLEncoder.encode(address, StandardCharsets.UTF_8) + "&key=YOUR_API_KEY";
-        // Make HTTP request, parse JSON response to get lat/lon
-        
-        // For now, return null to indicate geocoding is not available
-        // The system will still work with address fields, but location-based matching
-        // will be limited until geocoding is implemented
-        logger.warn("Geocoding not implemented for address: {}, {}, {}, {}. Address will be stored but lat/long will be null.", 
-                state, city, pinCode, area);
-        return null; // Return null to indicate geocoding unavailable
-    }
-    
-    /**
-     * Geocode an address string to get latitude and longitude
-     * This is a placeholder implementation for geocoding a full address string.
-     * 
-     * @param address Full address string
-     * @return double array with [latitude, longitude] or null if geocoding fails
-     */
-    private double[] geocodeAddressString(String address) {
-        // TODO: Integrate with a geocoding service
-        // For now, return null to indicate geocoding is not available
-        return null;
-    }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);

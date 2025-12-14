@@ -255,7 +255,8 @@ public class AdminController {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
-            List<Concern> concerns = concernService.getAllConcerns();
+            Long adminId = getUserIdFromAuthentication(authentication);
+            List<Concern> concerns = concernService.getAllConcerns(adminId);
             return ResponseEntity.ok(concerns);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
@@ -268,7 +269,8 @@ public class AdminController {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
-            List<Concern> concerns = concernService.getPendingConcerns();
+            Long adminId = getUserIdFromAuthentication(authentication);
+            List<Concern> concerns = concernService.getPendingConcerns(adminId);
             return ResponseEntity.ok(concerns);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));

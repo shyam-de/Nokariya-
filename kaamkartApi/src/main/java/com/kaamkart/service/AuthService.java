@@ -57,6 +57,9 @@ public class AuthService {
     @Autowired
     private PasswordResetTokenRepository passwordResetTokenRepository;
 
+    @Autowired
+    private IpGeolocationService ipGeolocationService;
+
     @Transactional
     public Map<String, Object> register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -106,7 +109,7 @@ public class AuthService {
         return response;
     }
 
-    public Map<String, Object> login(LoginRequest request) {
+    public Map<String, Object> login(LoginRequest request, String clientIp) {
         try {
             if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
                 throw new RuntimeException("Email is required");
@@ -127,6 +130,21 @@ public class AuthService {
                 // Check if system user is blocked
                 if (systemUser.getBlocked() != null && systemUser.getBlocked()) {
                     throw new RuntimeException("Your account has been blocked. Please contact administrator.");
+                }
+
+                // Automatically detect and update location from IP address
+                if (clientIp != null && !clientIp.isEmpty()) {
+                    Location detectedLocation = ipGeolocationService.getLocationFromIp(clientIp);
+                    if (detectedLocation != null && detectedLocation.getLatitude() != null 
+                            && detectedLocation.getLongitude() != null) {
+                        systemUser.setLocation(detectedLocation);
+                        systemUserRepository.save(systemUser);
+                        logger.info("📍 Admin location auto-detected during login | Email: {} | IP: {} | Lat: {} | Lon: {} | Address: {}", 
+                                systemUser.getEmail(), clientIp, detectedLocation.getLatitude(), 
+                                detectedLocation.getLongitude(), detectedLocation.getAddress());
+                    } else {
+                        logger.debug("Could not detect location from IP: {} for admin: {}", clientIp, systemUser.getEmail());
+                    }
                 }
 
                 // Generate token with negative ID to distinguish from regular users
@@ -152,6 +170,21 @@ public class AuthService {
             // Check if user is blocked
             if (user.getBlocked() != null && user.getBlocked()) {
                 throw new RuntimeException("Your account has been blocked. Please contact administrator.");
+            }
+
+            // Automatically detect and update location from IP address
+            if (clientIp != null && !clientIp.isEmpty()) {
+                Location detectedLocation = ipGeolocationService.getLocationFromIp(clientIp);
+                if (detectedLocation != null && detectedLocation.getLatitude() != null 
+                        && detectedLocation.getLongitude() != null) {
+                    user.setLocation(detectedLocation);
+                    userRepository.save(user);
+                    logger.info("📍 User location auto-detected during login | Email: {} | Role: {} | IP: {} | Lat: {} | Lon: {} | Address: {}", 
+                            user.getEmail(), user.getRole(), clientIp, detectedLocation.getLatitude(), 
+                            detectedLocation.getLongitude(), detectedLocation.getAddress());
+                } else {
+                    logger.debug("Could not detect location from IP: {} for user: {}", clientIp, user.getEmail());
+                }
             }
 
             String token = jwtUtil.generateToken(user.getId(), user.getRole().name());

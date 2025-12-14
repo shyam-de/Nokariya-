@@ -5,6 +5,7 @@ import com.kaamkart.dto.LoginRequest;
 import com.kaamkart.dto.RegisterRequest;
 import com.kaamkart.dto.ResetPasswordRequest;
 import com.kaamkart.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,7 +41,9 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, Object>> login(@Valid @RequestBody LoginRequest request) {
+    public ResponseEntity<Map<String, Object>> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
         long startTime = System.currentTimeMillis();
         String email = request.getEmail();
         
@@ -48,7 +51,11 @@ public class AuthController {
             logger.info("🔐 LOGIN ATTEMPT | Email: {} | Timestamp: {}", email, System.currentTimeMillis());
             logger.debug("Login request received for email: {}", email);
             
-            Map<String, Object> response = authService.login(request);
+            // Get client IP address for automatic location detection
+            String clientIp = getClientIpAddress(httpRequest);
+            logger.debug("Client IP for login: {}", clientIp);
+            
+            Map<String, Object> response = authService.login(request, clientIp);
             
             long duration = System.currentTimeMillis() - startTime;
             Object userObj = response.get("user");
@@ -64,6 +71,38 @@ public class AuthController {
             String errorMessage = e.getMessage() != null ? e.getMessage() : "Login failed";
             return ResponseEntity.status(401).body(Map.of("message", errorMessage));
         }
+    }
+    
+    /**
+     * Get client IP address from request
+     */
+    private String getClientIpAddress(HttpServletRequest request) {
+        String ip = request.getHeader("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("X-Real-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("WL-Proxy-Client-IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_CLIENT_IP");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getHeader("HTTP_X_FORWARDED_FOR");
+        }
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = request.getRemoteAddr();
+        }
+        
+        // If IP contains multiple addresses (from proxies), take the first one
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        
+        return ip;
     }
 
     @PostMapping("/forgot-password")
