@@ -418,14 +418,14 @@ export default function Home() {
                   <span className={`text-xl sm:text-2xl md:text-3xl flex-shrink-0 ${item.isAd ? 'animate-pulse' : 'animate-bounce-slow'}`}>
                     {item.icon}
                   </span>
-                  <div className="flex flex-col sm:flex-row items-center gap-1 sm:gap-2 md:gap-4 min-w-0 flex-1">
-                    <span className={`font-bold text-xs sm:text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} break-words min-w-0`}>
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-2 md:gap-4 min-w-0">
+                    <span className={`font-bold text-xs sm:text-sm md:text-base ${item.isAd ? 'text-yellow-200' : ''} break-words min-w-0 text-center`}>
                       {item.title}
                     </span>
                     {item.description && (
                       <>
                         <span className="hidden sm:inline text-white/80 flex-shrink-0">•</span>
-                        <span className="text-[10px] sm:text-xs md:text-sm text-white/90 text-center sm:text-left line-clamp-1 break-words min-w-0">{item.description}</span>
+                        <span className="text-[10px] sm:text-xs md:text-sm text-white/90 text-center line-clamp-1 break-words min-w-0">{item.description}</span>
                       </>
                     )}
                   </div>
