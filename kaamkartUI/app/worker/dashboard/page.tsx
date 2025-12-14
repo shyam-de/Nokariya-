@@ -112,7 +112,9 @@ export default function WorkerDashboard() {
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showRatingModal, setShowRatingModal] = useState(false)
   const [showConcernModal, setShowConcernModal] = useState(false)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [selectedRequest, setSelectedRequest] = useState<Request | null>(null)
+  const [selectedActiveWork, setSelectedActiveWork] = useState<any | null>(null)
   const [profile, setProfile] = useState<Profile | null>(null)
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
@@ -1030,6 +1032,202 @@ export default function WorkerDashboard() {
           </div>
         )}
 
+        {/* Details Modal for Active Work */}
+        {showDetailsModal && selectedActiveWork && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4 overflow-y-auto">
+            <div className="bg-white rounded-xl shadow-2xl p-4 sm:p-6 md:p-8 w-full max-w-2xl relative my-auto max-h-[95vh] overflow-y-auto">
+              <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6" lang={language}>
+                {t('worker.workDetails') || 'Work Details'}
+              </h3>
+              <button
+                onClick={() => {
+                  setShowDetailsModal(false)
+                  setSelectedActiveWork(null)
+                }}
+                className="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-2xl"
+              >
+                &times;
+              </button>
+              
+              <div className="space-y-4 md:space-y-6">
+                {/* Work Type and Status */}
+                <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-lg p-4 border-l-4 border-orange-500">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-lg md:text-xl font-bold text-gray-900 capitalize">
+                      {selectedActiveWork.workType || selectedActiveWork.request?.workType || 'Work Assignment'}
+                    </h4>
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ${
+                      selectedActiveWork.status === 'DEPLOYED' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-orange-100 text-orange-800'
+                    }`}>
+                      {selectedActiveWork.status === 'DEPLOYED' 
+                        ? (t('worker.deployed') || 'Deployed')
+                        : (t('worker.confirmed') || 'Confirmed')
+                      }
+                    </span>
+                  </div>
+                </div>
+
+                {/* Dates */}
+                {(selectedActiveWork.startDate || selectedActiveWork.endDate) && (
+                  <div className="bg-blue-50 rounded-lg p-4 border-l-4 border-blue-500">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-3" lang={language}>
+                      {t('worker.workDates') || 'Work Dates'}
+                    </h5>
+                    <div className="space-y-2">
+                      {selectedActiveWork.startDate && (
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <span className="text-lg">📅</span>
+                          <div>
+                            <p className="text-xs text-gray-500" lang={language}>{t('worker.startDate') || 'Start Date'}</p>
+                            <p className="font-medium">{new Date(selectedActiveWork.startDate).toLocaleDateString('en-IN', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedActiveWork.endDate && (
+                        <div className="flex items-center gap-2 text-gray-700">
+                          <span className="text-lg">📅</span>
+                          <div>
+                            <p className="text-xs text-gray-500" lang={language}>{t('worker.endDate') || 'End Date'}</p>
+                            <p className="font-medium">{new Date(selectedActiveWork.endDate).toLocaleDateString('en-IN', { 
+                              weekday: 'long', 
+                              year: 'numeric', 
+                              month: 'long', 
+                              day: 'numeric' 
+                            })}</p>
+                          </div>
+                        </div>
+                      )}
+                      {selectedActiveWork.startDate && selectedActiveWork.endDate && (
+                        <div className="mt-2 pt-2 border-t border-blue-200">
+                          <p className="text-sm text-gray-600">
+                            <span className="font-semibold">
+                              {Math.ceil((new Date(selectedActiveWork.endDate).getTime() - new Date(selectedActiveWork.startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1}
+                            </span> {t('worker.days') || 'days'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Customer Information */}
+                {(selectedActiveWork.customer || selectedActiveWork.request?.customer) && (
+                  <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-500">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-3" lang={language}>
+                      {t('worker.customerInformation') || 'Customer Information'}
+                    </h5>
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2 text-gray-700">
+                        <span className="text-lg">👤</span>
+                        <div>
+                          <p className="font-medium">{selectedActiveWork.customer?.name || selectedActiveWork.request?.customer?.name || 'Customer'}</p>
+                          {selectedActiveWork.customer?.phone || selectedActiveWork.request?.customer?.phone ? (
+                            <p className="text-sm text-gray-600">{selectedActiveWork.customer?.phone || selectedActiveWork.request?.customer?.phone}</p>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Work Location */}
+                {(selectedActiveWork.location || selectedActiveWork.request?.location) && (
+                  <div className="bg-green-50 rounded-lg p-4 border-l-4 border-green-500">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-3" lang={language}>
+                      {t('worker.workLocation') || 'Work Location'}
+                    </h5>
+                    <div className="space-y-2">
+                      <div className="flex items-start gap-2 text-gray-700">
+                        <span className="text-lg">📍</span>
+                        <div className="flex-1">
+                          <p className="font-medium break-words mb-1">
+                            {selectedActiveWork.location?.address || selectedActiveWork.request?.location?.address || 'Address not available'}
+                          </p>
+                          {(selectedActiveWork.location?.city || selectedActiveWork.request?.location?.city) && (
+                            <p className="text-sm text-gray-600">
+                              {selectedActiveWork.location?.city || selectedActiveWork.request?.location?.city}
+                              {(selectedActiveWork.location?.state || selectedActiveWork.request?.location?.state) && 
+                                `, ${selectedActiveWork.location?.state || selectedActiveWork.request?.location?.state}`
+                              }
+                              {(selectedActiveWork.location?.pinCode || selectedActiveWork.request?.location?.pinCode) && 
+                                ` - ${selectedActiveWork.location?.pinCode || selectedActiveWork.request?.location?.pinCode}`
+                              }
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      {(selectedActiveWork.location?.latitude && selectedActiveWork.location?.longitude) || 
+                       (selectedActiveWork.request?.location?.latitude && selectedActiveWork.request?.location?.longitude) ? (
+                        <a
+                          href={`https://www.google.com/maps/dir/?api=1&destination=${selectedActiveWork.location?.latitude || selectedActiveWork.request?.location?.latitude},${selectedActiveWork.location?.longitude || selectedActiveWork.request?.location?.longitude}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 mt-2 bg-gradient-to-r from-green-500 to-emerald-500 text-white py-2 px-4 rounded-lg font-semibold hover:shadow-lg transition-all duration-200 hover:scale-105 transform"
+                        >
+                          <span>🗺️</span>
+                          <span lang={language}>{t('worker.getDirections') || 'Get Directions'}</span>
+                          <span>→</span>
+                        </a>
+                      ) : null}
+                    </div>
+                  </div>
+                )}
+
+                {/* Worker Types Required */}
+                {(selectedActiveWork.laborTypes && selectedActiveWork.laborTypes.length > 0) || 
+                 (selectedActiveWork.request?.laborTypes && selectedActiveWork.request?.laborTypes.length > 0) ? (
+                  <div className="bg-indigo-50 rounded-lg p-4 border-l-4 border-indigo-500">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-3" lang={language}>
+                      {t('worker.workerTypesRequired') || 'Worker Types Required'}
+                    </h5>
+                    <div className="flex flex-wrap gap-2">
+                      {(selectedActiveWork.laborTypes || selectedActiveWork.request?.laborTypes || []).map((type: string, idx: number) => (
+                        <span key={idx} className="inline-block px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full font-medium">
+                          {type}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
+                {/* Number of Workers */}
+                {(selectedActiveWork.numberOfWorkers || selectedActiveWork.request?.numberOfWorkers) && (
+                  <div className="bg-yellow-50 rounded-lg p-4 border-l-4 border-yellow-500">
+                    <div className="flex items-center gap-2 text-gray-700">
+                      <span className="text-lg">👥</span>
+                      <div>
+                        <p className="text-xs text-gray-500" lang={language}>{t('worker.numberOfWorkers') || 'Number of Workers'}</p>
+                        <p className="font-medium text-lg">
+                          {selectedActiveWork.numberOfWorkers || selectedActiveWork.request?.numberOfWorkers || 1}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Description */}
+                {(selectedActiveWork.description || selectedActiveWork.request?.description) && (
+                  <div className="bg-gray-50 rounded-lg p-4 border-l-4 border-gray-400">
+                    <h5 className="text-sm font-semibold text-gray-700 mb-2" lang={language}>
+                      {t('worker.description') || 'Description'}
+                    </h5>
+                    <p className="text-sm text-gray-700 break-words">
+                      {selectedActiveWork.description || selectedActiveWork.request?.description}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {!available && activeTab === 'available' && (
           <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-300 rounded-xl p-3 md:p-4 mb-4 md:mb-6 animate-pulse">
             <div className="flex items-center gap-2 md:gap-3">
@@ -1357,8 +1555,8 @@ export default function WorkerDashboard() {
                             {work.requestId && (
                               <button
                                 onClick={() => {
-                                  setSelectedRequest(work.request || work)
-                                  setShowRatingModal(true)
+                                  setSelectedActiveWork(work)
+                                  setShowDetailsModal(true)
                                 }}
                                 className="w-full bg-gray-100 text-gray-700 py-2 px-4 rounded-lg font-medium hover:bg-gray-200 transition-all"
                               >
