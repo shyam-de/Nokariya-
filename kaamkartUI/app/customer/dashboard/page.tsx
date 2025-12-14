@@ -1845,17 +1845,17 @@ export default function CustomerDashboard() {
                   </div>
                 ) : (
                   requests.map((request) => (
-                <div key={request.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500 h-full flex flex-col">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-xl font-bold capitalize text-gray-900 mb-2">{request.workType}</h3>
+                <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500 h-full flex flex-col min-w-0">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-lg sm:text-xl font-bold capitalize text-gray-900 mb-2 break-words">{request.workType}</h3>
                       <div className="space-y-1 text-sm">
-                        <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                        <div className="flex items-start gap-2 text-gray-600 flex-wrap">
                           <span className="flex-shrink-0">⚡</span>
                           {request.workerTypes && request.workerTypes.length > 0 ? (
                             <div className="flex flex-wrap gap-1 min-w-0">
                               {request.workerTypes.map((type: string, idx: number) => (
-                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize break-words">
+                                <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize break-words min-w-0">
                                   {type.toLowerCase()}
                                 </span>
                               ))}
@@ -1865,14 +1865,14 @@ export default function CustomerDashboard() {
                           )}
                         </div>
                         {request.startDate && request.endDate && (
-                          <div className="flex items-center gap-2 text-gray-600">
-                            <span>📅</span>
-                            <span>{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
+                          <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                            <span className="flex-shrink-0">📅</span>
+                            <span className="break-words min-w-0">{new Date(request.startDate).toLocaleDateString()} - {new Date(request.endDate).toLocaleDateString()}</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-2 text-gray-600">
-                          <span>👥</span>
-                          <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''} needed</span>
+                        <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                          <span className="flex-shrink-0">👥</span>
+                          <span className="break-words min-w-0">{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''} needed</span>
                         </div>
                         <div className="flex items-start gap-2 text-gray-600">
                           <span className="flex-shrink-0">📍</span>
@@ -1884,7 +1884,9 @@ export default function CustomerDashboard() {
                         </div>
                       </div>
                     </div>
-                    {getStatusBadge(request.status)}
+                    <div className="flex-shrink-0 self-start sm:self-start">
+                      {getStatusBadge(request.status)}
+                    </div>
                   </div>
 
                   {request.status === 'DEPLOYED' && (
