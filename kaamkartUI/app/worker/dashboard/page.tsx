@@ -1406,13 +1406,11 @@ export default function WorkerDashboard() {
                     <div key={`${work.requestId}-${index}`} className="bg-white rounded-xl shadow-lg p-4 md:p-6 border-t-4 border-purple-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                         <div className="flex-1 w-full">
-                          <div className="flex items-center justify-between gap-2 md:gap-3 mb-2">
-                            <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                              <span className="text-xl md:text-2xl flex-shrink-0">⚡</span>
-                              <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900 truncate">
-                                {work.workType}
-                              </h3>
-                            </div>
+                          <div className="flex items-center gap-2 md:gap-3 mb-2 flex-nowrap">
+                            <span className="text-xl md:text-2xl flex-shrink-0">⚡</span>
+                            <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900 flex-1 min-w-0 truncate">
+                              {work.workType}
+                            </h3>
                             <div className="flex-shrink-0">{getStatusBadge(work.status)}</div>
                           </div>
                           {work.startDate && work.endDate && (
@@ -1487,11 +1485,9 @@ export default function WorkerDashboard() {
                       <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                           <div className="flex-1 w-full">
-                            <div className="flex items-center justify-between gap-2 md:gap-3 mb-2">
-                              <div className="flex items-center gap-2 md:gap-3 flex-1 min-w-0">
-                                <span className="text-xl md:text-2xl flex-shrink-0">⚡</span>
-                                <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900 truncate">{request.workType}</h3>
-                              </div>
+                            <div className="flex items-center gap-2 md:gap-3 mb-2 flex-nowrap">
+                              <span className="text-xl md:text-2xl flex-shrink-0">⚡</span>
+                              <h3 className="text-lg md:text-xl font-bold capitalize text-gray-900 flex-1 min-w-0 truncate">{request.workType}</h3>
                               <div className="flex-shrink-0">{getStatusBadge(request.status)}</div>
                             </div>
                             {request.startDate && request.endDate && (

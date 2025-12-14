@@ -1848,7 +1848,12 @@ export default function CustomerDashboard() {
                 <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500 h-full flex flex-col min-w-0">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg sm:text-xl font-bold capitalize text-gray-900 mb-2 break-words">{request.workType}</h3>
+                      <div className="flex items-start justify-between gap-3 mb-2">
+                        <h3 className="text-lg sm:text-xl font-bold capitalize text-gray-900 break-words flex-1 min-w-0">{request.workType}</h3>
+                        <div className="flex-shrink-0">
+                          {getStatusBadge(request.status)}
+                        </div>
+                      </div>
                       <div className="space-y-1 text-sm">
                         <div className="flex items-start gap-2 text-gray-600 flex-wrap">
                           <span className="flex-shrink-0">⚡</span>
@@ -1883,9 +1888,6 @@ export default function CustomerDashboard() {
                           <span className="break-words min-w-0">{new Date(request.createdAt).toLocaleString()}</span>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex-shrink-0 self-start sm:self-start">
-                      {getStatusBadge(request.status)}
                     </div>
                   </div>
 
