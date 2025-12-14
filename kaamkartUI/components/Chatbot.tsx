@@ -412,9 +412,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     setRetryCount({})
     
     const greetings = [
-      "Great! I'd be happy to help you create a request. Please select the type of work:",
-      "Perfect! Let's get started. What kind of work do you need?",
-      "Awesome! To help you find the right workers, please select your work type:"
+      t('chatbot.requestFlowStart') || "Great! I'll help you create a request. Let's start with the work type:",
+      t('chatbot.requestFlowStartAlt1') || "Perfect! Let's create your request step by step. First, what type of work do you need?",
+      t('chatbot.requestFlowStartAlt2') || "Awesome! I'll guide you through creating a request. Please select the type of work:"
     ]
     addBotMessage(`${greetings[Math.floor(Math.random() * greetings.length)]}`, 300)
     
@@ -544,33 +544,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         setRequestData({ ...requestData, workType: selectedWorkType })
-        const datePrompts = [
-          "Perfect! When do you need this work done?",
-          "Great! What dates work for you?",
-          "Excellent! When should the workers start?"
-        ]
-        
-        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}`, 300)
-        setTimeout(() => {
-          const today = new Date()
-          const tomorrow = new Date(today)
-          tomorrow.setDate(tomorrow.getDate() + 1)
-          const nextWeek = new Date(today)
-          nextWeek.setDate(nextWeek.getDate() + 7)
-          addMessage('', 'bot', [
-            `1. ${t('chatbot.today') || 'Today'} (${formatDate(today)})`,
-            `2. ${t('chatbot.tomorrow') || 'Tomorrow'} (${formatDate(tomorrow)})`,
-            `3. ${t('chatbot.nextWeek') || 'Next Week'} (${formatDate(nextWeek)})`,
-            `4. ${t('chatbot.customDate') || 'Custom Date'}`,
-            `5. ${t('chatbot.skip') || 'Skip'}`
-          ])
-        }, 500)
-        setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
-        break
-
-      case 'workerTypes':
-        const selectedWorkerTypes = userInput.split(',').map(t => t.trim()).filter(t => t)
-        setRequestData({ ...requestData, workerTypes: selectedWorkerTypes })
+        // After work type, ask for number of workers
         addBotMessage(t('chatbot.requestFlowWorkerCount') || 'How many workers do you need?', 300)
         setTimeout(() => {
           addMessage('', 'bot', [
@@ -618,14 +592,37 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           workerCountValue = userInput
         }
         
-        setRequestData({ ...requestData, workerCountText: workerCountValue })
-        // Ask for start date first
-        const startDatePrompts = [
-          "Perfect! When would you like the work to start?",
-          "Great! What's your preferred start date?",
-          "Excellent! When should the work begin?"
+        // Parse worker count to number
+        let numberOfWorkers = 1
+        if (workerCountValue === '1' || workerCountValue.includes('one')) {
+          numberOfWorkers = 1
+        } else if (workerCountValue === '2' || workerCountValue.includes('two')) {
+          numberOfWorkers = 2
+        } else if (workerCountValue === '3' || workerCountValue.includes('three')) {
+          numberOfWorkers = 3
+        } else if (workerCountValue === '4' || workerCountValue.includes('four')) {
+          numberOfWorkers = 4
+        } else if (workerCountValue === '5+' || workerCountValue.includes('five') || workerCountValue.includes('5')) {
+          numberOfWorkers = 5
+        } else {
+          // Try to extract number from text
+          const numMatch = workerCountValue.match(/\d+/)
+          if (numMatch) {
+            numberOfWorkers = parseInt(numMatch[0])
+            if (numberOfWorkers < 1) numberOfWorkers = 1
+            if (numberOfWorkers > 10) numberOfWorkers = 10
+          }
+        }
+        
+        setRequestData({ ...requestData, workerCountText: workerCountValue, numberOfWorkers })
+        
+        // Now ask for dates (optional)
+        const datePrompts = [
+          t('chatbot.requestFlowDates') || "Great! When do you need this work done? (Optional - you can skip this)",
+          t('chatbot.requestFlowDatesAlt1') || "Perfect! What dates work for you? (Optional - type 'skip' to continue)",
+          t('chatbot.requestFlowDatesAlt2') || "Excellent! When should the work start? (Optional)"
         ]
-        addBotMessage(`${startDatePrompts[Math.floor(Math.random() * startDatePrompts.length)]}`, 300)
+        addBotMessage(`${datePrompts[Math.floor(Math.random() * datePrompts.length)]}`, 300)
         setTimeout(() => {
           const today = new Date()
           const tomorrow = new Date(today)
@@ -640,7 +637,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             `5. ${t('chatbot.skip') || 'Skip'}`
           ])
         }, 500)
-        setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDate' }))
+        setRequestData((prev: any) => ({ ...prev, datesAsked: true, currentDateStep: 'startDate' }))
         break
 
       case 'startDate':
@@ -665,18 +662,20 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDateCustom' }))
           return
         } else if (lowerDateInput.includes('5') || lowerDateInput === 'skip' || lowerDateInput === 'no' || lowerDateInput === 'not needed') {
-          setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined })
+          setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined, datesSkipped: true })
+          // Move to location step
           const locationPrompts = [
-            "Perfect! Now, I need your location details.",
-            "Great! Where do you need the work done?",
-            "Excellent! Where should the workers come?"
+            t('chatbot.requestFlowLocation') || "Perfect! Now I need your location. Please provide your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt1') || "Great! Where do you need the work done? Please enter your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt2') || "Excellent! I need your location. Please provide your 6-digit pin code:"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}`, 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               t('chatbot.useCurrentLocation') || 'Use Current Location'
             ])
           }, 500)
+          setRequestData((prev: any) => ({ ...prev, locationAsked: true }))
           break
         } else {
           // Try to parse the date - support YYYY-MM-DD format or natural language
@@ -801,19 +800,21 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             setRequestData({ ...requestData, endDate: '', currentDateStep: undefined })
           } else {
             // If no start date, skip both
-            setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined })
+            setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined, datesSkipped: true })
           }
+          // Move to location step
           const locationPrompts = [
-            "Perfect! Now, I need your location details.",
-            "Great! Where do you need the work done?",
-            "Excellent! Where should the workers come?"
+            t('chatbot.requestFlowLocation') || "Perfect! Now I need your location. Please provide your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt1') || "Great! Where do you need the work done? Please enter your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt2') || "Excellent! I need your location. Please provide your 6-digit pin code:"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}`, 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               t('chatbot.useCurrentLocation') || 'Use Current Location'
             ])
           }, 500)
+          setRequestData((prev: any) => ({ ...prev, locationAsked: true }))
           break
         } else {
           // Try to parse the date - support YYYY-MM-DD format or natural language
@@ -855,18 +856,20 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             return
           }
           
-          setRequestData({ ...requestData, endDate: selectedEndDate })
+          setRequestData({ ...requestData, endDate: selectedEndDate, currentDateStep: undefined })
+          // Move to location step
           const locationPrompts = [
-            "Perfect! Now, I need your location details.",
-            "Great! Where do you need the work done?",
-            "Excellent! Where should the workers come?"
+            t('chatbot.requestFlowLocation') || "Perfect! Now I need your location. Please provide your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt1') || "Great! Where do you need the work done? Please enter your 6-digit pin code:",
+            t('chatbot.requestFlowLocationAlt2') || "Excellent! I need your location. Please provide your 6-digit pin code:"
           ]
-          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}\n\n${t('chatbot.enterPinCode') || 'Please provide your 6-digit pin code (required):'}`, 300)
+          addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}`, 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               t('chatbot.useCurrentLocation') || 'Use Current Location'
             ])
           }, 500)
+          setRequestData((prev: any) => ({ ...prev, locationAsked: true }))
         }
         break
 
@@ -972,7 +975,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         const pinCodeMatch = userInput.match(/\b(\d{6})\b/)
         if (pinCodeMatch) {
           const pinCode = pinCodeMatch[1]
-          addBotMessage("I see you provided a pin code. Let me fetch the location details...")
+          addBotMessage(t('chatbot.fetchingLocation') || "Great! Let me fetch your location details...", 300)
           setIsTyping(true)
           try {
             const locationData = await getLocationFromPinCode(pinCode)
@@ -983,11 +986,16 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                 pinCode: pinCode,
                 state: locationData.state,
                 city: locationData.city,
+                address: locationData.address,
                 useCurrentLocation: false,
-                optionalFieldsAsked: false
+                locationAsked: true
               })
               setIsTyping(false)
-              addBotMessage(`Perfect! I've detected your location from pin code ${pinCode}:\n\n📍 Address: ${locationData.address}\n🏙️ City: ${locationData.city}\n🗺️ State: ${locationData.state}\n\n${t('chatbot.addOptionalDetails') || 'Would you like to add any additional details?'}`, 300)
+              const locationMsg = (t('chatbot.locationDetected') || `✅ Perfect! I've detected your location:\n\n📍 Address: {address}\n🏙️ City: {city}\n🗺️ State: {state}\n\n${t('chatbot.addOptionalDetails') || 'Would you like to add any additional details like landmark? (Optional)'}`)
+                .replace('{address}', locationData.address)
+                .replace('{city}', locationData.city)
+                .replace('{state}', locationData.state)
+              addBotMessage(locationMsg, 300)
               setTimeout(() => {
                 addMessage('', 'bot', [
                   t('chatbot.skip') || 'Skip'
@@ -995,32 +1003,93 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
               }, 500)
             } else {
               setIsTyping(false)
-              addBotMessage(getEmpatheticResponse('error') + ` I couldn't find location details for pin code ${pinCode}. Please provide a valid 6-digit pin code.`)
+              addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.pinCodeNotFound') || `I couldn't find location details for pin code ${pinCode}. Please provide a valid 6-digit pin code.`}`)
+              setTimeout(() => {
+                addMessage('', 'bot', [
+                  t('chatbot.useCurrentLocation') || 'Use Current Location'
+                ])
+              }, 500)
             }
           } catch (error) {
             setIsTyping(false)
-            addBotMessage(getEmpatheticResponse('error') + " I had trouble fetching location from the pin code. Please provide a valid 6-digit pin code.")
+            addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.locationFetchError') || "I had trouble fetching location from the pin code. Please provide a valid 6-digit pin code."}`)
+            setTimeout(() => {
+              addMessage('', 'bot', [
+                t('chatbot.useCurrentLocation') || 'Use Current Location'
+              ])
+            }, 500)
           }
         } else if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here') || lowerLocation.includes('use current')) {
-          // If using current location, still need pin code
-          setRequestData({ ...requestData, useCurrentLocation: true })
-          addBotMessage(t('chatbot.usingCurrentLocation') || "I'll use your current location. However, I still need your 6-digit pin code for verification.\n\nPlease provide your pin code:", 300)
-          setTimeout(() => {
-            addMessage('', 'bot', [
-              t('chatbot.skip') || 'Skip'
-            ])
-          }, 500)
-        } else if (userInput.trim().length < 5) {
-          addBotMessage(t('chatbot.enterPinCode') || "Please provide a 6-digit pin code. This is required.", 300)
+          // If using current location, get GPS coordinates and still need pin code
+          if (navigator.geolocation) {
+            addBotMessage(t('chatbot.gettingCurrentLocation') || "Getting your current location...", 300)
+            setIsTyping(true)
+            navigator.geolocation.getCurrentPosition(
+              async (position) => {
+                try {
+                  // Reverse geocode to get address
+                  const lat = position.coords.latitude
+                  const lng = position.coords.longitude
+                  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+                  const data = await response.json()
+                  
+                  const address = data.display_name || `${lat}, ${lng}`
+                  setRequestData({ 
+                    ...requestData, 
+                    location: address,
+                    latitude: lat,
+                    longitude: lng,
+                    useCurrentLocation: true,
+                    locationAsked: true
+                  })
+                  
+                  setIsTyping(false)
+                  const currentLocationMsg = (t('chatbot.currentLocationDetected') || `✅ I've detected your current location:\n\n📍 {address}\n\n${t('chatbot.needPinCode') || 'However, I still need your 6-digit pin code for verification. Please provide your pin code:'}`)
+                    .replace('{address}', address)
+                  addBotMessage(currentLocationMsg, 300)
+                  setTimeout(() => {
+                    addMessage('', 'bot', [
+                      t('chatbot.skip') || 'Skip'
+                    ])
+                  }, 500)
+                } catch (error) {
+                  setIsTyping(false)
+                  addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.locationError') || "I couldn't get your location. Please provide your 6-digit pin code instead:"}`)
+                  setTimeout(() => {
+                    addMessage('', 'bot', [
+                      t('chatbot.useCurrentLocation') || 'Use Current Location'
+                    ])
+                  }, 500)
+                }
+              },
+              (error) => {
+                setIsTyping(false)
+                addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.locationPermissionDenied') || "I couldn't access your location. Please provide your 6-digit pin code instead:"}`)
+                setTimeout(() => {
+                  addMessage('', 'bot', [
+                    t('chatbot.useCurrentLocation') || 'Use Current Location'
+                  ])
+                }, 500)
+              }
+            )
+          } else {
+            addBotMessage(t('chatbot.locationNotSupported') || "Your browser doesn't support location services. Please provide your 6-digit pin code:", 300)
+            setTimeout(() => {
+              addMessage('', 'bot', [
+                t('chatbot.useCurrentLocation') || 'Use Current Location'
+              ])
+            }, 500)
+          }
+        } else if (userInput.trim().length < 6 || !userInput.match(/\d{6}/)) {
+          addBotMessage(t('chatbot.enterPinCode') || "Please provide a valid 6-digit pin code (e.g., 110001). This is required.", 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               t('chatbot.useCurrentLocation') || 'Use Current Location'
             ])
           }, 500)
         } else {
-          // User provided address but no pin code - ask for pin code
-          setRequestData({ ...requestData, location: userInput, useCurrentLocation: false })
-          addBotMessage(t('chatbot.addressNotedNeedPinCode') || "I've noted your address. However, I need your 6-digit pin code (this is required).\n\nPlease provide your pin code:", 300)
+          // User provided something but not a valid pin code
+          addBotMessage(t('chatbot.invalidPinCode') || "I need a valid 6-digit pin code. Please enter your pin code (e.g., 110001):", 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               t('chatbot.useCurrentLocation') || 'Use Current Location'
@@ -1300,21 +1369,29 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
   }
 
   const getRequestStep = (): string => {
-    // Only worker types are required, everything else is optional except pin code
-    if (!requestData.workerTypes) return 'workerTypes'
-    if (!requestData.workerCountText) return 'workerCount'
-    // Optional fields - only ask if not set
-    if (requestData.workType === undefined) return 'workType'
-    if (requestData.startDate === undefined && requestData.endDate === undefined) return 'dates'
-    // Location is required (for pin code), but can be asked in optionalFields if not provided
-    if (requestData.location === undefined && requestData.useCurrentLocation === undefined && !requestData.pinCode) return 'location'
-    // Pin code is mandatory - check if we have it
+    // Simplified flow order:
+    // 1. Work Type (required)
+    // 2. Number of Workers (required)
+    // 3. Dates (optional - can skip)
+    // 4. Location/Pin Code (required)
+    // 5. Optional Details (optional - can skip)
+    // 6. Confirm
+    
+    if (!requestData.workType) return 'workType'
+    if (!requestData.workerCountText && !requestData.numberOfWorkers) return 'workerCount'
+    // Check if dates step is in progress (startDate or endDate)
+    if (requestData.currentDateStep === 'startDate' || requestData.currentDateStep === 'startDateCustom') return 'startDate'
+    if (requestData.currentDateStep === 'endDate' || requestData.currentDateStep === 'endDateCustom') return 'endDate'
+    // If dates not asked yet and not skipped, ask for dates
+    if (requestData.datesAsked === undefined && !requestData.datesSkipped) return 'dates'
+    // Location/Pin Code is required
     if (!requestData.pinCode || requestData.pinCode.length !== 6) {
-      // If we're in optionalFields, we'll handle pin code there
-      if (requestData.optionalFieldsAsked === undefined) return 'optionalFields'
-      // If optionalFields was asked but pin code still missing, go back to location
+      // If location was asked but pin code still missing, ask again
+      if (requestData.locationAsked && !requestData.pinCode) return 'location'
+      // Otherwise, ask for location
       return 'location'
     }
+    // Optional fields - only ask if not asked yet
     if (requestData.optionalFieldsAsked === undefined) return 'optionalFields'
     return 'confirm'
   }
