@@ -55,6 +55,12 @@ public class Request {
     private LocalDate endDate;
 
     @Embedded
+    @AttributeOverrides({
+        @AttributeOverride(name = "latitude", column = @Column(name = "location_latitude")),
+        @AttributeOverride(name = "longitude", column = @Column(name = "location_longitude")),
+        @AttributeOverride(name = "address", column = @Column(name = "location_address")),
+        @AttributeOverride(name = "landmark", column = @Column(name = "location_landmark"))
+    })
     private Location location;
 
     @Enumerated(EnumType.STRING)
