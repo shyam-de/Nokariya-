@@ -917,7 +917,7 @@ export default function CustomerDashboard() {
       </nav>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex justify-between items-center mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
           <div className="flex-1 min-w-0">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 mb-2 truncate" lang={language}>{t('customer.title')}</h2>
             <p className="text-sm sm:text-base text-gray-600 truncate" lang={language}>{t('dashboard.welcome')}</p>
@@ -925,7 +925,7 @@ export default function CustomerDashboard() {
           {activeTab === 'requests' && (
             <button
               onClick={() => setShowRequestForm(true)}
-              className="flex-shrink-0 px-3 sm:px-4 md:px-6 py-2 sm:py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base whitespace-nowrap"
+              className="w-full sm:w-auto flex-shrink-0 px-3 sm:px-4 md:px-6 py-2 sm:py-3 bg-gradient-to-r from-primary-600 to-indigo-600 text-white rounded-lg font-semibold shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform flex items-center justify-center gap-1 sm:gap-2 text-xs sm:text-sm md:text-base whitespace-nowrap"
               lang={language}
             >
               <span className="text-lg sm:text-xl">+</span>
@@ -1836,7 +1836,7 @@ export default function CustomerDashboard() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
               </div>
             ) : (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
                 {requests.length === 0 ? (
                   <div className="col-span-full bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
                     <div className="text-6xl mb-4">📝</div>
