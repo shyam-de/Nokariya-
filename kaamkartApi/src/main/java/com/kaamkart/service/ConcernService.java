@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class ConcernService {
@@ -34,6 +35,9 @@ public class ConcernService {
 
     @Autowired
     private ConcernMessageRepository concernMessageRepository;
+
+    @Autowired
+    private AdminService adminService;
 
     @Transactional
     public Concern createConcern(Long raisedById, CreateConcernDto dto) {
@@ -69,12 +73,22 @@ public class ConcernService {
         return concernRepository.findByRaisedByOrderByCreatedAtDesc(user);
     }
 
-    public List<Concern> getAllConcerns() {
-        return concernRepository.findAllByOrderByCreatedAtDesc();
+    public List<Concern> getAllConcerns(Long adminId) {
+        List<Concern> concerns = concernRepository.findAllByOrderByCreatedAtDesc();
+        // Filter by admin radius if adminId is provided and not a super admin
+        if (adminId != null && !adminService.isSuperAdmin(adminId)) {
+            concerns = adminService.filterConcernsByAdminRadius(concerns, adminId);
+        }
+        return concerns;
     }
 
-    public List<Concern> getPendingConcerns() {
-        return concernRepository.findByStatusOrderByCreatedAtDesc(Concern.ConcernStatus.PENDING);
+    public List<Concern> getPendingConcerns(Long adminId) {
+        List<Concern> concerns = concernRepository.findByStatusOrderByCreatedAtDesc(Concern.ConcernStatus.PENDING);
+        // Filter by admin radius if adminId is provided and not a super admin
+        if (adminId != null && !adminService.isSuperAdmin(adminId)) {
+            concerns = adminService.filterConcernsByAdminRadius(concerns, adminId);
+        }
+        return concerns;
     }
 
     @Transactional

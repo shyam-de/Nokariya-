@@ -851,12 +851,18 @@ public class AdminService {
             systemUser.setSuperAdmin(isSuperAdmin != null ? isSuperAdmin : false);
             systemUser.setBlocked(false);
 
-            if (location != null) {
+            // Location will be automatically detected during first login via IP geolocation
+            // If location is explicitly provided during creation, use it
+            if (location != null && (location.getLatitude() != null || location.getAddress() != null)) {
                 Location loc = new Location();
                 loc.setLatitude(location.getLatitude());
                 loc.setLongitude(location.getLongitude());
                 loc.setAddress(location.getAddress());
+                loc.setLandmark(location.getLandmark());
                 systemUser.setLocation(loc);
+                logger.info("📍 Admin location set during creation: {}", loc.getAddress());
+            } else {
+                logger.info("📍 Admin location will be auto-detected during first login");
             }
 
             return systemUserRepository.save(systemUser);
@@ -1158,9 +1164,10 @@ public class AdminService {
             adminLocation = admin.getLocation();
         }
         
-        // If admin has no location, return all requests
+        // If admin has no location, return empty list (can't filter without location)
         if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
-            return requests;
+            logger.warn("Admin {} has no location, returning empty request list", adminId);
+            return new ArrayList<>();
         }
         
         double adminLat = adminLocation.getLatitude();
@@ -1430,6 +1437,73 @@ public class AdminService {
         }).collect(Collectors.toList());
     }
     
+    // Helper method to filter concerns by admin radius
+    public List<Concern> filterConcernsByAdminRadius(List<Concern> concerns, Long adminId) {
+        Location adminLocation = null;
+        
+        // Check if it's a system user (negative ID) or regular user
+        if (adminId < 0) {
+            // System user
+            Long systemUserId = Math.abs(adminId);
+            SystemUser systemUser = systemUserRepository.findById(systemUserId)
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            adminLocation = systemUser.getLocation();
+        } else {
+            // Regular user (legacy admin)
+            User admin = userRepository.findById(adminId)
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            adminLocation = admin.getLocation();
+        }
+        
+        // If admin has no location, return empty list (can't filter without location)
+        if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
+            logger.warn("Admin {} has no location, returning empty concern list", adminId);
+            return new ArrayList<>();
+        }
+        
+        double adminLat = adminLocation.getLatitude();
+        double adminLon = adminLocation.getLongitude();
+        
+        return concerns.stream()
+                .filter(concern -> {
+                    // Filter based on the location of the user who raised the concern
+                    User raisedBy = concern.getRaisedBy();
+                    if (raisedBy == null || raisedBy.getLocation() == null || 
+                        raisedBy.getLocation().getLatitude() == null || 
+                        raisedBy.getLocation().getLongitude() == null) {
+                        return false;
+                    }
+                    double distance = calculateDistance(
+                            adminLat, adminLon,
+                            raisedBy.getLocation().getLatitude(),
+                            raisedBy.getLocation().getLongitude()
+                    );
+                    // Validate distance calculation
+                    if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
+                        logger.warn("Invalid distance calculated for concern {} (raised by user {}) - excluding", 
+                                concern.getId(), raisedBy.getId());
+                        return false;
+                    }
+                    // Strict check: concern must be within 20km radius
+                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
+                    if (!withinRadius) {
+                        logger.debug("Concern {} (raised by user {}) excluded - distance {} km exceeds {} km radius", 
+                                concern.getId(), raisedBy.getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false;
+                    }
+                    // Double-check: if distance exceeds limit, block it
+                    if (distance > ADMIN_RADIUS_KM) {
+                        logger.warn("Concern {} (raised by user {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
+                                concern.getId(), raisedBy.getId(),
+                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                        return false;
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+    }
+
     // Helper method to filter system users by admin radius
     private List<SystemUser> filterSystemUsersByAdminRadius(List<SystemUser> systemUsers, Long adminId) {
         Location adminLocation = null;
