@@ -21,9 +21,9 @@ services:
       - key: SERVER_PORT
         value: 8585  # Alternative for Spring Boot
       - key: CORS_ALLOWED_ORIGINS
-        value: https://nokariya.onrender.com  # Frontend URL
+        value: https://nokariya.onrender.com,https://kaamkart.onrender.com,https://kaamkart.in,https://www.kaamkart.in  # Frontend URLs
       - key: WEBSOCKET_ALLOWED_ORIGINS
-        value: https://nokariya.onrender.com  # Frontend URL
+        value: https://nokariya.onrender.com,https://kaamkart.onrender.com,https://kaamkart.in,https://www.kaamkart.in  # Frontend URLs
       - key: HIBERNATE_DDL_AUTO
         value: update  # Use 'update' for first deployment, then 'validate' after schema is created
     healthCheckPath: /api/health
