@@ -604,35 +604,69 @@ public class AdminService {
                 }
                 
                 // 3. Check if worker is deployed (final check using native query - most reliable)
+                // NEW LOGIC: Check if worker's active work end date <= new request start date
                 Integer finalNativeCheckResult = deployedWorkerRepository.hasActiveDeployment(workerUserId);
                 boolean finalNativeCheck = finalNativeCheckResult != null && finalNativeCheckResult > 0;
                 if (finalNativeCheck) {
-                    skippedDeployedCount++;
-                    logger.error("🚫🚫🚫 FINAL NATIVE QUERY BLOCK: Worker {} (Email: {}) has active deployment - NOTIFICATION BLOCKED!", 
-                            worker.getUser().getName(), workerEmail);
-                    continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                    // Get active deployment details to check dates
+                    List<Object[]> activeDeployments = deployedWorkerRepository.findActiveDeploymentsForWorker(workerUserId);
+                    boolean shouldBlock = false;
+                    for (Object[] deployment : activeDeployments) {
+                        java.sql.Date endDate = (java.sql.Date) deployment[3];
+                        if (endDate != null && newRequestStartDate != null) {
+                            java.time.LocalDate deploymentEndDate = endDate.toLocalDate();
+                            // Block only if new request starts before worker's work ends
+                            if (newRequestStartDate.isBefore(deploymentEndDate)) {
+                                shouldBlock = true;
+                                logger.warn("🚫 FINAL NATIVE QUERY BLOCK: Worker {} (Email: {}) has active deployment ending {}, new request starts {} - BLOCKING!", 
+                                        worker.getUser().getName(), workerEmail, deploymentEndDate, newRequestStartDate);
+                                break;
+                            } else {
+                                logger.info("✅ Worker {} (Email: {}) can receive notification - deployment ends {}, new request starts {}", 
+                                        worker.getUser().getName(), workerEmail, deploymentEndDate, newRequestStartDate);
+                            }
+                        }
+                    }
+                    if (shouldBlock) {
+                        skippedDeployedCount++;
+                        continue; // Skip to next worker - DO NOT SEND NOTIFICATION
+                    }
                 }
                 
                 // 4. Also check using JPA (backup check)
                 List<DeployedWorker> finalDeploymentCheck = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(worker.getUser());
-                boolean hasActiveDeployment = false;
+                boolean hasBlockingDeployment = false;
                 for (DeployedWorker dw : finalDeploymentCheck) {
                     Request r = dw.getRequest();
                     if (r != null) {
                         boolean active = (r.getEndDate().isAfter(java.time.LocalDate.now()) || r.getEndDate().isEqual(java.time.LocalDate.now()))
                                 && r.getStatus() != Request.RequestStatus.COMPLETED;
                         if (active) {
-                            hasActiveDeployment = true;
-                            logger.error("🔴 FINAL JPA CHECK: Worker {} (Email: {}) has active deployment in request {} - BLOCKING NOTIFICATION!", 
-                                    worker.getUser().getName(), workerEmail, r.getId());
-                            break;
+                            // Check if new request starts before worker's work ends
+                            if (newRequestStartDate != null && r.getEndDate() != null) {
+                                if (newRequestStartDate.isBefore(r.getEndDate())) {
+                                    hasBlockingDeployment = true;
+                                    logger.warn("🔴 FINAL JPA CHECK: Worker {} (Email: {}) has active deployment in request {} (ends {}), new request starts {} - BLOCKING!", 
+                                            worker.getUser().getName(), workerEmail, r.getId(), r.getEndDate(), newRequestStartDate);
+                                    break;
+                                } else {
+                                    logger.info("✅ Worker {} (Email: {}) can receive notification - deployment ends {}, new request starts {}", 
+                                            worker.getUser().getName(), workerEmail, r.getEndDate(), newRequestStartDate);
+                                }
+                            } else {
+                                // If dates are null, block to be safe
+                                hasBlockingDeployment = true;
+                                logger.warn("🔴 FINAL JPA CHECK: Worker {} (Email: {}) has active deployment but dates are null - BLOCKING!", 
+                                        worker.getUser().getName(), workerEmail);
+                                break;
+                            }
                         }
                     }
                 }
                 
-                if (hasActiveDeployment) {
+                if (hasBlockingDeployment) {
                     skippedDeployedCount++;
-                    logger.error("🚫🚫🚫 FINAL JPA BLOCK: Worker {} (Email: {}) has active deployment - NOTIFICATION BLOCKED!", 
+                    logger.error("🚫🚫🚫 FINAL JPA BLOCK: Worker {} (Email: {}) has blocking deployment - NOTIFICATION BLOCKED!", 
                             worker.getUser().getName(), workerEmail);
                     continue; // Skip to next worker - DO NOT SEND NOTIFICATION
                 }
