@@ -505,36 +505,79 @@ public class AdminService {
                 }
             }
             
-            // Skip if worker is already deployed or confirmed during this period (work period hasn't ended)
-            // Workers can receive notifications after their work period ends or after work is marked as COMPLETED
-            // CRITICAL: Also check native query result - if native query says worker is deployed, block them
-            if (hasActiveDeploymentNative || isCurrentlyDeployed || isCurrentlyConfirmed || allCommittedWorkerIds.contains(workerUserId)) {
+            // NEW LOGIC: Worker can receive notification if:
+            // 1. Worker is available
+            // 2. Worker is within radius
+            // 3. Worker's active work end date <= new request start date (worker will be free when new work starts)
+            // OR worker has no active work
+            
+            // Check if worker has active work and if new request start date is before worker's active work end date
+            boolean shouldBlockNotification = false;
+            String blockReason = "";
+            java.time.LocalDate newRequestStartDate = finalRequest.getStartDate();
+            
+            if (isCurrentlyDeployed && deployedRequest != null) {
+                // Worker has active deployment - check if new request start date >= worker's active work end date
+                java.time.LocalDate activeWorkEndDate = deployedRequest.getEndDate();
+                if (newRequestStartDate != null && activeWorkEndDate != null) {
+                    // Worker can receive notification if new request starts on or after their current work ends
+                    if (newRequestStartDate.isBefore(activeWorkEndDate)) {
+                        shouldBlockNotification = true;
+                        blockReason = String.format("deployed in request %d (end date: %s), new request starts %s (before worker's work ends)", 
+                                deployedRequest.getId(), activeWorkEndDate, newRequestStartDate);
+                    } else {
+                        logger.info("✅ Worker {} (ID: {}) can receive notification - new request starts {} (after/on active work end date: {})", 
+                                worker.getUser().getName(), workerUserId, newRequestStartDate, activeWorkEndDate);
+                    }
+                } else {
+                    // If dates are null, block to be safe
+                    shouldBlockNotification = true;
+                    blockReason = "deployed but dates are null";
+                }
+            } else if (isCurrentlyConfirmed && confirmedRequest != null) {
+                // Worker has active confirmation - check if new request start date >= worker's confirmed work end date
+                java.time.LocalDate confirmedWorkEndDate = confirmedRequest.getEndDate();
+                if (newRequestStartDate != null && confirmedWorkEndDate != null) {
+                    // Worker can receive notification if new request starts on or after their confirmed work ends
+                    if (newRequestStartDate.isBefore(confirmedWorkEndDate)) {
+                        shouldBlockNotification = true;
+                        blockReason = String.format("confirmed in request %d (end date: %s), new request starts %s (before worker's work ends)", 
+                                confirmedRequest.getId(), confirmedWorkEndDate, newRequestStartDate);
+                    } else {
+                        logger.info("✅ Worker {} (ID: {}) can receive notification - new request starts {} (after/on confirmed work end date: {})", 
+                                worker.getUser().getName(), workerUserId, newRequestStartDate, confirmedWorkEndDate);
+                    }
+                } else {
+                    // If dates are null, block to be safe
+                    shouldBlockNotification = true;
+                    blockReason = "confirmed but dates are null";
+                }
+            } else if (hasActiveDeploymentNative) {
+                // Native query detected active deployment - need to check dates
+                // Get the active deployment details
+                List<Object[]> activeDeployments = deployedWorkerRepository.findActiveDeploymentsForWorker(workerUserId);
+                boolean foundBlockingDeployment = false;
+                for (Object[] deployment : activeDeployments) {
+                    java.sql.Date endDate = (java.sql.Date) deployment[3];
+                    if (endDate != null && newRequestStartDate != null) {
+                        java.time.LocalDate deploymentEndDate = endDate.toLocalDate();
+                        if (newRequestStartDate.isBefore(deploymentEndDate)) {
+                            foundBlockingDeployment = true;
+                            blockReason = String.format("native query detected active deployment (end date: %s), new request starts %s", 
+                                    deploymentEndDate, newRequestStartDate);
+                            break;
+                        }
+                    }
+                }
+                shouldBlockNotification = foundBlockingDeployment;
+            }
+            
+            if (shouldBlockNotification) {
                 skippedDeployedCount++;
-                String reason = "";
-                if (hasActiveDeploymentNative) {
-                    reason = "NATIVE QUERY detected active deployment";
-                } else if (isCurrentlyDeployed && deployedRequest != null) {
-                    reason = String.format("deployed in request %d (dates: %s to %s)", 
-                            deployedRequest.getId(), deployedRequest.getStartDate(), deployedRequest.getEndDate());
-                } else if (isCurrentlyConfirmed && confirmedRequest != null) {
-                    reason = String.format("confirmed in request %d (dates: %s to %s)", 
-                            confirmedRequest.getId(), confirmedRequest.getStartDate(), confirmedRequest.getEndDate());
-                } else if (allCommittedWorkerIds.contains(workerUserId)) {
-                    reason = "found in committed workers set";
-                }
-                
-                logger.error("🚫 BLOCKING NOTIFICATION to worker {} (ID: {}, Email: {}) - {}. " +
-                        "Checks: native={}, jpa deployed={}, confirmed={}, in committed set={}. " +
-                        "New request: {} (dates: {} to {})", 
-                        worker.getUser().getName(), workerUserId, workerEmail, reason,
-                        hasActiveDeploymentNative, isCurrentlyDeployed, isCurrentlyConfirmed, allCommittedWorkerIds.contains(workerUserId),
-                        finalRequest.getId(), finalRequest.getStartDate(), finalRequest.getEndDate());
-                
-                // Special check for problematic worker
-                if (workerEmail != null && workerEmail.toLowerCase().contains("elctician")) {
-                    logger.error("🔴🔴🔴 CRITICAL: Worker {} (Email: {}) WAS BLOCKED - should NOT receive notification!", 
-                            worker.getUser().getName(), workerEmail);
-                }
+                logger.warn("🚫 BLOCKING NOTIFICATION to worker {} (ID: {}, Email: {}) - {}. " +
+                        "New request: {} (start date: {})", 
+                        worker.getUser().getName(), workerUserId, workerEmail, blockReason,
+                        finalRequest.getId(), newRequestStartDate);
                 continue;
             }
             

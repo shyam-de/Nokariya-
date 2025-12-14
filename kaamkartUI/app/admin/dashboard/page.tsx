@@ -1307,12 +1307,12 @@ export default function AdminDashboard() {
         {/* Requests List or Concerns List */}
         {activeTab === 'concerns' ? (
           <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allConcerns')}</h2>
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900" lang={language}>{t('admin.allConcerns')}</h2>
               <button
                 onClick={fetchConcerns}
                 disabled={isLoadingConcerns}
-                className="px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                 lang={language}
               >
                 {isLoadingConcerns ? (
@@ -1502,13 +1502,13 @@ export default function AdminDashboard() {
             )}
           </div>
         ) : activeTab === 'workers' ? (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allWorkers')}</h2>
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900" lang={language}>{t('admin.allWorkers')}</h2>
               <button
                 onClick={fetchWorkers}
                 disabled={isLoadingWorkers}
-                className="px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                 lang={language}
               >
                 {isLoadingWorkers ? (
@@ -1681,13 +1681,13 @@ export default function AdminDashboard() {
             )}
           </div>
         ) : activeTab === 'customers' ? (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.allCustomers')}</h2>
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900" lang={language}>{t('admin.allCustomers')}</h2>
               <button
                 onClick={fetchCustomers}
                 disabled={isLoadingCustomers}
-                className="px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gradient-to-r from-purple-500 to-indigo-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                 lang={language}
               >
                 {isLoadingCustomers ? (
@@ -1820,13 +1820,13 @@ export default function AdminDashboard() {
             )}
           </div>
         ) : activeTab === 'systemUsers' ? (
-          <div className="bg-white rounded-xl shadow-lg p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900" lang={language}>{t('admin.systemUsersAdmins')}</h2>
+          <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-0 mb-4 sm:mb-6">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900" lang={language}>{t('admin.systemUsersAdmins')}</h2>
               <button
                 onClick={fetchSystemUsers}
                 disabled={isLoadingSystemUsers}
-                className="px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center gap-2"
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-gradient-to-r from-indigo-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-xl transition-all duration-200 hover:scale-105 transform disabled:opacity-50 flex items-center justify-center gap-2 text-sm sm:text-base"
                 lang={language}
               >
                 {isLoadingSystemUsers ? (
