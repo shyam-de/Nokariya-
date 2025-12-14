@@ -313,12 +313,9 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
       }
       addBotMessage(t('chatbot.workerFAQNotAvailable') || 'Currently you are deployed on work, so you are not able to make yourself available. Once you complete your current work assignment, you will be able to make yourself available again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
       return
-    } else if (reply.includes('Why unable to accept new request') || reply.includes('why unable to accept new request') || (reply.includes('accept') && reply.includes('why') && reply.includes('request'))) {
+    } else if (reply.includes('Why unable to accept new request') || reply.includes('why unable to accept new request') || (reply.includes('accept') && reply.includes('why') && reply.includes('request')) || (reply.includes('नया') && reply.includes('अनुरोध') && (reply.includes('स्वीकार') || reply.includes('क्यों')))) {
       // FAQ: Why unable to accept new request - Only for workers
-      if (!user || user.role?.toLowerCase() !== 'worker') {
-        addBotMessage(t('chatbot.workerOnly') || 'This information is only available for workers. Please login as a worker to see why you might not be able to accept new requests.')
-        return
-      }
+      // Remove the worker check - allow this FAQ even if not logged in as worker
       addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
       return
     }
@@ -1559,7 +1556,8 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         addBotMessage(greetings[Math.floor(Math.random() * greetings.length)])
         setTimeout(() => showQuickReplies(), 1000)
       } else if ((lowerText.includes('why') && lowerText.includes('unable') && lowerText.includes('accept')) ||
-                 (lowerText.includes('why') && lowerText.includes('not') && lowerText.includes('able') && lowerText.includes('accept'))) {
+                 (lowerText.includes('why') && lowerText.includes('not') && lowerText.includes('able') && lowerText.includes('accept')) ||
+                 (text.includes('नया') && text.includes('अनुरोध') && (text.includes('स्वीकार') || text.includes('क्यों')))) {
         // Handle worker FAQ: Why unable to accept new request?
         addBotMessage(t('chatbot.workerFAQNotAccept') || 'Currently you are deployed on work, so you are not able to accept new requests during this period. Once you complete your current work assignment, you will be able to accept new requests again.\n\nYou can check your active work in the "Active Work" tab on your dashboard.')
         setTimeout(() => showQuickReplies(), 2000)

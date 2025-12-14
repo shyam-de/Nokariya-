@@ -1339,14 +1339,14 @@ export default function AdminDashboard() {
                 <p className="text-gray-400" lang={language}>{t('admin.allClear')}</p>
               </div>
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4 md:space-y-6 overflow-x-hidden">
                 {concerns.map((concern: any) => (
-                  <div key={concern.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500">
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-xl font-bold text-gray-900" lang={language}>{t('admin.concern')} #{concern.id}</h3>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                  <div key={concern.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500 min-w-0">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-2">
+                          <h3 className="text-lg sm:text-xl font-bold text-gray-900 break-words" lang={language}>{t('admin.concern')} #{concern.id}</h3>
+                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                             concern.type === 'WORK_QUALITY' ? 'bg-blue-100 text-blue-800' :
                             concern.type === 'PAYMENT_ISSUE' ? 'bg-yellow-100 text-yellow-800' :
                             concern.type === 'BEHAVIOR' ? 'bg-red-100 text-red-800' :
@@ -1364,7 +1364,7 @@ export default function AdminDashboard() {
                               return typeMap[concern.type] || concern.type.replace(/_/g, ' ')
                             })()}
                           </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          <span className={`px-2 sm:px-3 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                             concern.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
                             concern.status === 'IN_REVIEW' ? 'bg-blue-100 text-blue-800' :
                             concern.status === 'RESOLVED' ? 'bg-green-100 text-green-800' :
@@ -1374,9 +1374,9 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                         <div className="space-y-2 text-sm text-gray-600 mb-4">
-                          <p lang={language}>
+                          <p lang={language} className="break-words min-w-0">
                             <span className="font-semibold">{t('admin.raisedBy')}:</span> {concern.raisedBy?.name || t('admin.unknown')} ({concern.raisedBy?.email || t('admin.na')}) 
-                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                            <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium inline-block ${
                               concern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
                               concern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
                               'bg-gray-100 text-gray-800'
@@ -1387,19 +1387,19 @@ export default function AdminDashboard() {
                             </span>
                           </p>
                           {concern.request && (
-                            <p lang={language}><span className="font-semibold">{t('admin.relatedRequest')}:</span> {concern.request.workType} ({t('admin.id')}: {concern.request.id})</p>
+                            <p lang={language} className="break-words min-w-0"><span className="font-semibold">{t('admin.relatedRequest')}:</span> {concern.request.workType} ({t('admin.id')}: {concern.request.id})</p>
                           )}
                           {concern.relatedTo && (
-                            <p lang={language}><span className="font-semibold">{t('admin.relatedTo')}:</span> {concern.relatedTo.name} ({concern.relatedTo.email})</p>
+                            <p lang={language} className="break-words min-w-0"><span className="font-semibold">{t('admin.relatedTo')}:</span> {concern.relatedTo.name} ({concern.relatedTo.email})</p>
                           )}
-                          <p lang={language}><span className="font-semibold">{t('admin.created')}:</span> {new Date(concern.createdAt).toLocaleString()}</p>
+                          <p lang={language} className="break-words min-w-0"><span className="font-semibold">{t('admin.created')}:</span> {new Date(concern.createdAt).toLocaleString()}</p>
                           {concern.resolvedAt && (
-                            <p lang={language}><span className="font-semibold">{t('admin.resolved')}:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
+                            <p lang={language} className="break-words min-w-0"><span className="font-semibold">{t('admin.resolved')}:</span> {new Date(concern.resolvedAt).toLocaleString()}</p>
                           )}
                         </div>
-                        <div className="bg-gray-50 rounded-lg p-4 mb-4">
+                        <div className="bg-gray-50 rounded-lg p-3 sm:p-4 mb-4">
                           <p className="font-semibold text-gray-900 mb-2" lang={language}>{t('admin.description')}:</p>
-                          <p className="text-gray-700" lang={language}>{concern.description}</p>
+                          <p className="text-gray-700 break-words min-w-0" lang={language}>{concern.description}</p>
                         </div>
                         
                         {/* Conversation Thread */}
@@ -1417,7 +1417,7 @@ export default function AdminDashboard() {
                                 return (
                                   <div
                                     key={msg.id}
-                                    className={`p-3 rounded-lg ${
+                                    className={`p-3 rounded-lg min-w-0 ${
                                       isAdmin
                                         ? 'bg-blue-50 border-l-4 border-blue-500'
                                         : isRaisedBy
@@ -1425,14 +1425,14 @@ export default function AdminDashboard() {
                                         : 'bg-gray-50 border-l-4 border-gray-400'
                                     }`}
                                   >
-                                    <div className="flex justify-between items-start mb-1">
-                                      <p className={`font-semibold text-sm ${
+                                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-2 mb-1">
+                                      <p className={`font-semibold text-sm break-words min-w-0 ${
                                         isAdmin ? 'text-blue-900' : isRaisedBy ? 'text-green-900' : 'text-gray-900'
                                       }`}>
                                         {msg.sentBy?.name || 'Unknown'}
                                         {isAdmin && <span className="ml-2 text-xs">(Admin)</span>}
                                         {!isAdmin && isRaisedBy && (
-                                          <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                                          <span className={`ml-2 text-xs px-2 py-0.5 rounded inline-block ${
                                             concern.raisedBy?.role === 'CUSTOMER' ? 'bg-blue-100 text-blue-800' :
                                             concern.raisedBy?.role === 'WORKER' ? 'bg-green-100 text-green-800' :
                                             'bg-gray-100 text-gray-800'
@@ -1442,11 +1442,11 @@ export default function AdminDashboard() {
                                           </span>
                                         )}
                                       </p>
-                                      <p className="text-xs text-gray-500">
+                                      <p className="text-xs text-gray-500 flex-shrink-0">
                                         {new Date(msg.createdAt).toLocaleString()}
                                       </p>
                                     </div>
-                                    <p className={`text-sm ${
+                                    <p className={`text-sm break-words min-w-0 ${
                                       isAdmin ? 'text-blue-700' : isRaisedBy ? 'text-green-700' : 'text-gray-700'
                                     }`}>
                                       {msg.message}
@@ -1461,7 +1461,7 @@ export default function AdminDashboard() {
                         </div>
                       </div>
                     </div>
-                    <div className="flex gap-3 mt-4">
+                    <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 mt-4">
                       <button
                         onClick={async () => {
                           // Refresh concerns to get latest user messages before opening modal
@@ -1482,14 +1482,14 @@ export default function AdminDashboard() {
                             setSelectedConcern(concern)
                           }
                         }}
-                        className="flex-1 bg-blue-500 text-white py-2 rounded-lg font-semibold hover:bg-blue-600 transition-colors"
+                        className="flex-1 px-3 sm:px-4 py-2 bg-blue-500 text-white rounded-lg font-semibold hover:bg-blue-600 transition-colors text-sm sm:text-base"
                       >
                         {concern.status === 'PENDING' ? t('admin.reviewAndRespond') : t('admin.updateStatus')}
                       </button>
                       {concern.status === 'PENDING' && (
                         <button
                           onClick={() => handleUpdateConcernStatus(concern.id, 'DISMISSED')}
-                          className="flex-1 bg-gray-500 text-white py-2 rounded-lg font-semibold hover:bg-gray-600 transition-colors"
+                          className="flex-1 px-3 sm:px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors text-sm sm:text-base"
                           lang={language}
                         >
                           {t('admin.dismiss')}
@@ -1608,48 +1608,48 @@ export default function AdminDashboard() {
                       worker.blocked ? 'border-red-500' : worker.verified ? 'border-green-500' : 'border-yellow-500'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{worker.name}</h3>
-                        <p className="text-sm text-gray-600 mb-1">📧 {worker.email}</p>
-                        <p className="text-sm text-gray-600 mb-1">📞 {worker.phone}</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 break-words">{worker.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📧 {worker.email}</p>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📞 {worker.phone}</p>
                         {worker.secondaryPhone && (
-                          <p className="text-sm text-gray-600 mb-1">📱 {worker.secondaryPhone}</p>
+                          <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📱 {worker.secondaryPhone}</p>
                         )}
                       </div>
                     </div>
                     
                     <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.laborTypes')}</span>
-                        <div className="flex flex-wrap gap-1">
+                      <div className="flex items-start gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0" lang={language}>{t('admin.laborTypes')}</span>
+                        <div className="flex flex-wrap gap-1 min-w-0">
                           {worker.workerTypes?.map((type: string) => (
-                            <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                            <span key={type} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full break-words min-w-0">
                               {type}
                             </span>
                           ))}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.rating')}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0" lang={language}>{t('admin.rating')}</span>
                         <span className="text-sm text-gray-600">⭐ {worker.rating || 0.0}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.totalJobs')}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0" lang={language}>{t('admin.totalJobs')}</span>
                         <span className="text-sm text-gray-600">{worker.totalJobs || 0}</span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700" lang={language}>{t('admin.available')}</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0" lang={language}>{t('admin.available')}</span>
                         <span className={`text-sm ${worker.available ? 'text-green-600' : 'text-red-600'}`} lang={language}>
                           {worker.available ? t('admin.yes') : t('admin.no')}
                         </span>
                       </div>
                     </div>
                     
-                    <div className="flex gap-2 mb-4">
+                    <div className="flex flex-col sm:flex-row gap-2 mb-4">
                         <button
                           onClick={() => handleToggleVerification(worker.id)}
-                          className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                          className={`flex-1 px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
                             worker.verified
                               ? 'bg-green-500 text-white hover:bg-green-600'
                               : 'bg-yellow-500 text-white hover:bg-yellow-600'
@@ -1659,7 +1659,7 @@ export default function AdminDashboard() {
                         </button>
                         <button
                           onClick={() => handleToggleBlock(worker.userId)}
-                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                        className={`flex-1 px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
                           worker.blocked
                             ? 'bg-green-500 text-white hover:bg-green-600'
                             : 'bg-red-500 text-white hover:bg-red-600'
@@ -1671,7 +1671,7 @@ export default function AdminDashboard() {
                     </div>
                     
                     {worker.currentLocation && (
-                      <p className="text-xs text-gray-500 mt-2">
+                      <p className="text-xs text-gray-500 mt-2 break-words min-w-0">
                         📍 {worker.currentLocation.address || 'Location not set'}
                       </p>
                     )}
@@ -1785,27 +1785,27 @@ export default function AdminDashboard() {
                       customer.blocked ? 'border-red-500' : 'border-purple-500'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{customer.name}</h3>
-                        <p className="text-sm text-gray-600 mb-1">📧 {customer.email}</p>
-                        <p className="text-sm text-gray-600 mb-1">📞 {customer.phone}</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 break-words">{customer.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📧 {customer.email}</p>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📞 {customer.phone}</p>
                         {customer.secondaryPhone && (
-                          <p className="text-sm text-gray-600 mb-1">📱 {customer.secondaryPhone}</p>
+                          <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📱 {customer.secondaryPhone}</p>
                         )}
                       </div>
                     </div>
                     
                     {customer.location && (
-                      <p className="text-xs text-gray-500 mb-4">
+                      <p className="text-xs text-gray-500 mb-4 break-words min-w-0">
                         📍 {customer.location.address || 'Location not set'}
                       </p>
                     )}
                     
-                    <div className="flex gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <button
                         onClick={() => handleToggleBlock(customer.id)}
-                        className={`flex-1 px-4 py-2 rounded-lg font-semibold transition-colors ${
+                        className={`flex-1 px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
                           customer.blocked
                             ? 'bg-green-500 text-white hover:bg-green-600'
                             : 'bg-red-500 text-white hover:bg-red-600'
@@ -1912,21 +1912,21 @@ export default function AdminDashboard() {
                       systemUser.blocked ? 'border-red-500' : systemUser.superAdmin ? 'border-purple-500' : 'border-blue-500'
                     }`}
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{systemUser.name}</h3>
-                        <p className="text-sm text-gray-600 mb-1">📧 {systemUser.email}</p>
-                        <p className="text-sm text-gray-600 mb-1">📞 {systemUser.phone}</p>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 break-words">{systemUser.name}</h3>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📧 {systemUser.email}</p>
+                        <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📞 {systemUser.phone}</p>
                         {systemUser.secondaryPhone && (
-                          <p className="text-sm text-gray-600 mb-1">📱 {systemUser.secondaryPhone}</p>
+                          <p className="text-sm text-gray-600 mb-1 break-words min-w-0">📱 {systemUser.secondaryPhone}</p>
                         )}
                       </div>
                     </div>
                     
                     <div className="space-y-2 mb-4">
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Type:</span>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0">Type:</span>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex-shrink-0 ${
                           systemUser.superAdmin 
                             ? 'bg-purple-100 text-purple-800' 
                             : 'bg-blue-100 text-blue-800'
@@ -1934,8 +1934,8 @@ export default function AdminDashboard() {
                           {systemUser.superAdmin ? '⭐ Super Admin' : '👨‍💼 Admin'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-sm font-medium text-gray-700">Status:</span>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-medium text-gray-700 flex-shrink-0">Status:</span>
                         <span className={`text-sm ${systemUser.blocked ? 'text-red-600' : 'text-green-600'}`}>
                           {systemUser.blocked ? '🚫 Blocked' : '✓ Active'}
                         </span>
@@ -1943,12 +1943,12 @@ export default function AdminDashboard() {
                     </div>
                     
                     {systemUser.location && (
-                      <p className="text-xs text-gray-500 mb-4">
+                      <p className="text-xs text-gray-500 mb-4 break-words min-w-0">
                         📍 {systemUser.location.address || 'Location not set'}
                       </p>
                     )}
                     
-                    <p className="text-xs text-gray-400 mt-2">
+                    <p className="text-xs text-gray-400 mt-2 break-words min-w-0">
                       Created: {new Date(systemUser.createdAt).toLocaleDateString()}
                     </p>
                   </div>
@@ -1983,20 +1983,22 @@ export default function AdminDashboard() {
                     key={request.id}
                     className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500 h-full flex flex-col min-w-0"
                   >
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex-1">
-                        <h3 className="text-xl font-bold text-gray-900 mb-2">{request.workType}</h3>
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 break-words">{request.workType}</h3>
+                      </div>
+                      <div className="flex-shrink-0 self-start sm:self-start">
                         {getStatusBadge(request.status)}
                       </div>
                     </div>
                     
                     <div className="space-y-2 text-sm mb-4">
-                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                      <div className="flex items-start gap-2 text-gray-600 flex-wrap">
                         <span className="flex-shrink-0">⚡</span>
                         <div className="flex flex-wrap gap-1 min-w-0">
                           {request.workerTypes && request.workerTypes.length > 0 ? (
                             request.workerTypes.map((type: string, idx: number) => (
-                              <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize">
+                              <span key={idx} className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs capitalize break-words min-w-0">
                                 {type.toLowerCase()}
                               </span>
                             ))
@@ -2014,19 +2016,19 @@ export default function AdminDashboard() {
                           </span>
                         </div>
                       )}
-                      <div className="flex items-center gap-2 text-gray-600">
-                        <span>👥</span>
-                        <span>{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''}</span>
+                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
+                        <span className="flex-shrink-0">👥</span>
+                        <span className="break-words min-w-0">{request.numberOfWorkers} worker{request.numberOfWorkers > 1 ? 's' : ''}</span>
                       </div>
                       <div className="flex items-start gap-2 text-gray-600">
                         <span className="flex-shrink-0">📍</span>
                         <span className="break-words min-w-0">{request.location?.address || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
                         <span className="flex-shrink-0">👤</span>
                         <span className="break-words min-w-0">{request.customer?.name || 'N/A'}</span>
                       </div>
-                      <div className="flex items-center gap-2 text-gray-600">
+                      <div className="flex items-center gap-2 text-gray-600 flex-wrap">
                         <span className="flex-shrink-0">📧</span>
                         <span className="break-words min-w-0">{request.customer?.email || 'N/A'}</span>
                       </div>
