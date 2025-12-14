@@ -645,8 +645,45 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         const lowerDateInput = userInput.toLowerCase().trim()
         let selectedStartDate: string | null = null
         
-        // Handle clickable options
-        if (lowerDateInput.includes('1') || lowerDateInput.includes('today')) {
+        // Handle clickable options - check for number pattern first (e.g., "1. Today", "4. Custom Date")
+        const startDateOptionMatch = userInput.match(/^(\d+)\.?\s*(.+)$/)
+        if (startDateOptionMatch) {
+          const optionNum = parseInt(startDateOptionMatch[1])
+          const optionText = startDateOptionMatch[2].toLowerCase()
+          
+          if (optionNum === 1 || optionText.includes('today')) {
+            selectedStartDate = formatDate(new Date())
+          } else if (optionNum === 2 || optionText.includes('tomorrow')) {
+            const tomorrow = new Date()
+            tomorrow.setDate(tomorrow.getDate() + 1)
+            selectedStartDate = formatDate(tomorrow)
+          } else if (optionNum === 3 || optionText.includes('next week')) {
+            const nextWeek = new Date()
+            nextWeek.setDate(nextWeek.getDate() + 7)
+            selectedStartDate = formatDate(nextWeek)
+          } else if (optionNum === 4 || optionText.includes('custom')) {
+            // Ask for custom date input
+            addBotMessage(t('chatbot.enterCustomDate') || 'Please enter your start date in YYYY-MM-DD format (e.g., 2025-12-15):', 300)
+            setRequestData((prev: any) => ({ ...prev, currentDateStep: 'startDateCustom' }))
+            return
+          } else if (optionNum === 5 || optionText.includes('skip')) {
+            // Skip dates
+            setRequestData({ ...requestData, startDate: '', endDate: '', currentDateStep: undefined, datesSkipped: true })
+            const locationPrompts = [
+              t('chatbot.requestFlowLocation') || "Perfect! Now I need your location. Please provide your 6-digit pin code:",
+              t('chatbot.requestFlowLocationAlt1') || "Great! Where do you need the work done? Please enter your 6-digit pin code:",
+              t('chatbot.requestFlowLocationAlt2') || "Excellent! I need your location. Please provide your 6-digit pin code:"
+            ]
+            addBotMessage(`${locationPrompts[Math.floor(Math.random() * locationPrompts.length)]}`, 300)
+            setTimeout(() => {
+              addMessage('', 'bot', [
+                t('chatbot.useCurrentLocation') || 'Use Current Location'
+              ])
+            }, 500)
+            setRequestData((prev: any) => ({ ...prev, locationAsked: true }))
+            break
+          }
+        } else if (lowerDateInput.includes('1') || lowerDateInput.includes('today')) {
           selectedStartDate = formatDate(new Date())
         } else if (lowerDateInput.includes('2') || lowerDateInput.includes('tomorrow')) {
           const tomorrow = new Date()
@@ -1020,25 +1057,74 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
             }, 500)
           }
         } else if (lowerLocation.includes('current') || lowerLocation.includes('gps') || lowerLocation.includes('my location') || lowerLocation.includes('here') || lowerLocation.includes('use current')) {
-          // If using current location, get GPS coordinates and still need pin code
-          if (navigator.geolocation) {
+          // If using current location, get GPS coordinates and try to extract pin code from reverse geocoding
+          if (typeof navigator !== 'undefined' && navigator.geolocation) {
             addBotMessage(t('chatbot.gettingCurrentLocation') || "Getting your current location...", 300)
             setIsTyping(true)
             navigator.geolocation.getCurrentPosition(
               async (position) => {
                 try {
-                  // Reverse geocode to get address
+                  // Reverse geocode to get address and pin code
                   const lat = position.coords.latitude
                   const lng = position.coords.longitude
-                  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`)
+                  
+                  const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&addressdetails=1`, {
+                    headers: {
+                      'User-Agent': 'KaamKart-App'
+                    }
+                  })
                   const data = await response.json()
                   
                   const address = data.display_name || `${lat}, ${lng}`
+                  const pinCode = data.address?.postcode || ''
+                  const state = data.address?.state || data.address?.region || ''
+                  const city = data.address?.city || data.address?.town || data.address?.village || ''
+                  
+                  // If we got a pin code from reverse geocoding, use it
+                  if (pinCode && pinCode.length === 6) {
+                    // Try to get full location details from pin code
+                    try {
+                      const locationData = await getLocationFromPinCode(pinCode)
+                      if (locationData) {
+                        setRequestData({ 
+                          ...requestData, 
+                          location: locationData.address || address,
+                          address: locationData.address || address,
+                          latitude: lat,
+                          longitude: lng,
+                          pinCode: pinCode,
+                          state: locationData.state || state,
+                          city: locationData.city || city,
+                          useCurrentLocation: true,
+                          locationAsked: true
+                        })
+                        setIsTyping(false)
+                        const locationMsg = (t('chatbot.locationDetected') || `✅ Perfect! I've detected your location:\n\n📍 Address: {address}\n🏙️ City: {city}\n🗺️ State: {state}\n\nWould you like to add any additional details like landmark? (Optional)`)
+                          .replace('{address}', locationData.address || address)
+                          .replace('{city}', locationData.city || city)
+                          .replace('{state}', locationData.state || state)
+                        addBotMessage(locationMsg, 300)
+                        setTimeout(() => {
+                          addMessage('', 'bot', [
+                            t('chatbot.skip') || 'Skip'
+                          ])
+                        }, 500)
+                        return
+                      }
+                    } catch (error) {
+                      logger.error('Error fetching location from pin code:', error)
+                    }
+                  }
+                  
+                  // If no pin code from reverse geocoding, set location but still ask for pin code
                   setRequestData({ 
                     ...requestData, 
                     location: address,
+                    address: address,
                     latitude: lat,
                     longitude: lng,
+                    state: state,
+                    city: city,
                     useCurrentLocation: true,
                     locationAsked: true
                   })
@@ -1054,6 +1140,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
                   }, 500)
                 } catch (error) {
                   setIsTyping(false)
+                  logger.error('Error getting current location:', error)
                   addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.locationError') || "I couldn't get your location. Please provide your 6-digit pin code instead:"}`)
                   setTimeout(() => {
                     addMessage('', 'bot', [
@@ -1064,12 +1151,18 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
               },
               (error) => {
                 setIsTyping(false)
+                logger.error('Geolocation error:', error)
                 addBotMessage(getEmpatheticResponse('error') + ` ${t('chatbot.locationPermissionDenied') || "I couldn't access your location. Please provide your 6-digit pin code instead:"}`)
                 setTimeout(() => {
                   addMessage('', 'bot', [
                     t('chatbot.useCurrentLocation') || 'Use Current Location'
                   ])
                 }, 500)
+              },
+              {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
               }
             )
           } else {
@@ -1147,10 +1240,19 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
           }
         }
         
-        // Handle skip or empty input
-        if (userInput.toLowerCase().includes('skip') || userInput.toLowerCase().trim() === '') {
+        // Handle skip or empty input - proceed to confirmation, don't cancel
+        const optionalFieldsLowerInput = userInput.toLowerCase().trim()
+        if (optionalFieldsLowerInput.includes('skip') || optionalFieldsLowerInput === '') {
           setRequestData({ ...requestData, optionalFieldsAsked: true })
-          addBotMessage(t('chatbot.requestFlowConfirm') || `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nWorker Types: ${requestData.workerTypes?.join(', ')}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || 'Current Location'}\nPin Code: ${requestData.pinCode}\n\nType "confirm" to proceed to dashboard or "cancel" to start over.`)
+          // Proceed to confirmation
+          const finalLandmark = requestData.landmark || ''
+          const finalArea = requestData.area || ''
+          const finalState = requestData.state || ''
+          const finalCity = requestData.city || ''
+          const finalPinCode = requestData.pinCode || ''
+          
+          const confirmText = `Please confirm your request:\n\nWork Type: ${requestData.workType || 'Not specified'}\nNumber of Workers: ${requestData.numberOfWorkers || 1}\nDates: ${requestData.startDate && requestData.endDate ? `${requestData.startDate} to ${requestData.endDate}` : 'Not specified'}\nLocation: ${requestData.location || requestData.address || 'Current Location'}\nPin Code: ${finalPinCode}${finalLandmark ? `\nLandmark: ${finalLandmark}` : ''}${finalArea ? `\nArea: ${finalArea}` : ''}${finalState ? `\nState: ${finalState}` : ''}${finalCity ? `\nCity: ${finalCity}` : ''}\n\nClick "Confirm" to create your request or "Cancel" to start over.`
+          addBotMessage(confirmText, 300)
           setTimeout(() => {
             addMessage('', 'bot', [
               'Confirm',
@@ -1161,7 +1263,7 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
         }
         
         // Process any text input as optional fields (landmark, area, etc.)
-        const optionalFieldsLowerInput = userInput.toLowerCase()
+        // Reuse optionalFieldsLowerInput from above (already defined at line 1244)
         let landmark = requestData.landmark || ''
         let area = requestData.area || ''
         let state = requestData.state || ''
@@ -1289,12 +1391,22 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
 
       case 'confirm':
         if (userInput.toLowerCase().includes('confirm') || userInput.toLowerCase().includes('yes') || userInput.toLowerCase().includes('हाँ')) {
-          navigateToRequestForm()
-        } else {
+          // Create request directly instead of redirecting
+          createRequestDirectly()
+        } else if (userInput.toLowerCase().includes('cancel') || userInput.toLowerCase().includes('no') || userInput.toLowerCase().includes('नहीं')) {
           setCurrentFlow('none')
           setRequestData({})
           addBotMessage(t('chatbot.requestFlowCancelled') || 'Request cancelled. How can I help you?')
           setTimeout(() => showQuickReplies(), 1000)
+        } else {
+          // If user typed something else, ask for clarification
+          addBotMessage(t('chatbot.requestFlowConfirm') || "Please click 'Confirm' to create your request or 'Cancel' to start over.", 300)
+          setTimeout(() => {
+            addMessage('', 'bot', [
+              'Confirm',
+              'Cancel'
+            ])
+          }, 500)
         }
         break
     }
@@ -1402,23 +1514,62 @@ export default function Chatbot({ user, adminStats }: ChatbotProps) {
     return 'confirm'
   }
 
-  const navigateToRequestForm = () => {
-    addBotMessage(t('chatbot.navigatingToDashboard') || 'Redirecting you to the request form...')
-    setTimeout(() => {
-      if (typeof window !== 'undefined') {
-        // Store request data in sessionStorage with all optional fields
-        const requestDataToStore = {
-          ...requestData,
-          landmark: requestData.landmark || '',
-          area: requestData.area || '',
-          state: requestData.state || '',
-          city: requestData.city || '',
-          pinCode: requestData.pinCode || ''
+  const createRequestDirectly = async () => {
+    setIsTyping(true)
+    addBotMessage(t('chatbot.creatingRequest') || 'Creating your request...', 300)
+    
+    try {
+      // Prepare request data in the format expected by the backend
+      const workerTypeRequirements = requestData.workType ? [{
+        workerType: requestData.workType.toUpperCase(),
+        numberOfWorkers: requestData.numberOfWorkers || 1
+      }] : []
+      
+      const requestPayload: any = {
+        workerTypeRequirements: workerTypeRequirements,
+        workType: requestData.workType || 'Other',
+        startDate: requestData.startDate || null,
+        endDate: requestData.endDate || null,
+        location: {
+          latitude: requestData.latitude || 0,
+          longitude: requestData.longitude || 0,
+          address: requestData.location || requestData.address || '',
+          landmark: requestData.landmark || null,
+          state: requestData.state || null,
+          city: requestData.city || null,
+          pinCode: requestData.pinCode || null,
+          area: requestData.area || null
         }
-        sessionStorage.setItem('chatbotRequestData', JSON.stringify(requestDataToStore))
-        router.push('/customer/dashboard?action=createRequest')
       }
-    }, 1500)
+      
+      const response = await apiClient.post('/requests', requestPayload)
+      
+      setIsTyping(false)
+      addBotMessage(t('chatbot.requestCreatedSuccess') || '✅ Your request has been created successfully! Workers in your area will be notified.', 300)
+      
+      // Reset flow
+      setCurrentFlow('none')
+      setRequestData({})
+      
+      setTimeout(() => {
+        showQuickReplies()
+        // Optionally redirect to dashboard to see the request
+        setTimeout(() => {
+          router.push('/customer/dashboard')
+        }, 2000)
+      }, 2000)
+    } catch (error: any) {
+      setIsTyping(false)
+      const errorMessage = error.response?.data?.message || t('chatbot.requestError') || 'Failed to create request. Please try again.'
+      addBotMessage(t('chatbot.requestError') || `❌ ${errorMessage}\n\nWould you like to try again or visit your dashboard to create it manually?`, 300)
+      
+      setTimeout(() => {
+        addMessage('', 'bot', [
+          t('chatbot.tryAgain') || 'Try Again',
+          t('chatbot.goToDashboard') || 'Go to Dashboard'
+        ])
+      }, 500)
+    }
   }
 
   const navigateToConcernForm = async () => {
