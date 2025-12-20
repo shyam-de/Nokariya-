@@ -48,13 +48,18 @@ public class AdminController {
     private WorkerTypeService workerTypeService;
 
     @GetMapping("/requests/pending")
-    public ResponseEntity<?> getPendingRequests(Authentication authentication) {
+    public ResponseEntity<?> getPendingRequests(
+            Authentication authentication,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Boolean locationFilter) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
             Long adminId = getUserIdFromAuthentication(authentication);
-            List<Request> requests = adminService.getPendingApprovalRequests(adminId);
+            List<Request> requests = adminService.getPendingApprovalRequests(adminId, search, sortBy, sortOrder, locationFilter);
             return ResponseEntity.ok(requests);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
@@ -62,13 +67,18 @@ public class AdminController {
     }
 
     @GetMapping("/requests/active")
-    public ResponseEntity<?> getActiveRequests(Authentication authentication) {
+    public ResponseEntity<?> getActiveRequests(
+            Authentication authentication,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Boolean locationFilter) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
             Long adminId = getUserIdFromAuthentication(authentication);
-            List<Request> requests = adminService.getActiveRequests(adminId);
+            List<Request> requests = adminService.getActiveRequests(adminId, search, sortBy, sortOrder, locationFilter);
             return ResponseEntity.ok(requests);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));
@@ -231,6 +241,85 @@ public class AdminController {
         }
     }
 
+    /**
+     * Update system user (admin) - super admin status and/or password
+     * Only super admin can perform this operation
+     */
+    @PutMapping("/system-users/{id}")
+    public ResponseEntity<?> updateSystemUser(
+            Authentication authentication,
+            @PathVariable Long id,
+            @RequestBody Map<String, Object> request) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            }
+            
+            Long adminId = getUserIdFromAuthentication(authentication);
+            if (!adminService.isSuperAdmin(adminId)) {
+                return ResponseEntity.status(403).body(Map.of("message", "Only super admin can update system users"));
+            }
+            
+            Boolean superAdmin = request.get("superAdmin") != null ? 
+                    Boolean.valueOf(request.get("superAdmin").toString()) : null;
+            String newPassword = request.get("newPassword") != null ? 
+                    request.get("newPassword").toString() : null;
+            
+            SystemUser updated = adminService.updateSystemUser(adminId, id, superAdmin, newPassword);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "System user updated successfully");
+            response.put("id", updated.getId());
+            response.put("name", updated.getName());
+            response.put("email", updated.getEmail());
+            response.put("superAdmin", updated.getSuperAdmin());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error updating system user", e);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /**
+     * Update customer or worker password
+     * Only super admin can perform this operation
+     */
+    @PutMapping("/users/{id}/password")
+    public ResponseEntity<?> updateUserPassword(
+            Authentication authentication,
+            @PathVariable Long id,
+            @RequestBody Map<String, String> request) {
+        try {
+            if (authentication == null) {
+                return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
+            }
+            
+            Long adminId = getUserIdFromAuthentication(authentication);
+            if (!adminService.isSuperAdmin(adminId)) {
+                return ResponseEntity.status(403).body(Map.of("message", "Only super admin can update user passwords"));
+            }
+            
+            String newPassword = request.get("newPassword");
+            if (newPassword == null || newPassword.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "Password is required"));
+            }
+            
+            User updated = adminService.updateUserPassword(adminId, id, newPassword);
+            
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Password updated successfully");
+            response.put("id", updated.getId());
+            response.put("email", updated.getEmail());
+            response.put("role", updated.getRole().name());
+            
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            logger.error("Error updating user password", e);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
     @GetMapping("/requests/all")
     public ResponseEntity<?> getAllRequests(
             Authentication authentication,
@@ -250,13 +339,18 @@ public class AdminController {
     }
 
     @GetMapping("/concerns")
-    public ResponseEntity<?> getAllConcerns(Authentication authentication) {
+    public ResponseEntity<?> getAllConcerns(
+            Authentication authentication,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String sortBy,
+            @RequestParam(required = false) String sortOrder,
+            @RequestParam(required = false) Boolean locationFilter) {
         try {
             if (authentication == null) {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
             Long adminId = getUserIdFromAuthentication(authentication);
-            List<Concern> concerns = concernService.getAllConcerns(adminId);
+            List<Concern> concerns = concernService.getAllConcerns(adminId, search, sortBy, sortOrder, locationFilter);
             return ResponseEntity.ok(concerns);
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("message", e.getMessage()));

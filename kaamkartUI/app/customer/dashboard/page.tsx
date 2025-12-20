@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { apiClient, API_URL } from '@/lib/api'
@@ -73,6 +73,17 @@ export default function CustomerDashboard() {
   const [isLoading, setIsLoading] = useState(false)
   const [isLoadingConcerns, setIsLoadingConcerns] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showExtendDateModal, setShowExtendDateModal] = useState(false)
+  const [selectedWorkerForExtend, setSelectedWorkerForExtend] = useState<{requestId: string, workerId: string, workerName: string, currentEndDate: string} | null>(null)
+  const [newEndDate, setNewEndDate] = useState('')
+  const [isExtending, setIsExtending] = useState(false)
+  // Search and sort state for customer dashboard
+  const [requestsSearch, setRequestsSearch] = useState('')
+  const [requestsSortBy, setRequestsSortBy] = useState('date')
+  const [requestsSortOrder, setRequestsSortOrder] = useState('desc')
+  const [concernsSearch, setConcernsSearch] = useState('')
+  const [concernsSortBy, setConcernsSortBy] = useState('date')
+  const [concernsSortOrder, setConcernsSortOrder] = useState('desc')
   const [dataLoaded, setDataLoaded] = useState({
     requests: false,
     concerns: false
@@ -1636,19 +1647,93 @@ export default function CustomerDashboard() {
         )}
 
         {activeTab === 'concerns' ? (
-          <div className="space-y-6">
-            {isLoadingConcerns ? (
-              <div className="flex justify-center items-center py-20">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+          <>
+            {/* Search and Sort for Concerns */}
+            <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                  <input
+                    type="text"
+                    value={concernsSearch}
+                    onChange={(e) => setConcernsSearch(e.target.value)}
+                    placeholder="Search by type, description, request..."
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                  <select
+                    value={concernsSortBy}
+                    onChange={(e) => setConcernsSortBy(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="date">Date</option>
+                    <option value="type">Type</option>
+                    <option value="status">Status</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                  <select
+                    value={concernsSortOrder}
+                    onChange={(e) => setConcernsSortOrder(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="desc">Newest First</option>
+                    <option value="asc">Oldest First</option>
+                  </select>
+                </div>
               </div>
-            ) : myConcerns.length === 0 ? (
-              <div className="bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
-                <div className="text-6xl mb-4">📢</div>
-                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('customer.noConcerns')}</p>
-                <p className="text-gray-400" lang={language}>{t('customer.raiseConcern')}</p>
-              </div>
-            ) : (
-              myConcerns.map((concern: any) => (
+            </div>
+            <div className="space-y-6">
+              {isLoadingConcerns ? (
+                <div className="flex justify-center items-center py-20">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+                </div>
+              ) : (() => {
+                // Filter and sort concerns
+                let filtered = myConcerns.filter((concern: any) => {
+                  const searchLower = concernsSearch.toLowerCase()
+                  return !concernsSearch || 
+                    concern.type?.toLowerCase().includes(searchLower) ||
+                    concern.description?.toLowerCase().includes(searchLower) ||
+                    concern.request?.workType?.toLowerCase().includes(searchLower) ||
+                    concern.status?.toLowerCase().includes(searchLower)
+                })
+                
+                filtered.sort((a: any, b: any) => {
+                  let aVal: any, bVal: any
+                  if (concernsSortBy === 'date') {
+                    aVal = new Date(a.createdAt || 0).getTime()
+                    bVal = new Date(b.createdAt || 0).getTime()
+                  } else if (concernsSortBy === 'type') {
+                    aVal = (a.type || '').toLowerCase()
+                    bVal = (b.type || '').toLowerCase()
+                  } else if (concernsSortBy === 'status') {
+                    aVal = (a.status || '').toLowerCase()
+                    bVal = (b.status || '').toLowerCase()
+                  } else {
+                    return 0
+                  }
+                  
+                  if (concernsSortOrder === 'asc') {
+                    return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                  } else {
+                    return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                  }
+                })
+                
+                return filtered.length === 0 ? (
+                  <div className="bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
+                    <div className="text-6xl mb-4">📢</div>
+                    <p className="text-xl text-gray-500 mb-2" lang={language}>
+                      {concernsSearch ? 'No concerns match your search' : t('customer.noConcerns')}
+                    </p>
+                    <p className="text-gray-400" lang={language}>{t('customer.raiseConcern')}</p>
+                  </div>
+                ) : (
+                  filtered.map((concern: any) => (
                 <div key={concern.id} className="bg-white rounded-xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex-1">
@@ -1826,9 +1911,11 @@ export default function CustomerDashboard() {
                     </div>
                   </div>
                 </div>
-              ))
-            )}
-          </div>
+                  ))
+                )
+              })()}
+            </div>
+          </>
         ) : (
           <>
             {isLoading ? (
@@ -1836,15 +1923,93 @@ export default function CustomerDashboard() {
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
-                {requests.length === 0 ? (
-                  <div className="col-span-full bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
-                    <div className="text-6xl mb-4">📝</div>
-                <p className="text-xl text-gray-500 mb-2" lang={language}>{t('customer.noRequests')}</p>
-                <p className="text-gray-400" lang={language}>{t('customer.createRequest')}</p>
+              <>
+                {/* Search and Sort for Requests */}
+                <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                      <input
+                        type="text"
+                        value={requestsSearch}
+                        onChange={(e) => setRequestsSearch(e.target.value)}
+                        placeholder="Search by work type, location, status..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                      <select
+                        value={requestsSortBy}
+                        onChange={(e) => setRequestsSortBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="workType">Work Type</option>
+                        <option value="status">Status</option>
+                        <option value="startDate">Start Date</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                      <select
+                        value={requestsSortOrder}
+                        onChange={(e) => setRequestsSortOrder(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
-                ) : (
-                  requests.map((request) => (
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
+                  {(() => {
+                    // Filter and sort requests
+                    let filtered = requests.filter((request: any) => {
+                      const searchLower = requestsSearch.toLowerCase()
+                      return !requestsSearch || 
+                        request.workType?.toLowerCase().includes(searchLower) ||
+                        request.location?.address?.toLowerCase().includes(searchLower) ||
+                        request.status?.toLowerCase().includes(searchLower) ||
+                        request.workerTypes?.some((type: string) => type.toLowerCase().includes(searchLower))
+                    })
+                    
+                    filtered.sort((a: any, b: any) => {
+                      let aVal: any, bVal: any
+                      if (requestsSortBy === 'date') {
+                        aVal = new Date(a.createdAt || 0).getTime()
+                        bVal = new Date(b.createdAt || 0).getTime()
+                      } else if (requestsSortBy === 'workType') {
+                        aVal = (a.workType || '').toLowerCase()
+                        bVal = (b.workType || '').toLowerCase()
+                      } else if (requestsSortBy === 'status') {
+                        aVal = (a.status || '').toLowerCase()
+                        bVal = (b.status || '').toLowerCase()
+                      } else if (requestsSortBy === 'startDate') {
+                        aVal = new Date(a.startDate || 0).getTime()
+                        bVal = new Date(b.startDate || 0).getTime()
+                      } else {
+                        return 0
+                      }
+                      
+                      if (requestsSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                      } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                      }
+                    })
+                    
+                    return filtered.length === 0 ? (
+                      <div className="col-span-full bg-white rounded-xl shadow-lg p-12 text-center border-2 border-dashed border-gray-300">
+                        <div className="text-6xl mb-4">📝</div>
+                        <p className="text-xl text-gray-500 mb-2" lang={language}>
+                          {requestsSearch ? 'No requests match your search' : t('customer.noRequests')}
+                        </p>
+                        <p className="text-gray-400" lang={language}>{t('customer.createRequest')}</p>
+                      </div>
+                    ) : (
+                      filtered.map((request) => (
                 <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500 h-full flex flex-col min-w-0">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
                     <div className="flex-1 min-w-0">
@@ -1986,14 +2151,106 @@ export default function CustomerDashboard() {
                     </div>
                   )}
                 </div>
-              ))
-            )}
-          </div>
+                  ))
+                )
+              })()}
+            </div>
+              </>
             )}
           </>
         )}
       </div>
       
+      {/* Extend End Date Modal */}
+      {showExtendDateModal && selectedWorkerForExtend && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl p-6 md:p-8 w-full max-w-md">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4">Extend End Date</h3>
+            <p className="text-gray-600 mb-4">
+              Extend the end date for <strong>{selectedWorkerForExtend.workerName}</strong>
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              Current end date: <strong>{new Date(selectedWorkerForExtend.currentEndDate).toLocaleDateString()}</strong>
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                New End Date
+              </label>
+              <input
+                type="date"
+                value={newEndDate}
+                onChange={(e) => setNewEndDate(e.target.value)}
+                min={(() => {
+                  const currentEnd = new Date(selectedWorkerForExtend.currentEndDate)
+                  currentEnd.setDate(currentEnd.getDate() + 1)
+                  return currentEnd.toISOString().split('T')[0]
+                })()}
+                className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={async () => {
+                  if (!newEndDate) {
+                    toast.error('Please select a new end date')
+                    return
+                  }
+                  const currentEnd = new Date(selectedWorkerForExtend.currentEndDate)
+                  const newEnd = new Date(newEndDate)
+                  if (newEnd <= currentEnd) {
+                    toast.error('New end date must be after the current end date')
+                    return
+                  }
+                  setIsExtending(true)
+                  try {
+                    const token = SessionStorage.getToken()
+                    await apiClient.put(
+                      `/requests/${selectedWorkerForExtend.requestId}/extend-end-date`,
+                      {
+                        workerId: selectedWorkerForExtend.workerId,
+                        newEndDate: newEndDate
+                      },
+                      {
+                        headers: { Authorization: `Bearer ${token}` }
+                      }
+                    )
+                    toast.success('End date extended successfully!')
+                    setShowExtendDateModal(false)
+                    setSelectedWorkerForExtend(null)
+                    setNewEndDate('')
+                    // Refresh requests
+                    const response = await apiClient.get('/requests/my-requests', {
+                      headers: { Authorization: `Bearer ${token}` }
+                    })
+                    setRequests(response.data)
+                  } catch (error: any) {
+                    logger.error('Error extending end date:', error)
+                    toast.error(error.response?.data?.message || 'Failed to extend end date')
+                  } finally {
+                    setIsExtending(false)
+                  }
+                }}
+                disabled={isExtending}
+                className="flex-1 px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all font-semibold disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {isExtending ? 'Extending...' : 'Extend'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowExtendDateModal(false)
+                  setSelectedWorkerForExtend(null)
+                  setNewEndDate('')
+                }}
+                disabled={isExtending}
+                className="flex-1 px-6 py-3 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all font-semibold disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chatbot */}
       <Chatbot user={user} />
     </div>

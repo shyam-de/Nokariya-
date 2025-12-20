@@ -12,6 +12,7 @@ import { useLanguage } from '@/contexts/LanguageContext'
 import LanguageSwitcher from '@/components/LanguageSwitcher'
 import Chatbot from '@/components/Chatbot'
 import { logger } from '@/lib/logger'
+import { getLocationFromPinCode } from '@/lib/indianLocationValidation'
 
 interface Request {
   id: string
@@ -65,10 +66,21 @@ export default function AdminDashboard() {
   const [showCreateUser, setShowCreateUser] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [isCreatingUser, setIsCreatingUser] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [editingSystemUser, setEditingSystemUser] = useState<any | null>(null)
+  const [editingUserPassword, setEditingUserPassword] = useState<any | null>(null)
+  const [newPassword, setNewPassword] = useState('')
+  const [showNewPassword, setShowNewPassword] = useState(false)
+  const [isUpdatingSystemUser, setIsUpdatingSystemUser] = useState(false)
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortBy, setSortBy] = useState('date')
   const [sortOrder, setSortOrder] = useState('desc')
   const [statusFilter, setStatusFilter] = useState<string>('all')
+  // Location filter for pending, active, and concerns tabs (super admin only)
+  const [pendingLocationFilter, setPendingLocationFilter] = useState(false)
+  const [activeLocationFilter, setActiveLocationFilter] = useState(false)
+  const [concernsLocationFilter, setConcernsLocationFilter] = useState(false)
   // Search, sort, and location filter for workers, customers, and system users
   const [workersSearch, setWorkersSearch] = useState('')
   const [workersSortBy, setWorkersSortBy] = useState('date')
@@ -82,6 +94,28 @@ export default function AdminDashboard() {
   const [systemUsersSortBy, setSystemUsersSortBy] = useState('date')
   const [systemUsersSortOrder, setSystemUsersSortOrder] = useState('desc')
   const [systemUsersLocationFilter, setSystemUsersLocationFilter] = useState(false)
+  // Search and sort for success stories, advertisements, and worker types
+  const [successStoriesSearch, setSuccessStoriesSearch] = useState('')
+  const [successStoriesSortBy, setSuccessStoriesSortBy] = useState('date')
+  const [successStoriesSortOrder, setSuccessStoriesSortOrder] = useState('desc')
+  const [advertisementsSearch, setAdvertisementsSearch] = useState('')
+  const [advertisementsSortBy, setAdvertisementsSortBy] = useState('date')
+  const [advertisementsSortOrder, setAdvertisementsSortOrder] = useState('desc')
+  const [workerTypesSearch, setWorkerTypesSearch] = useState('')
+  const [workerTypesSortBy, setWorkerTypesSortBy] = useState('displayOrder')
+  const [workerTypesSortOrder, setWorkerTypesSortOrder] = useState('asc')
+  // Pagination state for all tabs (default 10 items per page)
+  const [pendingPage, setPendingPage] = useState(1)
+  const [activePage, setActivePage] = useState(1)
+  const [historyPage, setHistoryPage] = useState(1)
+  const [concernsPage, setConcernsPage] = useState(1)
+  const [workersPage, setWorkersPage] = useState(1)
+  const [customersPage, setCustomersPage] = useState(1)
+  const [systemUsersPage, setSystemUsersPage] = useState(1)
+  const [successStoriesPage, setSuccessStoriesPage] = useState(1)
+  const [advertisementsPage, setAdvertisementsPage] = useState(1)
+  const [workerTypesPage, setWorkerTypesPage] = useState(1)
+  const itemsPerPage = 10
   const [confirmationStatus, setConfirmationStatus] = useState<{[key: string]: any}>({})
   const [isLoadingConfirmation, setIsLoadingConfirmation] = useState<{[key: string]: boolean}>({})
   const [isDeploying, setIsDeploying] = useState<{[key: string]: boolean}>({})
@@ -151,7 +185,11 @@ export default function AdminDashboard() {
     password: '',
     role: 'customer' as 'customer' | 'worker' | 'admin',
     workerType: '' as string, // Single labor type for worker
-    isSuperAdmin: false
+    isSuperAdmin: false,
+    pinCode: '', // Pin code for location
+    state: '',
+    city: '',
+    address: ''
   })
 
   // Auto-logout after 30 minutes of inactivity
@@ -204,7 +242,41 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/admin/success-stories`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setSuccessStories(response.data)
+      let stories = response.data || []
+      
+      // Apply search filter
+      if (successStoriesSearch && successStoriesSearch.trim()) {
+        const searchLower = successStoriesSearch.toLowerCase()
+        stories = stories.filter((story: any) =>
+          (story.title && story.title.toLowerCase().includes(searchLower)) ||
+          (story.description && story.description.toLowerCase().includes(searchLower)) ||
+          (story.name && story.name.toLowerCase().includes(searchLower)) ||
+          (story.storyType && story.storyType.toLowerCase().includes(searchLower))
+        )
+      }
+      
+      // Apply sorting
+      if (successStoriesSortBy) {
+        stories = [...stories].sort((a: any, b: any) => {
+          let comparison = 0
+          switch (successStoriesSortBy) {
+            case 'date':
+              comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+              break
+            case 'title':
+              comparison = (a.title || '').localeCompare(b.title || '')
+              break
+            case 'displayOrder':
+              comparison = (a.displayOrder || 0) - (b.displayOrder || 0)
+              break
+            default:
+              comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+          }
+          return successStoriesSortOrder === 'desc' ? -comparison : comparison
+        })
+      }
+      
+      setSuccessStories(stories)
       setDataLoaded(prev => ({ ...prev, successStories: true }))
     } catch (error: any) {
       logger.error('Error fetching success stories:', error)
@@ -223,7 +295,40 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/admin/advertisements`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setAdvertisements(response.data)
+      let ads = response.data || []
+      
+      // Apply search filter
+      if (advertisementsSearch && advertisementsSearch.trim()) {
+        const searchLower = advertisementsSearch.toLowerCase()
+        ads = ads.filter((ad: any) =>
+          (ad.title && ad.title.toLowerCase().includes(searchLower)) ||
+          (ad.text && ad.text.toLowerCase().includes(searchLower)) ||
+          (ad.linkText && ad.linkText.toLowerCase().includes(searchLower))
+        )
+      }
+      
+      // Apply sorting
+      if (advertisementsSortBy) {
+        ads = [...ads].sort((a: any, b: any) => {
+          let comparison = 0
+          switch (advertisementsSortBy) {
+            case 'date':
+              comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+              break
+            case 'title':
+              comparison = (a.title || '').localeCompare(b.title || '')
+              break
+            case 'displayOrder':
+              comparison = (a.displayOrder || 0) - (b.displayOrder || 0)
+              break
+            default:
+              comparison = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
+          }
+          return advertisementsSortOrder === 'desc' ? -comparison : comparison
+        })
+      }
+      
+      setAdvertisements(ads)
       setDataLoaded(prev => ({ ...prev, advertisements: true }))
     } catch (error: any) {
       logger.error('Error fetching advertisements:', error)
@@ -242,7 +347,43 @@ export default function AdminDashboard() {
       const response = await axios.get(`${API_URL}/admin/worker-types`, {
         headers: { Authorization: `Bearer ${token}` }
       })
-      setWorkerTypes(response.data)
+      let types = response.data || []
+      
+      // Apply search filter
+      if (workerTypesSearch && workerTypesSearch.trim()) {
+        const searchLower = workerTypesSearch.toLowerCase()
+        types = types.filter((type: any) =>
+          (type.name && type.name.toLowerCase().includes(searchLower)) ||
+          (type.displayName && type.displayName.toLowerCase().includes(searchLower)) ||
+          (type.description && type.description.toLowerCase().includes(searchLower))
+        )
+      }
+      
+      // Apply sorting
+      if (workerTypesSortBy) {
+        types = [...types].sort((a: any, b: any) => {
+          let comparison = 0
+          switch (workerTypesSortBy) {
+            case 'name':
+              comparison = (a.name || '').localeCompare(b.name || '')
+              break
+            case 'displayName':
+              comparison = (a.displayName || '').localeCompare(b.displayName || '')
+              break
+            case 'displayOrder':
+              comparison = (a.displayOrder || 0) - (b.displayOrder || 0)
+              break
+            case 'isActive':
+              comparison = (a.isActive ? 1 : 0) - (b.isActive ? 1 : 0)
+              break
+            default:
+              comparison = (a.displayOrder || 0) - (b.displayOrder || 0)
+          }
+          return workerTypesSortOrder === 'desc' ? -comparison : comparison
+        })
+      }
+      
+      setWorkerTypes(types)
       setDataLoaded(prev => ({ ...prev, workerTypes: true }))
     } catch (error: any) {
       logger.error('Error fetching worker types:', error)
@@ -376,7 +517,11 @@ export default function AdminDashboard() {
   }, [activeTab, searchQuery, sortBy, sortOrder, statusFilter, 
       workersSearch, workersSortBy, workersSortOrder, workersLocationFilter,
       customersSearch, customersSortBy, customersSortOrder, customersLocationFilter,
-      systemUsersSearch, systemUsersSortBy, systemUsersSortOrder, systemUsersLocationFilter, user])
+      systemUsersSearch, systemUsersSortBy, systemUsersSortOrder, systemUsersLocationFilter,
+      pendingLocationFilter, activeLocationFilter, concernsLocationFilter,
+      successStoriesSearch, successStoriesSortBy, successStoriesSortOrder,
+      advertisementsSearch, advertisementsSortBy, advertisementsSortOrder,
+      workerTypesSearch, workerTypesSortBy, workerTypesSortOrder, user])
 
   // Fetch confirmation status only when tab is first loaded or when user manually refreshes
   // Removed automatic interval to prevent unnecessary API calls
@@ -385,7 +530,19 @@ export default function AdminDashboard() {
     setIsLoading(true)
     try {
       const token = SessionStorage.getToken()
-      const response = await axios.get(`${API_URL}/admin/requests/pending`, {
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('search', searchQuery)
+      if (sortBy) params.append('sortBy', sortBy)
+      if (sortOrder) params.append('sortOrder', sortOrder)
+      // Add location filter for super admin only
+      if ((user?.superAdmin === true || user?.superAdmin === 'true') && pendingLocationFilter) {
+        params.append('locationFilter', 'true')
+      } else if (!(user?.superAdmin === true || user?.superAdmin === 'true')) {
+        // Regular admins always see requests within 20km radius
+        params.append('locationFilter', 'true')
+      }
+      
+      const response = await axios.get(`${API_URL}/admin/requests/pending?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setRequests(response.data)
@@ -403,7 +560,19 @@ export default function AdminDashboard() {
     setIsLoadingActive(true)
     try {
       const token = SessionStorage.getToken()
-      const response = await axios.get(`${API_URL}/admin/requests/active`, {
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('search', searchQuery)
+      if (sortBy) params.append('sortBy', sortBy)
+      if (sortOrder) params.append('sortOrder', sortOrder)
+      // Add location filter for super admin only
+      if ((user?.superAdmin === true || user?.superAdmin === 'true') && activeLocationFilter) {
+        params.append('locationFilter', 'true')
+      } else if (!(user?.superAdmin === true || user?.superAdmin === 'true')) {
+        // Regular admins always see requests within 20km radius
+        params.append('locationFilter', 'true')
+      }
+      
+      const response = await axios.get(`${API_URL}/admin/requests/active?${params.toString()}`, {
         headers: { Authorization: `Bearer ${token}` }
       })
       setActiveRequests(response.data)
@@ -467,6 +636,8 @@ export default function AdminDashboard() {
       toast.success('Request approved! Workers have been notified.', { id: `approve-${requestId}` })
       setShowApproveModal({ show: false, requestId: null })
       fetchPendingRequests()
+      // Refresh active requests to show the newly approved request
+      fetchActiveRequests()
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to approve request', { id: `approve-error-${requestId}` })
     }
@@ -535,7 +706,19 @@ export default function AdminDashboard() {
   const fetchConcerns = async () => {
     setIsLoadingConcerns(true)
     try {
-      const response = await apiClient.get('/admin/concerns')
+      const params = new URLSearchParams()
+      if (searchQuery) params.append('search', searchQuery)
+      if (sortBy) params.append('sortBy', sortBy)
+      if (sortOrder) params.append('sortOrder', sortOrder)
+      // Add location filter for super admin only
+      if ((user?.superAdmin === true || user?.superAdmin === 'true') && concernsLocationFilter) {
+        params.append('locationFilter', 'true')
+      } else if (!(user?.superAdmin === true || user?.superAdmin === 'true')) {
+        // Regular admins always see concerns within 20km radius
+        params.append('locationFilter', 'true')
+      }
+      
+      const response = await apiClient.get(`/admin/concerns?${params.toString()}`)
       // Filter out RESOLVED concerns - admin only sees active concerns
       const activeConcerns = response.data.filter((concern: any) => concern.status !== 'RESOLVED')
       setConcerns(activeConcerns)
@@ -804,15 +987,31 @@ export default function AdminDashboard() {
         return
       }
       
+      // Validate pin code
+      if (!userFormData.pinCode || userFormData.pinCode.length !== 6) {
+        toast.error('Pin Code is required and must be exactly 6 digits')
+        setIsCreatingUser(false)
+        return
+      }
+      
       const data = {
         ...userFormData,
         role: userFormData.role.toUpperCase(),
         workerTypes: userFormData.role === 'worker' && userFormData.workerType 
           ? [userFormData.workerType.toUpperCase()] 
-          : []
+          : [],
+        location: {
+          pinCode: userFormData.pinCode,
+          state: userFormData.state,
+          city: userFormData.city,
+          address: userFormData.address || (userFormData.city && userFormData.state ? `${userFormData.city}, ${userFormData.state} ${userFormData.pinCode}` : `Pin Code: ${userFormData.pinCode}`)
+        }
       }
       
-      await axios.post(`${API_URL}/admin/users/create`, data, {
+      // Remove pinCode from top level since it's in location
+      const { pinCode, ...dataWithoutPinCode } = data
+      
+      await axios.post(`${API_URL}/admin/users/create`, dataWithoutPinCode, {
         headers: { Authorization: `Bearer ${token}` }
       })
       
@@ -826,7 +1025,11 @@ export default function AdminDashboard() {
         password: '',
         role: 'customer',
         workerType: '',
-        isSuperAdmin: false
+        isSuperAdmin: false,
+        pinCode: '',
+        state: '',
+        city: '',
+        address: ''
       })
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to create user')
@@ -837,6 +1040,109 @@ export default function AdminDashboard() {
 
   const displayedRequests = activeTab === 'pending' ? requests : activeTab === 'active' ? activeRequests : allRequests
   const isCurrentlyLoading = activeTab === 'pending' ? isLoading : activeTab === 'active' ? isLoadingActive : activeTab === 'history' ? isLoadingHistory : isLoadingConcerns
+  
+  // Pagination helper function
+  const paginate = <T,>(items: T[], page: number, perPage: number) => {
+    const startIndex = (page - 1) * perPage
+    const endIndex = startIndex + perPage
+    return {
+      paginatedItems: items.slice(startIndex, endIndex),
+      totalPages: Math.ceil(items.length / perPage),
+      currentPage: page,
+      totalItems: items.length
+    }
+  }
+  
+  // Get paginated data for each tab
+  const pendingPagination = paginate(requests, pendingPage, itemsPerPage)
+  const activePagination = paginate(activeRequests, activePage, itemsPerPage)
+  const historyPagination = paginate(allRequests, historyPage, itemsPerPage)
+  const concernsPagination = paginate(concerns, concernsPage, itemsPerPage)
+  const workersPagination = paginate(workers, workersPage, itemsPerPage)
+  const customersPagination = paginate(customers, customersPage, itemsPerPage)
+  const systemUsersPagination = paginate(systemUsers, systemUsersPage, itemsPerPage)
+  const successStoriesPagination = paginate(successStories, successStoriesPage, itemsPerPage)
+  const advertisementsPagination = paginate(advertisements, advertisementsPage, itemsPerPage)
+  const workerTypesPagination = paginate(workerTypes, workerTypesPage, itemsPerPage)
+  
+  // Pagination component
+  const PaginationControls = ({ currentPage, totalPages, onPageChange, totalItems }: {
+    currentPage: number
+    totalPages: number
+    onPageChange: (page: number) => void
+    totalItems: number
+  }) => {
+    if (totalPages <= 1) return null
+    
+    const getPageNumbers = () => {
+      const pages: (number | string)[] = []
+      if (totalPages <= 7) {
+        for (let i = 1; i <= totalPages; i++) {
+          pages.push(i)
+        }
+      } else {
+        pages.push(1)
+        if (currentPage > 3) pages.push('...')
+        for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+          pages.push(i)
+        }
+        if (currentPage < totalPages - 2) pages.push('...')
+        pages.push(totalPages)
+      }
+      return pages
+    }
+    
+    return (
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-6 border-t border-gray-200">
+        <div className="text-sm text-gray-600">
+          Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, totalItems)} of {totalItems} results
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              currentPage === 1
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Previous
+          </button>
+          <div className="flex gap-1">
+            {getPageNumbers().map((page, index) => (
+              page === '...' ? (
+                <span key={`ellipsis-${index}`} className="px-2 py-2 text-gray-400">...</span>
+              ) : (
+                <button
+                  key={page}
+                  onClick={() => onPageChange(page as number)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                    currentPage === page
+                      ? 'bg-red-500 text-white'
+                      : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                  }`}
+                >
+                  {page}
+                </button>
+              )
+            ))}
+          </div>
+          <button
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`px-4 py-2 rounded-lg font-medium transition-all ${
+              currentPage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+            }`}
+          >
+            Next
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-red-50 to-orange-50">
@@ -940,7 +1246,7 @@ export default function AdminDashboard() {
         {showCreateUser && (
           <div className="bg-white rounded-xl shadow-lg p-4 sm:p-6 md:p-8 mb-8 border-2 border-green-200 animate-slide-down relative z-10">
             <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-4 sm:mb-6" lang={language}>{t('admin.createNewUser')}</h2>
-            <form onSubmit={handleCreateUser} className="space-y-4 sm:space-y-5 max-h-[80vh] overflow-y-auto pr-2">
+            <form onSubmit={handleCreateUser} className="space-y-4 sm:space-y-5 max-h-[85vh] overflow-y-auto pr-2 pb-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-5">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.name')}</label>
@@ -1003,16 +1309,29 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.password')}</label>
-                  <input
-                    type="password"
-                    required
-                    minLength={6}
-                    value={userFormData.password}
-                    onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
-                    placeholder={t('admin.passwordPlaceholder')}
-                    lang={language}
-                  />
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      minLength={6}
+                      value={userFormData.password}
+                      onChange={(e) => setUserFormData({ ...userFormData, password: e.target.value })}
+                      className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                      placeholder={t('admin.passwordPlaceholder')}
+                      lang={language}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? '👁️' : '👁️‍🗨️'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1" lang={language}>
+                    {t('admin.passwordVisibleNote') || 'Password is visible for your reference. Save it securely.'}
+                  </p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.role')}</label>
@@ -1040,7 +1359,91 @@ export default function AdminDashboard() {
                       {user?.email === 'admin@kaamkart.com' && ' Please log out and log back in to refresh your permissions.'}
                     </p>
                   )}
+                  {userFormData.role === 'admin' && (user?.superAdmin === true || user?.superAdmin === 'true') && (
+                    <div className="mt-3 flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="isSuperAdmin"
+                        checked={userFormData.isSuperAdmin}
+                        onChange={(e) => setUserFormData({ ...userFormData, isSuperAdmin: e.target.checked })}
+                        className="w-5 h-5 text-green-600 rounded focus:ring-green-500"
+                      />
+                      <label htmlFor="isSuperAdmin" className="text-sm font-medium text-gray-700 cursor-pointer" lang={language}>
+                        ⭐ Make this admin a Super Admin
+                      </label>
+                    </div>
+                  )}
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                    {t('login.pinCode') || 'Pin Code'} <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    value={userFormData.pinCode}
+                    onChange={async (e) => {
+                      const value = e.target.value.replace(/\D/g, '') // Only digits
+                      if (value.length <= 6) {
+                        setUserFormData({ ...userFormData, pinCode: value })
+                        
+                        // Auto-fill state, city, and address when pin code is complete
+                        if (value.length === 6) {
+                          try {
+                            const location = await getLocationFromPinCode(value)
+                            if (location) {
+                              setUserFormData(prev => ({
+                                ...prev,
+                                pinCode: value,
+                                state: location.state || prev.state,
+                                city: location.city || prev.city,
+                                address: location.address || prev.address
+                              }))
+                              toast.success(t('login.pinCodeDetected') || 'Location detected from Pin Code!', { id: 'admin-pin-code-detected' })
+                            } else {
+                              toast.error(t('login.pinCodeNotFound') || 'Pin Code not found. Please enter a valid 6-digit pin code.', { id: 'admin-pin-code-not-found' })
+                            }
+                          } catch (error) {
+                            logger.error('Error fetching location from pin code:', error)
+                            toast.error(t('login.pinCodeError') || 'Error detecting location from Pin Code. Please try again.', { id: 'admin-pin-code-error' })
+                          }
+                        }
+                      }
+                    }}
+                    onBlur={(e) => {
+                      const value = e.target.value.trim()
+                      if (value && value.length !== 6) {
+                        toast.error(t('login.invalidPinCode') || 'Pin Code must be exactly 6 digits')
+                      }
+                    }}
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                    placeholder={t('login.pinCodePlaceholder') || 'Enter 6-digit pin code'}
+                    pattern="[0-9]{6}"
+                    title={t('login.pinCodeValidation') || 'Pin Code must be exactly 6 digits'}
+                    lang={language}
+                  />
+                  {userFormData.pinCode.length === 6 && (userFormData.state || userFormData.city) && (
+                    <p className="text-xs text-green-600 mt-1" lang={language}>
+                      ✓ {t('login.autoDetected') || 'Auto-detected'}: {userFormData.city && userFormData.state ? `${userFormData.city}, ${userFormData.state}` : userFormData.state || userFormData.city}
+                    </p>
+                  )}
+                </div>
+              </div>
+              
+              {/* Address - Editable, auto-filled from Pin Code but can be modified */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                  {t('login.address') || 'Full Address'} <span className="text-gray-500 text-xs">({t('login.addressHelp') || 'Auto-filled from Pin Code, but you can edit'})</span>
+                </label>
+                <textarea
+                  value={userFormData.address}
+                  onChange={(e) => setUserFormData({ ...userFormData, address: e.target.value })}
+                  rows={3}
+                  className="w-full px-3 sm:px-4 py-2 sm:py-3 text-sm sm:text-base border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all resize-none"
+                  placeholder={t('login.addressPlaceholder') || 'Enter your full address (auto-filled from Pin Code, but you can edit)'}
+                  lang={language}
+                />
               </div>
 
               {userFormData.role === 'worker' && (
@@ -1077,11 +1480,12 @@ export default function AdminDashboard() {
                 </div>
               )}
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 mt-4 pb-4">
                 <button
                   type="submit"
                   disabled={isCreatingUser}
-                  className="px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex-1 sm:flex-none px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-500 text-white rounded-lg hover:shadow-xl transition-all duration-200 hover:scale-105 transform font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  lang={language}
                 >
                   {isCreatingUser ? t('admin.creating') : t('admin.createUser')}
                 </button>
@@ -1097,10 +1501,14 @@ export default function AdminDashboard() {
                       password: '',
                       role: 'customer',
                       workerType: '',
-                      isSuperAdmin: false
+                      isSuperAdmin: false,
+                      pinCode: '',
+                      state: '',
+                      city: '',
+                      address: ''
                     })
                   }}
-                  className="px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
+                  className="flex-1 sm:flex-none px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
                   lang={language}
                 >
                   {t('admin.cancel')}
@@ -1328,6 +1736,62 @@ export default function AdminDashboard() {
                 )}
               </button>
             </div>
+            
+            {/* Search, Sort, and Filter Bar for Concerns */}
+            <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('admin.searchConcernsPlaceholder') || 'Search concerns...'}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    lang={language}
+                  >
+                    <option value="date" lang={language}>{t('admin.sortByDate')}</option>
+                    <option value="status" lang={language}>{t('admin.sortByStatus')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    lang={language}
+                  >
+                    <option value="desc" lang={language}>{t('admin.newestFirst')}</option>
+                    <option value="asc" lang={language}>{t('admin.oldestFirst')}</option>
+                  </select>
+                </div>
+              </div>
+              {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                <div className="mt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={concernsLocationFilter}
+                      onChange={(e) => setConcernsLocationFilter(e.target.checked)}
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      📍 {t('admin.filterByMyLocation') || 'Filter by my location (within 20 km radius)'}
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
+            
             {isCurrentlyLoading ? (
               <div className="flex justify-center items-center py-20">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
@@ -1339,8 +1803,9 @@ export default function AdminDashboard() {
                 <p className="text-gray-400" lang={language}>{t('admin.allClear')}</p>
               </div>
             ) : (
-              <div className="space-y-4 md:space-y-6 overflow-x-hidden">
-                {concerns.map((concern: any) => (
+              <>
+                <div className="space-y-4 md:space-y-6 overflow-x-hidden">
+                  {concernsPagination.paginatedItems.map((concern: any) => (
                   <div key={concern.id} className="bg-white rounded-xl shadow-lg p-4 sm:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500 min-w-0">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-start gap-3 mb-4">
                       <div className="flex-1 min-w-0">
@@ -1499,6 +1964,13 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+              <PaginationControls
+                currentPage={concernsPage}
+                totalPages={concernsPagination.totalPages}
+                onPageChange={setConcernsPage}
+                totalItems={concernsPagination.totalItems}
+              />
+            </>
             )}
           </div>
         ) : activeTab === 'workers' ? (
@@ -1600,8 +2072,9 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noWorkersFound')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
-                {workers.map((worker: any) => (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
+                  {workersPagination.paginatedItems.map((worker: any) => (
                   <div
                     key={worker.id}
                     className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
@@ -1668,6 +2141,15 @@ export default function AdminDashboard() {
                       >
                         {worker.blocked ? t('admin.unblock') : t('admin.block')}
                       </button>
+                      {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                        <button
+                          onClick={() => setEditingUserPassword({ id: worker.userId, email: worker.email, name: worker.name, role: 'WORKER' })}
+                          className="flex-1 px-3 sm:px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold text-sm sm:text-base"
+                          lang={language}
+                        >
+                          🔑 Update Password
+                        </button>
+                      )}
                     </div>
                     
                     {worker.currentLocation && (
@@ -1678,6 +2160,13 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+              <PaginationControls
+                currentPage={workersPage}
+                totalPages={workersPagination.totalPages}
+                onPageChange={setWorkersPage}
+                totalItems={workersPagination.totalItems}
+              />
+            </>
             )}
           </div>
         ) : activeTab === 'customers' ? (
@@ -1777,8 +2266,9 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noCustomersFound')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
-                {customers.map((customer: any) => (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
+                  {customersPagination.paginatedItems.map((customer: any) => (
                   <div
                     key={customer.id}
                     className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
@@ -1813,10 +2303,26 @@ export default function AdminDashboard() {
                       >
                         {customer.blocked ? t('admin.unblock') : t('admin.block')}
                       </button>
+                      {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                        <button
+                          onClick={() => setEditingUserPassword({ id: customer.id, email: customer.email, name: customer.name, role: 'CUSTOMER' })}
+                          className="flex-1 px-3 sm:px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold text-sm sm:text-base"
+                          lang={language}
+                        >
+                          🔑 Update Password
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
+              <PaginationControls
+                currentPage={customersPage}
+                totalPages={customersPagination.totalPages}
+                onPageChange={setCustomersPage}
+                totalItems={customersPagination.totalItems}
+              />
+            </>
             )}
           </div>
         ) : activeTab === 'systemUsers' ? (
@@ -1904,8 +2410,9 @@ export default function AdminDashboard() {
                 <p className="text-xl text-gray-500 mb-2" lang={language}>{t('admin.noSystemUsersFound')}</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
-                {systemUsers.map((systemUser: any) => (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
+                  {systemUsersPagination.paginatedItems.map((systemUser: any) => (
                   <div
                     key={systemUser.id}
                     className={`bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 h-full flex flex-col min-w-0 ${
@@ -1951,9 +2458,40 @@ export default function AdminDashboard() {
                     <p className="text-xs text-gray-400 mt-2 break-words min-w-0">
                       Created: {new Date(systemUser.createdAt).toLocaleDateString()}
                     </p>
+                    
+                    {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                      <div className="flex flex-col gap-2 mt-4">
+                        <button
+                          onClick={() => handleUpdateSystemUser(!systemUser.superAdmin)}
+                          disabled={isUpdatingSystemUser}
+                          className={`px-3 sm:px-4 py-2 rounded-lg font-semibold transition-colors text-sm sm:text-base ${
+                            systemUser.superAdmin
+                              ? 'bg-blue-500 text-white hover:bg-blue-600'
+                              : 'bg-purple-500 text-white hover:bg-purple-600'
+                          } disabled:opacity-50`}
+                          lang={language}
+                        >
+                          {systemUser.superAdmin ? '👨‍💼 Remove Super Admin' : '⭐ Make Super Admin'}
+                        </button>
+                        <button
+                          onClick={() => setEditingSystemUser(systemUser)}
+                          className="px-3 sm:px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold text-sm sm:text-base"
+                          lang={language}
+                        >
+                          🔑 Update Password
+                        </button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+              <PaginationControls
+                currentPage={systemUsersPage}
+                totalPages={systemUsersPagination.totalPages}
+                onPageChange={setSystemUsersPage}
+                totalItems={systemUsersPagination.totalItems}
+              />
+            </>
             )}
           </div>
         ) : (activeTab === 'pending' || activeTab === 'active' || activeTab === 'history') ? (
@@ -1961,6 +2499,68 @@ export default function AdminDashboard() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6" lang={language}>
               {activeTab === 'pending' ? t('admin.pendingApprovalRequests') : activeTab === 'active' ? t('admin.activeRequestsNeedDeployment') : t('admin.allRequests')}
             </h2>
+            
+            {/* Search, Sort, and Filter Bar for Requests */}
+            <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder={t('admin.searchRequestsPlaceholder') || 'Search requests...'}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    lang={language}
+                  >
+                    <option value="date" lang={language}>{t('admin.sortByDate')}</option>
+                    <option value="workType" lang={language}>{t('admin.sortByWorkType') || 'Work Type'}</option>
+                    <option value="status" lang={language}>{t('admin.sortByStatus')}</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
+                  <select
+                    value={sortOrder}
+                    onChange={(e) => setSortOrder(e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                    lang={language}
+                  >
+                    <option value="desc" lang={language}>{t('admin.newestFirst')}</option>
+                    <option value="asc" lang={language}>{t('admin.oldestFirst')}</option>
+                  </select>
+                </div>
+              </div>
+              {(user?.superAdmin === true || user?.superAdmin === 'true') && (
+                <div className="mt-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={activeTab === 'pending' ? pendingLocationFilter : activeLocationFilter}
+                      onChange={(e) => {
+                        if (activeTab === 'pending') {
+                          setPendingLocationFilter(e.target.checked)
+                        } else {
+                          setActiveLocationFilter(e.target.checked)
+                        }
+                      }}
+                      className="w-5 h-5 text-red-600 rounded focus:ring-red-500"
+                    />
+                    <span className="text-sm font-medium text-gray-700">
+                      📍 {t('admin.filterByMyLocation') || 'Filter by my location (within 20 km radius)'}
+                    </span>
+                  </label>
+                </div>
+              )}
+            </div>
             
             {isCurrentlyLoading ? (
               <div className="flex justify-center items-center py-20">
@@ -1977,8 +2577,11 @@ export default function AdminDashboard() {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
-                {displayedRequests.map((request) => (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 items-start overflow-x-hidden">
+                  {(activeTab === 'pending' ? pendingPagination.paginatedItems : 
+                    activeTab === 'active' ? activePagination.paginatedItems : 
+                    historyPagination.paginatedItems).map((request) => (
                   <div
                     key={request.id}
                     className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-red-500 h-full flex flex-col min-w-0"
@@ -2216,6 +2819,13 @@ export default function AdminDashboard() {
                   </div>
                 ))}
               </div>
+              <PaginationControls
+                currentPage={activeTab === 'pending' ? pendingPage : activeTab === 'active' ? activePage : historyPage}
+                totalPages={activeTab === 'pending' ? pendingPagination.totalPages : activeTab === 'active' ? activePagination.totalPages : historyPagination.totalPages}
+                onPageChange={activeTab === 'pending' ? setPendingPage : activeTab === 'active' ? setActivePage : setHistoryPage}
+                totalItems={activeTab === 'pending' ? pendingPagination.totalItems : activeTab === 'active' ? activePagination.totalItems : historyPagination.totalItems}
+              />
+            </>
             )}
           </div>
         ) : null}
@@ -2609,8 +3219,9 @@ export default function AdminDashboard() {
           ) : successStories.length === 0 ? (
             <div className="text-center py-8 text-gray-500" lang={language}>{t('admin.noSuccessStoriesYet')}</div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {successStories.map((story) => (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {successStoriesPagination.paginatedItems.map((story) => (
                 <div key={story.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
                   <div className="flex justify-between items-start mb-4">
                     <h3 className="text-lg font-bold text-gray-800">{story.title}</h3>
@@ -2670,8 +3281,15 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <PaginationControls
+                currentPage={successStoriesPage}
+                totalPages={successStoriesPagination.totalPages}
+                onPageChange={setSuccessStoriesPage}
+                totalItems={successStoriesPagination.totalItems}
+              />
+            </>
           )}
         </div>
       )}
@@ -2701,6 +3319,47 @@ export default function AdminDashboard() {
             >
               + {t('admin.createAdvertisement')}
             </button>
+          </div>
+          
+          {/* Search and Sort Bar for Advertisements */}
+          <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                <input
+                  type="text"
+                  value={advertisementsSearch}
+                  onChange={(e) => setAdvertisementsSearch(e.target.value)}
+                  placeholder={t('admin.searchAdvertisementsPlaceholder') || 'Search advertisements...'}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
+                <select
+                  value={advertisementsSortBy}
+                  onChange={(e) => setAdvertisementsSortBy(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  lang={language}
+                >
+                  <option value="date" lang={language}>{t('admin.sortByDate')}</option>
+                  <option value="title" lang={language}>{t('admin.sortByTitle') || 'Title'}</option>
+                  <option value="displayOrder" lang={language}>{t('admin.sortByDisplayOrder') || 'Display Order'}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
+                <select
+                  value={advertisementsSortOrder}
+                  onChange={(e) => setAdvertisementsSortOrder(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  lang={language}
+                >
+                  <option value="desc" lang={language}>{t('admin.newestFirst')}</option>
+                  <option value="asc" lang={language}>{t('admin.oldestFirst')}</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           {showAdForm && (
@@ -2845,8 +3504,9 @@ export default function AdminDashboard() {
           ) : advertisements.length === 0 ? (
             <div className="text-center py-8 text-gray-500" lang={language}>{t('admin.noAdvertisementsYet')}</div>
           ) : (
-            <div className="space-y-4">
-              {advertisements.map((ad) => (
+            <>
+              <div className="space-y-4">
+                {advertisementsPagination.paginatedItems.map((ad) => (
                 <div key={ad.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
                   <div className="flex justify-between items-start mb-4">
                     <div>
@@ -2905,8 +3565,15 @@ export default function AdminDashboard() {
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
+                ))}
+              </div>
+              <PaginationControls
+                currentPage={advertisementsPage}
+                totalPages={advertisementsPagination.totalPages}
+                onPageChange={setAdvertisementsPage}
+                totalItems={advertisementsPagination.totalItems}
+              />
+            </>
           )}
         </div>
       )}
@@ -2933,6 +3600,48 @@ export default function AdminDashboard() {
             >
               + {t('admin.addWorkerType')}
             </button>
+          </div>
+          
+          {/* Search and Sort Bar for Worker Types */}
+          <div className="bg-gray-50 rounded-xl shadow-md p-6 mb-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                <input
+                  type="text"
+                  value={workerTypesSearch}
+                  onChange={(e) => setWorkerTypesSearch(e.target.value)}
+                  placeholder={t('admin.searchWorkerTypesPlaceholder') || 'Search worker types...'}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.sortBy')}</label>
+                <select
+                  value={workerTypesSortBy}
+                  onChange={(e) => setWorkerTypesSortBy(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  lang={language}
+                >
+                  <option value="displayOrder" lang={language}>{t('admin.sortByDisplayOrder') || 'Display Order'}</option>
+                  <option value="name" lang={language}>{t('admin.sortByName')}</option>
+                  <option value="displayName" lang={language}>{t('admin.sortByDisplayName') || 'Display Name'}</option>
+                  <option value="isActive" lang={language}>{t('admin.sortByStatus')}</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>{t('admin.order')}</label>
+                <select
+                  value={workerTypesSortOrder}
+                  onChange={(e) => setWorkerTypesSortOrder(e.target.value)}
+                  className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  lang={language}
+                >
+                  <option value="asc" lang={language}>{t('admin.ascending') || 'Ascending'}</option>
+                  <option value="desc" lang={language}>{t('admin.descending') || 'Descending'}</option>
+                </select>
+              </div>
+            </div>
           </div>
 
           {showWorkerTypeForm && (
@@ -3044,13 +3753,14 @@ export default function AdminDashboard() {
               <p className="mt-4 text-gray-600">Loading worker types...</p>
             </div>
           ) : (
-            <div className="space-y-4">
-              {workerTypes.length === 0 ? (
-                <div className="text-center py-12 text-gray-500">
-                  <p lang={language}>{t('admin.noWorkerTypesFound')}</p>
-                </div>
-              ) : (
-                workerTypes.map((lt) => (
+            <>
+              <div className="space-y-4">
+                {workerTypes.length === 0 ? (
+                  <div className="text-center py-12 text-gray-500">
+                    <p lang={language}>{t('admin.noWorkerTypesFound')}</p>
+                  </div>
+                ) : (
+                  workerTypesPagination.paginatedItems.map((lt) => (
                   <div key={lt.id} className="bg-gray-50 rounded-xl p-6 border-2 border-gray-200">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
@@ -3107,9 +3817,16 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
+                  ))
+                )}
+              </div>
+              <PaginationControls
+                currentPage={workerTypesPage}
+                totalPages={workerTypesPagination.totalPages}
+                onPageChange={setWorkerTypesPage}
+                totalItems={workerTypesPagination.totalItems}
+              />
+            </>
           )}
         </div>
       )}
@@ -3211,6 +3928,147 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* Edit System User Modal */}
+      {editingSystemUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4" lang={language}>
+              Edit System User: {editingSystemUser.name}
+            </h2>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                  New Password (leave empty to keep current)
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                    placeholder="Enter new password (min 6 characters)"
+                    minLength={6}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="superAdminToggle"
+                  checked={editingSystemUser.superAdmin}
+                  onChange={(e) => setEditingSystemUser({ ...editingSystemUser, superAdmin: e.target.checked })}
+                  className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500"
+                />
+                <label htmlFor="superAdminToggle" className="text-sm font-medium text-gray-700" lang={language}>
+                  Super Admin
+                </label>
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={() => handleUpdateSystemUser(editingSystemUser.superAdmin, newPassword)}
+                disabled={isUpdatingSystemUser || (newPassword && newPassword.length < 6)}
+                className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                lang={language}
+              >
+                {isUpdatingSystemUser ? 'Updating...' : 'Update'}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingSystemUser(null)
+                  setNewPassword('')
+                  setShowNewPassword(false)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+                lang={language}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Update User Password Modal */}
+      {editingUserPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4" lang={language}>
+              Update Password: {editingUserPassword.name}
+            </h2>
+            <p className="text-sm text-gray-600 mb-4" lang={language}>
+              {editingUserPassword.email} ({editingUserPassword.role})
+            </p>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2" lang={language}>
+                  New Password <span className="text-red-500">*</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type={showNewPassword ? 'text' : 'password'}
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    className="w-full px-4 py-3 pr-12 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500 transition-all"
+                    placeholder="Enter new password (min 6 characters)"
+                    minLength={6}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  >
+                    {showNewPassword ? '👁️' : '👁️‍🗨️'}
+                  </button>
+                </div>
+                {newPassword && newPassword.length < 6 && (
+                  <p className="text-xs text-red-500 mt-1" lang={language}>
+                    Password must be at least 6 characters long
+                  </p>
+                )}
+              </div>
+            </div>
+            
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={handleUpdateUserPassword}
+                disabled={isUpdatingPassword || !newPassword || newPassword.length < 6}
+                className="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                lang={language}
+              >
+                {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+              </button>
+              <button
+                onClick={() => {
+                  setEditingUserPassword(null)
+                  setNewPassword('')
+                  setShowNewPassword(false)
+                }}
+                className="flex-1 px-4 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-semibold"
+                lang={language}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Chatbot */}
+      <Chatbot user={user} adminStats={adminStats} />
     </div>
   )
 }

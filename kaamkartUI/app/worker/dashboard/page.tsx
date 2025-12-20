@@ -120,6 +120,19 @@ export default function WorkerDashboard() {
   const [isSubmittingRating, setIsSubmittingRating] = useState(false)
   const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  // Search and sort state for worker dashboard
+  const [availableSearch, setAvailableSearch] = useState('')
+  const [availableSortBy, setAvailableSortBy] = useState('date')
+  const [availableSortOrder, setAvailableSortOrder] = useState('desc')
+  const [activeWorkSearch, setActiveWorkSearch] = useState('')
+  const [activeWorkSortBy, setActiveWorkSortBy] = useState('date')
+  const [activeWorkSortOrder, setActiveWorkSortOrder] = useState('desc')
+  const [historySearch, setHistorySearch] = useState('')
+  const [historySortBy, setHistorySortBy] = useState('date')
+  const [historySortOrder, setHistorySortOrder] = useState('desc')
+  const [concernsSearch, setConcernsSearch] = useState('')
+  const [concernsSortBy, setConcernsSortBy] = useState('date')
+  const [concernsSortOrder, setConcernsSortOrder] = useState('desc')
   const [profileData, setProfileData] = useState({
     name: '',
     email: '',
@@ -1246,15 +1259,89 @@ export default function WorkerDashboard() {
         ) : (
           <>
             {activeTab === 'concerns' && (
-              <div className="space-y-4 md:space-y-6">
-                {myConcerns.length === 0 ? (
-                  <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
-                    <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📢</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noConcernsYet')}</p>
-                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.raiseConcernHint')}</p>
+              <>
+                {/* Search and Sort for Concerns */}
+                <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                      <input
+                        type="text"
+                        value={concernsSearch}
+                        onChange={(e) => setConcernsSearch(e.target.value)}
+                        placeholder="Search by type, description, request..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                      <select
+                        value={concernsSortBy}
+                        onChange={(e) => setConcernsSortBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="type">Type</option>
+                        <option value="status">Status</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                      <select
+                        value={concernsSortOrder}
+                        onChange={(e) => setConcernsSortOrder(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
-                ) : (
-                  myConcerns.map((concern: any) => (
+                </div>
+                <div className="space-y-4 md:space-y-6">
+                  {(() => {
+                    // Filter and sort concerns
+                    let filtered = myConcerns.filter((concern: any) => {
+                      const searchLower = concernsSearch.toLowerCase()
+                      return !concernsSearch || 
+                        concern.type?.toLowerCase().includes(searchLower) ||
+                        concern.description?.toLowerCase().includes(searchLower) ||
+                        concern.request?.workType?.toLowerCase().includes(searchLower) ||
+                        concern.status?.toLowerCase().includes(searchLower)
+                    })
+                    
+                    filtered.sort((a: any, b: any) => {
+                      let aVal: any, bVal: any
+                      if (concernsSortBy === 'date') {
+                        aVal = new Date(a.createdAt || 0).getTime()
+                        bVal = new Date(b.createdAt || 0).getTime()
+                      } else if (concernsSortBy === 'type') {
+                        aVal = (a.type || '').toLowerCase()
+                        bVal = (b.type || '').toLowerCase()
+                      } else if (concernsSortBy === 'status') {
+                        aVal = (a.status || '').toLowerCase()
+                        bVal = (b.status || '').toLowerCase()
+                      } else {
+                        return 0
+                      }
+                      
+                      if (concernsSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                      } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                      }
+                    })
+                    
+                    return filtered.length === 0 ? (
+                      <div className="bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
+                        <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📢</div>
+                        <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>
+                          {concernsSearch ? 'No concerns match your search' : t('worker.noConcernsYet')}
+                        </p>
+                        <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.raiseConcernHint')}</p>
+                      </div>
+                    ) : (
+                      filtered.map((concern: any) => (
                     <div key={concern.id} className="bg-white rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 transform border-l-4 border-red-500">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                         <div className="flex-1 w-full">
@@ -1434,24 +1521,102 @@ export default function WorkerDashboard() {
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                      ))
+                    )
+                  })()}
+                </div>
+              </>
             )}
             {activeTab === 'activeWork' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
-                {isLoadingActiveWork ? (
-                  <div className="col-span-1 md:col-span-2 flex justify-center items-center py-20">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+              <>
+                {/* Search and Sort for Active Work */}
+                <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                      <input
+                        type="text"
+                        value={activeWorkSearch}
+                        onChange={(e) => setActiveWorkSearch(e.target.value)}
+                        placeholder="Search by work type, location, customer..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                      <select
+                        value={activeWorkSortBy}
+                        onChange={(e) => setActiveWorkSortBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="workType">Work Type</option>
+                        <option value="startDate">Start Date</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                      <select
+                        value={activeWorkSortOrder}
+                        onChange={(e) => setActiveWorkSortOrder(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
-                ) : activeWork.length === 0 ? (
-                  <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
-                    <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📍</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noActiveWork') || 'No active work assignments'}</p>
-                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.noActiveWorkHelp') || 'When you confirm a job, it will appear here with location and directions.'}</p>
-                  </div>
-                ) : (
-                  activeWork.map((work: any, index: number) => {
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                  {isLoadingActiveWork ? (
+                    <div className="col-span-1 md:col-span-2 flex justify-center items-center py-20">
+                      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600"></div>
+                    </div>
+                  ) : (() => {
+                    // Filter and sort active work
+                    let filtered = activeWork.filter((work: any) => {
+                      const searchLower = activeWorkSearch.toLowerCase()
+                      const workType = work.workType || work.request?.workType || ''
+                      const location = work.location?.address || work.request?.location?.address || ''
+                      const customer = work.customer?.name || work.request?.customer?.name || ''
+                      return !activeWorkSearch || 
+                        workType.toLowerCase().includes(searchLower) ||
+                        location.toLowerCase().includes(searchLower) ||
+                        customer.toLowerCase().includes(searchLower)
+                    })
+                    
+                    filtered.sort((a: any, b: any) => {
+                      let aVal: any, bVal: any
+                      if (activeWorkSortBy === 'date') {
+                        aVal = new Date(a.createdAt || a.deployedAt || a.startDate || 0).getTime()
+                        bVal = new Date(b.createdAt || b.deployedAt || b.startDate || 0).getTime()
+                      } else if (activeWorkSortBy === 'workType') {
+                        aVal = (a.workType || a.request?.workType || '').toLowerCase()
+                        bVal = (b.workType || b.request?.workType || '').toLowerCase()
+                      } else if (activeWorkSortBy === 'startDate') {
+                        aVal = new Date(a.startDate || a.request?.startDate || 0).getTime()
+                        bVal = new Date(b.startDate || b.request?.startDate || 0).getTime()
+                      } else {
+                        return 0
+                      }
+                      
+                      if (activeWorkSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                      } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                      }
+                    })
+                    
+                    return filtered.length === 0 ? (
+                      <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
+                        <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📍</div>
+                        <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>
+                          {activeWorkSearch ? 'No active work matches your search' : t('worker.noActiveWork') || 'No active work assignments'}
+                        </p>
+                        <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.noActiveWorkHelp') || 'When you confirm a job, it will appear here with location and directions.'}</p>
+                      </div>
+                    ) : (
+                      filtered.map((work: any, index: number) => {
                     const workLocation = work.location || work.request?.location
                     const customer = work.customer || work.request?.customer
                     const hasLocation = workLocation?.latitude && workLocation?.longitude
@@ -1587,20 +1752,100 @@ export default function WorkerDashboard() {
                         </div>
                       </div>
                     )
-                  })
-                )}
-              </div>
+                      })
+                    )
+                  })()}
+                </div>
+              </>
             )}
             {activeTab === 'history' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
-                {workHistory.length === 0 ? (
-                  <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
-                    <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📚</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">{t('worker.noWorkHistoryYet') || 'No work history yet'}</p>
-                    <p className="text-sm md:text-base text-gray-400">Complete some jobs to see your history here!</p>
+              <>
+                {/* Search and Sort for History */}
+                <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                      <input
+                        type="text"
+                        value={historySearch}
+                        onChange={(e) => setHistorySearch(e.target.value)}
+                        placeholder="Search by work type, location, customer..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                      <select
+                        value={historySortBy}
+                        onChange={(e) => setHistorySortBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="workType">Work Type</option>
+                        <option value="startDate">Start Date</option>
+                        <option value="status">Status</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                      <select
+                        value={historySortOrder}
+                        onChange={(e) => setHistorySortOrder(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
-                ) : (
-                  workHistory.map((work, index) => (
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                  {(() => {
+                    // Filter and sort work history
+                    let filtered = workHistory.filter((work: any) => {
+                      const searchLower = historySearch.toLowerCase()
+                      return !historySearch || 
+                        work.workType?.toLowerCase().includes(searchLower) ||
+                        work.location?.address?.toLowerCase().includes(searchLower) ||
+                        work.customer?.name?.toLowerCase().includes(searchLower) ||
+                        work.status?.toLowerCase().includes(searchLower)
+                    })
+                    
+                    filtered.sort((a: any, b: any) => {
+                      let aVal: any, bVal: any
+                      if (historySortBy === 'date') {
+                        aVal = new Date(a.completedAt || a.createdAt || a.startDate || 0).getTime()
+                        bVal = new Date(b.completedAt || b.createdAt || b.startDate || 0).getTime()
+                      } else if (historySortBy === 'workType') {
+                        aVal = (a.workType || '').toLowerCase()
+                        bVal = (b.workType || '').toLowerCase()
+                      } else if (historySortBy === 'startDate') {
+                        aVal = new Date(a.startDate || 0).getTime()
+                        bVal = new Date(b.startDate || 0).getTime()
+                      } else if (historySortBy === 'status') {
+                        aVal = (a.status || '').toLowerCase()
+                        bVal = (b.status || '').toLowerCase()
+                      } else {
+                        return 0
+                      }
+                      
+                      if (historySortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                      } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                      }
+                    })
+                    
+                    return filtered.length === 0 ? (
+                      <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
+                        <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📚</div>
+                        <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2">
+                          {historySearch ? 'No history matches your search' : t('worker.noWorkHistoryYet') || 'No work history yet'}
+                        </p>
+                        <p className="text-sm md:text-base text-gray-400">Complete some jobs to see your history here!</p>
+                      </div>
+                    ) : (
+                      filtered.map((work, index) => (
                     <div key={`${work.requestId}-${index}`} className="bg-white rounded-xl shadow-lg p-4 md:p-6 border-t-4 border-purple-500 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform">
                       <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                         <div className="flex-1 w-full">
@@ -1666,20 +1911,96 @@ export default function WorkerDashboard() {
                         </div>
                       )}
                     </div>
-                  ))
-                )}
-              </div>
+                      ))
+                    )
+                  })()}
+                </div>
+              </>
             )}
             {activeTab === 'available' && (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
-                {requests.length === 0 ? (
-                  <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
-                    <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📭</div>
-                    <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>{t('worker.noRequests')}</p>
-                    <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.available')}</p>
+              <>
+                {/* Search and Sort for Available Requests */}
+                <div className="bg-gray-50 rounded-xl shadow-md p-4 md:p-6 mb-4 md:mb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">🔍 Search</label>
+                      <input
+                        type="text"
+                        value={availableSearch}
+                        onChange={(e) => setAvailableSearch(e.target.value)}
+                        placeholder="Search by work type, location, customer..."
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Sort By</label>
+                      <select
+                        value={availableSortBy}
+                        onChange={(e) => setAvailableSortBy(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="date">Date</option>
+                        <option value="workType">Work Type</option>
+                        <option value="distance">Distance</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Order</label>
+                      <select
+                        value={availableSortOrder}
+                        onChange={(e) => setAvailableSortOrder(e.target.value)}
+                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                      >
+                        <option value="desc">Newest First</option>
+                        <option value="asc">Oldest First</option>
+                      </select>
+                    </div>
                   </div>
-                ) : (
-                  requests.map((request) => (
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4 md:gap-6">
+                  {(() => {
+                    // Filter and sort available requests
+                    let filtered = requests.filter((req: any) => {
+                      const searchLower = availableSearch.toLowerCase()
+                      return !availableSearch || 
+                        req.workType?.toLowerCase().includes(searchLower) ||
+                        req.location?.address?.toLowerCase().includes(searchLower) ||
+                        req.customer?.name?.toLowerCase().includes(searchLower) ||
+                        req.customer?.phone?.includes(searchLower)
+                    })
+                    
+                    filtered.sort((a: any, b: any) => {
+                      let aVal: any, bVal: any
+                      if (availableSortBy === 'date') {
+                        aVal = new Date(a.createdAt || a.startDate || 0).getTime()
+                        bVal = new Date(b.createdAt || b.startDate || 0).getTime()
+                      } else if (availableSortBy === 'workType') {
+                        aVal = (a.workType || '').toLowerCase()
+                        bVal = (b.workType || '').toLowerCase()
+                      } else if (availableSortBy === 'distance') {
+                        aVal = a.distance || 999999
+                        bVal = b.distance || 999999
+                      } else {
+                        return 0
+                      }
+                      
+                      if (availableSortOrder === 'asc') {
+                        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+                      } else {
+                        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+                      }
+                    })
+                    
+                    return filtered.length === 0 ? (
+                      <div className="col-span-1 md:col-span-2 bg-white rounded-xl shadow-lg p-6 md:p-8 lg:p-12 text-center border-2 border-dashed border-gray-300">
+                        <div className="text-4xl md:text-5xl lg:text-6xl mb-3 md:mb-4">📭</div>
+                        <p className="text-base md:text-lg lg:text-xl text-gray-500 mb-2" lang={language}>
+                          {availableSearch ? 'No requests match your search' : t('worker.noRequests')}
+                        </p>
+                        <p className="text-sm md:text-base text-gray-400" lang={language}>{t('worker.available')}</p>
+                      </div>
+                    ) : (
+                      filtered.map((request) => (
                       <div key={request.id} className="bg-white rounded-xl shadow-lg p-4 md:p-6 hover:shadow-2xl transition-all duration-300 hover:-translate-y-2 transform border-t-4 border-primary-500">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3 sm:gap-4 mb-3 md:mb-4">
                           <div className="flex-1 w-full">
@@ -1739,10 +2060,12 @@ export default function WorkerDashboard() {
                           <span>✓</span>
                           {t('worker.apply')}
                         </button>
-                      </div>
-                    ))
-                )}
-              </div>
+                    </div>
+                      ))
+                    )
+                  })()}
+                </div>
+              </>
             )}
           </>
         )}

@@ -50,33 +50,134 @@ public class AdminService {
     @Autowired
     private DeployedWorkerRepository deployedWorkerRepository;
 
+    @Autowired
+    private PinCodeGeocodingService pinCodeGeocodingService;
+
     private static final double EARTH_RADIUS_KM = 6371.0;
     private static final double ADMIN_RADIUS_KM = 20.0; // 20km radius for admin
     private static final double WORKER_NOTIFICATION_RADIUS_KM = 20.0; // 20km radius for worker notifications
 
-    public List<Request> getPendingApprovalRequests(Long adminId) {
+    public List<Request> getPendingApprovalRequests(Long adminId, String search, String sortBy, String sortOrder, Boolean locationFilter) {
         List<Request> requests = requestRepository.findByStatusOrderByCreatedAtDesc(Request.RequestStatus.PENDING_ADMIN_APPROVAL);
-        // Only filter by radius if admin is not a super admin
+        
+        // Apply location filter
+        boolean shouldFilterByLocation = false;
         if (adminId != null && !isSuperAdmin(adminId)) {
-            return filterByAdminRadius(requests, adminId);
+            // Normal admin: always filter by location
+            shouldFilterByLocation = true;
+        } else if (adminId != null && isSuperAdmin(adminId) && locationFilter != null && locationFilter) {
+            // Super admin: filter only if locationFilter is explicitly true
+            shouldFilterByLocation = true;
         }
+        
+        if (shouldFilterByLocation) {
+            requests = filterByAdminRadius(requests, adminId);
+        }
+        
+        // Apply search filter
+        if (search != null && !search.trim().isEmpty()) {
+            String searchLower = search.toLowerCase();
+            requests = requests.stream()
+                    .filter(request -> 
+                            request.getWorkType().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getName().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getEmail().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getPhone().toLowerCase().contains(searchLower) ||
+                            (request.getLocation() != null && request.getLocation().getAddress() != null && 
+                             request.getLocation().getAddress().toLowerCase().contains(searchLower)))
+                    .collect(Collectors.toList());
+        }
+        
+        // Apply sorting
+        if (sortBy != null && sortOrder != null) {
+            Comparator<Request> comparator = null;
+            switch (sortBy.toLowerCase()) {
+                case "date":
+                    comparator = Comparator.comparing(Request::getCreatedAt);
+                    break;
+                case "worktype":
+                    comparator = Comparator.comparing(Request::getWorkType);
+                    break;
+                case "status":
+                    comparator = Comparator.comparing(r -> r.getStatus().name());
+                    break;
+                default:
+                    comparator = Comparator.comparing(Request::getCreatedAt);
+            }
+            
+            if (sortOrder.equalsIgnoreCase("desc")) {
+                comparator = comparator.reversed();
+            }
+            requests = requests.stream().sorted(comparator).collect(Collectors.toList());
+        }
+        
         return requests;
     }
 
-    public List<Request> getActiveRequests(Long adminId) {
+    public List<Request> getActiveRequests(Long adminId, String search, String sortBy, String sortOrder, Boolean locationFilter) {
         List<Request.RequestStatus> activeStatuses = Arrays.asList(
                 Request.RequestStatus.NOTIFIED,
                 Request.RequestStatus.CONFIRMED
         );
         List<Request> requests = requestRepository.findByStatusIn(activeStatuses);
-        // Only filter by radius if admin is not a super admin
+        
+        // Apply location filter
+        boolean shouldFilterByLocation = false;
         if (adminId != null && !isSuperAdmin(adminId)) {
-            return filterByAdminRadius(requests, adminId);
+            // Normal admin: always filter by location
+            shouldFilterByLocation = true;
+        } else if (adminId != null && isSuperAdmin(adminId) && locationFilter != null && locationFilter) {
+            // Super admin: filter only if locationFilter is explicitly true
+            shouldFilterByLocation = true;
         }
-        // Sort by created date descending
-        return requests.stream()
-                .sorted(Comparator.comparing(Request::getCreatedAt).reversed())
-                .collect(Collectors.toList());
+        
+        if (shouldFilterByLocation) {
+            requests = filterByAdminRadius(requests, adminId);
+        }
+        
+        // Apply search filter
+        if (search != null && !search.trim().isEmpty()) {
+            String searchLower = search.toLowerCase();
+            requests = requests.stream()
+                    .filter(request -> 
+                            request.getWorkType().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getName().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getEmail().toLowerCase().contains(searchLower) ||
+                            request.getCustomer().getPhone().toLowerCase().contains(searchLower) ||
+                            (request.getLocation() != null && request.getLocation().getAddress() != null && 
+                             request.getLocation().getAddress().toLowerCase().contains(searchLower)))
+                    .collect(Collectors.toList());
+        }
+        
+        // Apply sorting
+        if (sortBy != null && sortOrder != null) {
+            Comparator<Request> comparator = null;
+            switch (sortBy.toLowerCase()) {
+                case "date":
+                    comparator = Comparator.comparing(Request::getCreatedAt);
+                    break;
+                case "worktype":
+                    comparator = Comparator.comparing(Request::getWorkType);
+                    break;
+                case "status":
+                    comparator = Comparator.comparing(r -> r.getStatus().name());
+                    break;
+                default:
+                    comparator = Comparator.comparing(Request::getCreatedAt);
+            }
+            
+            if (sortOrder.equalsIgnoreCase("desc")) {
+                comparator = comparator.reversed();
+            }
+            requests = requests.stream().sorted(comparator).collect(Collectors.toList());
+        } else {
+            // Default sort by created date descending
+            requests = requests.stream()
+                    .sorted(Comparator.comparing(Request::getCreatedAt).reversed())
+                    .collect(Collectors.toList());
+        }
+        
+        return requests;
     }
 
     public List<Request> getAllRequests(String search, String sortBy, String sortOrder, Long adminId) {
@@ -160,12 +261,36 @@ public class AdminService {
         // CRITICAL: Only include workers within 20km radius of the request location
         final Request finalRequest = savedRequest;
         
-        // Validate request location first
+        // Validate request location first - try to geocode if missing lat/long but has pin code
         if (finalRequest.getLocation() == null || finalRequest.getLocation().getLatitude() == null || finalRequest.getLocation().getLongitude() == null) {
-            logger.error("❌ CRITICAL: Request {} has no valid location (lat/long). Cannot calculate distances. Skipping worker notifications.", 
-                    finalRequest.getId());
-            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
-            return requestRepository.save(savedRequest);
+            // Try to geocode from pin code if available
+            String pinCode = extractPinCode(finalRequest.getLocation());
+            if (pinCode != null && pinCode.matches("\\d{6}")) {
+                logger.info("📍 Request {} has no lat/long but has pin code {}. Attempting geocoding...", 
+                        finalRequest.getId(), pinCode);
+                Location geocodedLocation = pinCodeGeocodingService.getLocationFromPinCode(pinCode);
+                if (geocodedLocation != null && geocodedLocation.getLatitude() != null && geocodedLocation.getLongitude() != null) {
+                    // Update request location with geocoded coordinates
+                    finalRequest.getLocation().setLatitude(geocodedLocation.getLatitude());
+                    finalRequest.getLocation().setLongitude(geocodedLocation.getLongitude());
+                    if (geocodedLocation.getAddress() != null && !geocodedLocation.getAddress().startsWith("Pin Code:")) {
+                        finalRequest.getLocation().setAddress(geocodedLocation.getAddress());
+                    }
+                    savedRequest = requestRepository.save(finalRequest);
+                    logger.info("✅ Successfully geocoded request {} pin code {}: lat={}, lon={}", 
+                            finalRequest.getId(), pinCode, geocodedLocation.getLatitude(), geocodedLocation.getLongitude());
+                } else {
+                    logger.error("❌ CRITICAL: Request {} has no valid location (lat/long) and geocoding failed for pin code {}. Cannot calculate distances. Skipping worker notifications.", 
+                            finalRequest.getId(), pinCode);
+                    savedRequest.setStatus(Request.RequestStatus.NOTIFIED);
+                    return requestRepository.save(savedRequest);
+                }
+            } else {
+                logger.error("❌ CRITICAL: Request {} has no valid location (lat/long) and no valid pin code. Cannot calculate distances. Skipping worker notifications.", 
+                        finalRequest.getId());
+                savedRequest.setStatus(Request.RequestStatus.NOTIFIED);
+                return requestRepository.save(savedRequest);
+            }
         }
         
         double requestLat = finalRequest.getLocation().getLatitude();
@@ -175,14 +300,16 @@ public class AdminService {
         if (requestLat == 0.0 && requestLon == 0.0) {
             logger.error("❌ CRITICAL: Request {} has invalid location (0,0). Cannot calculate distances. Skipping worker notifications.", 
                     finalRequest.getId());
-            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
+            // Set status to NOTIFIED even if no workers can be notified (request is approved and ready)
+            savedRequest.setStatus(Request.RequestStatus.NOTIFIED);
             return requestRepository.save(savedRequest);
         }
         
         if (Math.abs(requestLat) > 90 || Math.abs(requestLon) > 180) {
             logger.error("❌ CRITICAL: Request {} has invalid coordinates (lat: {}, lon: {}). Cannot calculate distances. Skipping worker notifications.", 
                     finalRequest.getId(), requestLat, requestLon);
-            savedRequest.setStatus(Request.RequestStatus.ADMIN_APPROVED);
+            // Set status to NOTIFIED even if no workers can be notified (request is approved and ready)
+            savedRequest.setStatus(Request.RequestStatus.NOTIFIED);
             return requestRepository.save(savedRequest);
         }
         
@@ -810,6 +937,123 @@ public class AdminService {
         return EARTH_RADIUS_KM * c;
     }
 
+    /**
+     * Extract pin code from location address
+     * Address format: "Pin Code: XXXXXX" or contains 6-digit pin code
+     */
+    private String extractPinCode(Location location) {
+        if (location == null || location.getAddress() == null) {
+            return null;
+        }
+        String address = location.getAddress();
+        
+        // Check for "Pin Code: XXXXXX" format
+        if (address.contains("Pin Code:")) {
+            String pinCode = address.substring(address.indexOf("Pin Code:") + 9).trim();
+            // Extract all digits
+            String digitsOnly = pinCode.replaceAll("\\D", "");
+            // Take first 6 digits if available
+            if (digitsOnly.length() >= 6) {
+                return digitsOnly.substring(0, 6);
+            } else if (digitsOnly.length() > 0) {
+                // If less than 6 digits, pad with zeros or return null
+                logger.debug("Pin code found but has less than 6 digits: {}", digitsOnly);
+                return null;
+            }
+        }
+        
+        // Try to find 6-digit pin code in address using regex
+        java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\b\\d{6}\\b");
+        java.util.regex.Matcher matcher = pattern.matcher(address);
+        if (matcher.find()) {
+            return matcher.group();
+        }
+        
+        return null;
+    }
+
+    /**
+     * Get admin pin code from admin location
+     */
+    private String getAdminPinCode(Long adminId) {
+        Location adminLocation = null;
+        
+        // Check if it's a system user (negative ID) or regular user
+        if (adminId < 0) {
+            // System user
+            Long systemUserId = Math.abs(adminId);
+            SystemUser systemUser = systemUserRepository.findById(systemUserId)
+                    .orElse(null);
+            if (systemUser != null) {
+                adminLocation = systemUser.getLocation();
+            }
+        } else {
+            // Regular user (legacy admin)
+            User admin = userRepository.findById(adminId)
+                    .orElse(null);
+            if (admin != null) {
+                adminLocation = admin.getLocation();
+            }
+        }
+        
+        if (adminLocation != null) {
+            return extractPinCode(adminLocation);
+        }
+        
+        return null;
+    }
+
+    /**
+     * Calculate approximate distance between two pin codes based on pin code hierarchy
+     * In India, pin codes are hierarchical:
+     * - First digit: Region (1-9)
+     * - Next 2 digits: Sub-region
+     * - Last 3 digits: Specific area
+     * 
+     * Same first 3 digits = same region (typically within 20-50km)
+     * Same first digit = same state/region (can be 100-500km)
+     * Different first digit = different region (500km+)
+     */
+    private boolean isPinCodeWithinRadius(String adminPinCode, String targetPinCode, double radiusKm) {
+        if (adminPinCode == null || targetPinCode == null || 
+            adminPinCode.length() != 6 || targetPinCode.length() != 6) {
+            return false;
+        }
+        
+        // If pin codes are exactly the same, they're in the same area (within radius)
+        if (adminPinCode.equals(targetPinCode)) {
+            return true;
+        }
+        
+        // Extract first 3 digits (region code)
+        String adminRegion = adminPinCode.substring(0, 3);
+        String targetRegion = targetPinCode.substring(0, 3);
+        
+        // If same region (first 3 digits), likely within 20-50km
+        if (adminRegion.equals(targetRegion)) {
+            return true; // Same region, likely within radius
+        }
+        
+        // Extract first digit (state/zone)
+        String adminZone = adminPinCode.substring(0, 1);
+        String targetZone = targetPinCode.substring(0, 1);
+        
+        // If different zones, definitely outside 20km radius
+        if (!adminZone.equals(targetZone)) {
+            return false;
+        }
+        
+        // Same zone but different region - calculate numeric difference
+        int adminRegionNum = Integer.parseInt(adminRegion);
+        int targetRegionNum = Integer.parseInt(targetRegion);
+        int regionDiff = Math.abs(adminRegionNum - targetRegionNum);
+        
+        // If region difference is small (1-2), might be within 20km
+        // If region difference is large, definitely outside 20km
+        // This is approximate - for accurate filtering, lat/long is preferred
+        return regionDiff <= 2;
+    }
+
     private static class WorkerDistance {
         private final Worker worker;
         private final double distance;
@@ -830,10 +1074,26 @@ public class AdminService {
 
     @Transactional
     public Object createUser(Long creatingAdminId, String name, String email, String phone, String secondaryPhone, String password, User.UserRole role, LocationDto location, List<String> workerTypes, Boolean isSuperAdmin) {
-        // Check if email already exists in either table
-        if (userRepository.existsByEmail(email) || systemUserRepository.existsByEmail(email)) {
+        // Normalize email to lowercase
+        String emailLower = email.trim().toLowerCase();
+        
+        // Check if email already exists in either table (case-insensitive)
+        if (userRepository.existsByEmail(emailLower) || systemUserRepository.existsByEmailIgnoreCase(emailLower)) {
             throw new RuntimeException("User with this email already exists");
         }
+        
+        // Validate pin code is provided
+        if (location == null || location.getPinCode() == null || location.getPinCode().trim().isEmpty()) {
+            throw new RuntimeException("Pin Code is required");
+        }
+        
+        // Validate pin code format (6 digits)
+        if (!location.getPinCode().matches("^\\d{6}$")) {
+            throw new RuntimeException("Pin Code must be exactly 6 digits");
+        }
+        
+        logger.info("🔍 Creating user with pin code: {}, location object: lat={}, lon={}, address={}", 
+                location.getPinCode(), location.getLatitude(), location.getLongitude(), location.getAddress());
 
         // If creating admin user, create in SystemUser table
         if (role == User.UserRole.ADMIN) {
@@ -844,25 +1104,63 @@ public class AdminService {
 
             SystemUser systemUser = new SystemUser();
             systemUser.setName(name);
-            systemUser.setEmail(email);
+            // Store email in lowercase to match login query (case-insensitive)
+            systemUser.setEmail(emailLower);
             systemUser.setPhone(phone);
             systemUser.setSecondaryPhone(secondaryPhone);
             systemUser.setPassword(passwordEncoder.encode(password));
             systemUser.setSuperAdmin(isSuperAdmin != null ? isSuperAdmin : false);
             systemUser.setBlocked(false);
 
-            // Location will be automatically detected during first login via IP geolocation
-            // If location is explicitly provided during creation, use it
-            if (location != null && (location.getLatitude() != null || location.getAddress() != null)) {
+            // Always geocode pin code to get lat/long if pin code is provided
+            if (location != null && location.getPinCode() != null && !location.getPinCode().trim().isEmpty()) {
                 Location loc = new Location();
-                loc.setLatitude(location.getLatitude());
-                loc.setLongitude(location.getLongitude());
-                loc.setAddress(location.getAddress());
+                
+                // Always try to geocode the pin code to get coordinates
+                logger.info("📍 Geocoding pin code for admin: {}", location.getPinCode());
+                Location geocodedLocation = pinCodeGeocodingService.getLocationFromPinCode(location.getPinCode());
+                
+                if (geocodedLocation != null) {
+                    // Use geocoded coordinates (prefer geocoded over provided)
+                    if (geocodedLocation.getLatitude() != null && geocodedLocation.getLongitude() != null) {
+                        loc.setLatitude(geocodedLocation.getLatitude());
+                        loc.setLongitude(geocodedLocation.getLongitude());
+                        logger.info("✅ Geocoded admin pin code {}: lat={}, lon={}", 
+                                location.getPinCode(), geocodedLocation.getLatitude(), geocodedLocation.getLongitude());
+                    } else if (location.getLatitude() != null && location.getLongitude() != null) {
+                        // Fallback to provided coordinates if geocoding didn't return them
+                        loc.setLatitude(location.getLatitude());
+                        loc.setLongitude(location.getLongitude());
+                        logger.info("📍 Using provided coordinates for admin: lat={}, lon={}", 
+                                location.getLatitude(), location.getLongitude());
+                    }
+                    
+                    // Use geocoded address if it's better than what was provided
+                    if (geocodedLocation.getAddress() != null && !geocodedLocation.getAddress().startsWith("Pin Code:")) {
+                        loc.setAddress(geocodedLocation.getAddress());
+                    } else if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                        loc.setAddress(location.getAddress());
+                    } else {
+                        loc.setAddress(geocodedLocation.getAddress() != null ? geocodedLocation.getAddress() : "Pin Code: " + location.getPinCode());
+                    }
+                } else {
+                    // Geocoding failed, use provided data or pin code
+                    logger.warn("⚠️ Failed to geocode pin code {} for admin, using provided data or pin code only", location.getPinCode());
+                    loc.setLatitude(location.getLatitude());
+                    loc.setLongitude(location.getLongitude());
+                    if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                        loc.setAddress(location.getAddress());
+                    } else {
+                        loc.setAddress("Pin Code: " + location.getPinCode());
+                    }
+                }
+                
                 loc.setLandmark(location.getLandmark());
                 systemUser.setLocation(loc);
-                logger.info("📍 Admin location set during creation: {}", loc.getAddress());
+                logger.info("📍 Admin location set during creation: Address: {}, Pin Code: {}, Lat: {}, Lon: {}", 
+                        loc.getAddress(), location.getPinCode(), loc.getLatitude(), loc.getLongitude());
             } else {
-                logger.info("📍 Admin location will be auto-detected during first login");
+                logger.warn("⚠️ No pin code provided for admin, location will be auto-detected during first login");
             }
 
             return systemUserRepository.save(systemUser);
@@ -877,12 +1175,54 @@ public class AdminService {
         user.setPassword(passwordEncoder.encode(password));
         user.setRole(role);
 
-        if (location != null) {
+        // Always geocode pin code to get lat/long if pin code is provided
+        if (location != null && location.getPinCode() != null && !location.getPinCode().trim().isEmpty()) {
             Location loc = new Location();
-            loc.setLatitude(location.getLatitude());
-            loc.setLongitude(location.getLongitude());
-            loc.setAddress(location.getAddress());
+            
+            // Always try to geocode the pin code to get coordinates
+            logger.info("📍 Geocoding pin code for user: {}", location.getPinCode());
+            Location geocodedLocation = pinCodeGeocodingService.getLocationFromPinCode(location.getPinCode());
+            
+            if (geocodedLocation != null) {
+                // Use geocoded coordinates (prefer geocoded over provided)
+                if (geocodedLocation.getLatitude() != null && geocodedLocation.getLongitude() != null) {
+                    loc.setLatitude(geocodedLocation.getLatitude());
+                    loc.setLongitude(geocodedLocation.getLongitude());
+                    logger.info("✅ Geocoded user pin code {}: lat={}, lon={}", 
+                            location.getPinCode(), geocodedLocation.getLatitude(), geocodedLocation.getLongitude());
+                } else if (location.getLatitude() != null && location.getLongitude() != null) {
+                    // Fallback to provided coordinates if geocoding didn't return them
+                    loc.setLatitude(location.getLatitude());
+                    loc.setLongitude(location.getLongitude());
+                    logger.info("📍 Using provided coordinates for user: lat={}, lon={}", 
+                            location.getLatitude(), location.getLongitude());
+                }
+                
+                // Use geocoded address if it's better than what was provided
+                if (geocodedLocation.getAddress() != null && !geocodedLocation.getAddress().startsWith("Pin Code:")) {
+                    loc.setAddress(geocodedLocation.getAddress());
+                } else if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                    loc.setAddress(location.getAddress());
+                } else {
+                    loc.setAddress(geocodedLocation.getAddress() != null ? geocodedLocation.getAddress() : "Pin Code: " + location.getPinCode());
+                }
+            } else {
+                // Geocoding failed, use provided data or pin code
+                logger.warn("⚠️ Failed to geocode pin code {} for user, using provided data or pin code only", location.getPinCode());
+                loc.setLatitude(location.getLatitude());
+                loc.setLongitude(location.getLongitude());
+                if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                    loc.setAddress(location.getAddress());
+                } else {
+                    loc.setAddress("Pin Code: " + location.getPinCode());
+                }
+            }
+            
             user.setLocation(loc);
+            logger.info("📍 User location set during creation: Address: {}, Pin Code: {}, Lat: {}, Lon: {}", 
+                    loc.getAddress(), location.getPinCode(), loc.getLatitude(), loc.getLongitude());
+        } else {
+            logger.warn("⚠️ No pin code provided for user, location not set");
         }
 
         user = userRepository.save(user);
@@ -896,12 +1236,54 @@ public class AdminService {
             worker.setVerified(false);
             worker.setAvailable(false);
             // Note: Aadhaar number can be added later via profile update
-            if (location != null) {
+            // Always geocode pin code to get lat/long if pin code is provided
+            if (location != null && location.getPinCode() != null && !location.getPinCode().trim().isEmpty()) {
                 Location currentLocation = new Location();
-                currentLocation.setLatitude(location.getLatitude());
-                currentLocation.setLongitude(location.getLongitude());
-                currentLocation.setAddress(location.getAddress());
+                
+                // Always try to geocode the pin code to get coordinates
+                logger.info("📍 Geocoding pin code for worker current location: {}", location.getPinCode());
+                Location geocodedLocation = pinCodeGeocodingService.getLocationFromPinCode(location.getPinCode());
+                
+                if (geocodedLocation != null) {
+                    // Use geocoded coordinates (prefer geocoded over provided)
+                    if (geocodedLocation.getLatitude() != null && geocodedLocation.getLongitude() != null) {
+                        currentLocation.setLatitude(geocodedLocation.getLatitude());
+                        currentLocation.setLongitude(geocodedLocation.getLongitude());
+                        logger.info("✅ Geocoded worker pin code {}: lat={}, lon={}", 
+                                location.getPinCode(), geocodedLocation.getLatitude(), geocodedLocation.getLongitude());
+                    } else if (location.getLatitude() != null && location.getLongitude() != null) {
+                        // Fallback to provided coordinates if geocoding didn't return them
+                        currentLocation.setLatitude(location.getLatitude());
+                        currentLocation.setLongitude(location.getLongitude());
+                        logger.info("📍 Using provided coordinates for worker: lat={}, lon={}", 
+                                location.getLatitude(), location.getLongitude());
+                    }
+                    
+                    // Use geocoded address if it's better than what was provided
+                    if (geocodedLocation.getAddress() != null && !geocodedLocation.getAddress().startsWith("Pin Code:")) {
+                        currentLocation.setAddress(geocodedLocation.getAddress());
+                    } else if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                        currentLocation.setAddress(location.getAddress());
+                    } else {
+                        currentLocation.setAddress(geocodedLocation.getAddress() != null ? geocodedLocation.getAddress() : "Pin Code: " + location.getPinCode());
+                    }
+                } else {
+                    // Geocoding failed, use provided data or pin code
+                    logger.warn("⚠️ Failed to geocode pin code {} for worker, using provided data or pin code only", location.getPinCode());
+                    currentLocation.setLatitude(location.getLatitude());
+                    currentLocation.setLongitude(location.getLongitude());
+                    if (location.getAddress() != null && !location.getAddress().isEmpty()) {
+                        currentLocation.setAddress(location.getAddress());
+                    } else {
+                        currentLocation.setAddress("Pin Code: " + location.getPinCode());
+                    }
+                }
+                
                 worker.setCurrentLocation(currentLocation);
+                logger.info("📍 Worker current location set during creation: Address: {}, Pin Code: {}, Lat: {}, Lon: {}", 
+                        currentLocation.getAddress(), location.getPinCode(), currentLocation.getLatitude(), currentLocation.getLongitude());
+            } else {
+                logger.warn("⚠️ No pin code provided for worker current location");
             }
             workerRepository.save(worker);
         }
@@ -920,6 +1302,66 @@ public class AdminService {
         
         admin.setPassword(passwordEncoder.encode(newPassword));
         return userRepository.save(admin);
+    }
+
+    /**
+     * Update system user (admin) - super admin status and/or password
+     * Only super admin can perform this operation
+     */
+    @Transactional
+    public SystemUser updateSystemUser(Long updatingAdminId, Long systemUserId, Boolean superAdmin, String newPassword) {
+        // Check if updating admin is super admin
+        if (!isSuperAdmin(updatingAdminId)) {
+            throw new RuntimeException("Only super admin can update system users");
+        }
+        
+        SystemUser systemUser = systemUserRepository.findById(systemUserId)
+                .orElseThrow(() -> new RuntimeException("System user not found"));
+        
+        // Update super admin status if provided
+        if (superAdmin != null) {
+            systemUser.setSuperAdmin(superAdmin);
+            logger.info("Updated system user {} super admin status to: {}", systemUser.getEmail(), superAdmin);
+        }
+        
+        // Update password if provided
+        if (newPassword != null && !newPassword.trim().isEmpty()) {
+            if (newPassword.length() < 6) {
+                throw new RuntimeException("Password must be at least 6 characters long");
+            }
+            systemUser.setPassword(passwordEncoder.encode(newPassword));
+            logger.info("Updated password for system user: {}", systemUser.getEmail());
+        }
+        
+        return systemUserRepository.save(systemUser);
+    }
+
+    /**
+     * Update customer or worker password
+     * Only super admin can perform this operation
+     */
+    @Transactional
+    public User updateUserPassword(Long updatingAdminId, Long userId, String newPassword) {
+        // Check if updating admin is super admin
+        if (!isSuperAdmin(updatingAdminId)) {
+            throw new RuntimeException("Only super admin can update user passwords");
+        }
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new RuntimeException("Password cannot be empty");
+        }
+        
+        if (newPassword.length() < 6) {
+            throw new RuntimeException("Password must be at least 6 characters long");
+        }
+        
+        user.setPassword(passwordEncoder.encode(newPassword));
+        logger.info("Updated password for user: {} (Role: {})", user.getEmail(), user.getRole());
+        
+        return userRepository.save(user);
     }
 
     public List<Map<String, Object>> getAllWorkers(Long adminId, String search, String sortBy, String sortOrder, Boolean locationFilter) {
@@ -1165,25 +1607,55 @@ public class AdminService {
         }
         
         // If admin has no location, return empty list (can't filter without location)
-        if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
+        if (adminLocation == null) {
             logger.warn("Admin {} has no location, returning empty request list", adminId);
             return new ArrayList<>();
         }
         
-        double adminLat = adminLocation.getLatitude();
-        double adminLon = adminLocation.getLongitude();
+        // Get admin pin code for fallback filtering
+        String adminPinCode = extractPinCode(adminLocation);
+        boolean hasAdminPinCode = adminPinCode != null && adminPinCode.length() == 6;
+        
+        // Try to use lat/long if available (more accurate)
+        boolean useLatLong = adminLocation.getLatitude() != null && adminLocation.getLongitude() != null;
+        double adminLat = useLatLong ? adminLocation.getLatitude() : 0.0;
+        double adminLon = useLatLong ? adminLocation.getLongitude() : 0.0;
+        
+        if (!useLatLong && !hasAdminPinCode) {
+            logger.warn("Admin {} has no location coordinates or pin code, returning empty request list", adminId);
+            return new ArrayList<>();
+        }
+        
+        final String finalAdminPinCode = adminPinCode;
+        final boolean finalUseLatLong = useLatLong;
+        final boolean finalHasAdminPinCode = hasAdminPinCode;
         
         return requests.stream()
                 .filter(request -> {
-                    if (request.getLocation() == null || request.getLocation().getLatitude() == null || request.getLocation().getLongitude() == null) {
+                    if (request.getLocation() == null) {
                         return false;
                     }
-                    double distance = calculateDistance(
-                            adminLat, adminLon,
-                            request.getLocation().getLatitude(),
-                            request.getLocation().getLongitude()
-                    );
-                    return distance <= ADMIN_RADIUS_KM;
+                    
+                    // Try lat/long first if available
+                    if (finalUseLatLong && request.getLocation().getLatitude() != null && 
+                        request.getLocation().getLongitude() != null) {
+                        double distance = calculateDistance(
+                                adminLat, adminLon,
+                                request.getLocation().getLatitude(),
+                                request.getLocation().getLongitude()
+                        );
+                        return distance <= ADMIN_RADIUS_KM;
+                    }
+                    
+                    // Fallback to pin code matching
+                    if (finalHasAdminPinCode) {
+                        String requestPinCode = extractPinCode(request.getLocation());
+                        if (requestPinCode != null && requestPinCode.length() == 6) {
+                            return isPinCodeWithinRadius(finalAdminPinCode, requestPinCode, ADMIN_RADIUS_KM);
+                        }
+                    }
+                    
+                    return false;
                 })
                 .collect(Collectors.toList());
     }
@@ -1207,47 +1679,96 @@ public class AdminService {
         }
         
         // If admin has no location, return empty list (can't filter without location)
-        if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
+        if (adminLocation == null) {
             logger.warn("Admin {} has no location, returning empty worker list", adminId);
             return new ArrayList<>();
         }
         
-        double adminLat = adminLocation.getLatitude();
-        double adminLon = adminLocation.getLongitude();
+        // Get admin pin code for fallback filtering
+        String adminPinCode = extractPinCode(adminLocation);
+        boolean hasAdminPinCode = adminPinCode != null && adminPinCode.length() == 6;
+        logger.info("Admin {} location check - Pin Code: {}, Has Pin Code: {}, Address: {}", 
+                adminId, adminPinCode, hasAdminPinCode, 
+                adminLocation.getAddress() != null ? adminLocation.getAddress() : "null");
+        
+        // Try to use lat/long if available (more accurate)
+        boolean useLatLong = adminLocation.getLatitude() != null && adminLocation.getLongitude() != null;
+        double adminLat = useLatLong ? adminLocation.getLatitude() : 0.0;
+        double adminLon = useLatLong ? adminLocation.getLongitude() : 0.0;
+        logger.info("Admin {} location check - Use Lat/Long: {}, Lat: {}, Lon: {}", 
+                adminId, useLatLong, adminLat, adminLon);
+        
+        if (!useLatLong && !hasAdminPinCode) {
+            logger.warn("Admin {} has no location coordinates or pin code, returning empty worker list. Address: {}", 
+                    adminId, adminLocation.getAddress() != null ? adminLocation.getAddress() : "null");
+            return new ArrayList<>();
+        }
+        
+        final String finalAdminPinCode = adminPinCode;
+        final boolean finalUseLatLong = useLatLong;
+        final boolean finalHasAdminPinCode = hasAdminPinCode;
         
         return workers.stream()
                 .filter(worker -> {
-                    if (worker.getCurrentLocation() == null || worker.getCurrentLocation().getLatitude() == null || worker.getCurrentLocation().getLongitude() == null) {
+                    if (worker.getCurrentLocation() == null) {
                         return false;
                     }
-                    double distance = calculateDistance(
-                            adminLat, adminLon,
-                            worker.getCurrentLocation().getLatitude(),
-                            worker.getCurrentLocation().getLongitude()
-                    );
-                    // Validate distance calculation
-                    if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
-                        logger.warn("Invalid distance calculated for worker {} (ID: {}) - excluding", 
-                                worker.getUser().getName(), worker.getUser().getId());
-                        return false;
+                    
+                    // Try lat/long first if available
+                    if (finalUseLatLong && worker.getCurrentLocation().getLatitude() != null && 
+                        worker.getCurrentLocation().getLongitude() != null) {
+                        double distance = calculateDistance(
+                                adminLat, adminLon,
+                                worker.getCurrentLocation().getLatitude(),
+                                worker.getCurrentLocation().getLongitude()
+                        );
+                        // Validate distance calculation
+                        if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
+                            logger.warn("Invalid distance calculated for worker {} (ID: {}) - excluding", 
+                                    worker.getUser().getName(), worker.getUser().getId());
+                            return false;
+                        }
+                        // Strict check: worker must be within 20km radius
+                        // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
+                        boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
+                        if (!withinRadius) {
+                            logger.debug("Worker {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
+                                    worker.getUser().getName(), worker.getUser().getId(),
+                                    String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                            return false; // Explicitly return false
+                        }
+                        // Double-check: if distance exceeds limit, block it
+                        if (distance > ADMIN_RADIUS_KM) {
+                            logger.warn("Worker {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
+                                    worker.getUser().getName(), worker.getUser().getId(),
+                                    String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                            return false; // Block if somehow exceeded
+                        }
+                        return true;
                     }
-                    // Strict check: worker must be within 20km radius
-                    // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
-                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
-                    if (!withinRadius) {
-                        logger.debug("Worker {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
-                                worker.getUser().getName(), worker.getUser().getId(),
-                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
-                        return false; // Explicitly return false
+                    
+                    // Fallback to pin code matching
+                    if (finalHasAdminPinCode) {
+                        String workerPinCode = extractPinCode(worker.getCurrentLocation());
+                        logger.debug("Worker {} (ID: {}) - Pin Code: {}, Address: {}", 
+                                worker.getUser().getName(), worker.getUser().getId(), 
+                                workerPinCode, 
+                                worker.getCurrentLocation().getAddress() != null ? worker.getCurrentLocation().getAddress() : "null");
+                        if (workerPinCode != null && workerPinCode.length() == 6) {
+                            boolean withinRadius = isPinCodeWithinRadius(finalAdminPinCode, workerPinCode, ADMIN_RADIUS_KM);
+                            logger.debug("Worker {} (ID: {}) - Admin Pin: {}, Worker Pin: {}, Within Radius: {}", 
+                                    worker.getUser().getName(), worker.getUser().getId(), 
+                                    finalAdminPinCode, workerPinCode, withinRadius);
+                            return withinRadius;
+                        } else {
+                            logger.debug("Worker {} (ID: {}) excluded - no valid pin code extracted", 
+                                    worker.getUser().getName(), worker.getUser().getId());
+                        }
                     }
-                    // Double-check: if distance exceeds limit, block it
-                    if (distance > ADMIN_RADIUS_KM) {
-                        logger.warn("Worker {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
-                                worker.getUser().getName(), worker.getUser().getId(),
-                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
-                        return false; // Block if somehow exceeded
-                    }
-                    return true;
+                    
+                    logger.debug("Worker {} (ID: {}) excluded - no location data available for filtering", 
+                            worker.getUser().getName(), worker.getUser().getId());
+                    return false;
                 })
                 .collect(Collectors.toList());
     }
@@ -1271,47 +1792,89 @@ public class AdminService {
         }
         
         // If admin has no location, return empty list (can't filter without location)
-        if (adminLocation == null || adminLocation.getLatitude() == null || adminLocation.getLongitude() == null) {
+        if (adminLocation == null) {
             logger.warn("Admin {} has no location, returning empty customer list", adminId);
             return new ArrayList<>();
         }
         
-        double adminLat = adminLocation.getLatitude();
-        double adminLon = adminLocation.getLongitude();
+        // Get admin pin code for fallback filtering
+        String adminPinCode = extractPinCode(adminLocation);
+        boolean hasAdminPinCode = adminPinCode != null && adminPinCode.length() == 6;
+        logger.info("Admin {} location check (customers) - Pin Code: {}, Has Pin Code: {}, Address: {}", 
+                adminId, adminPinCode, hasAdminPinCode, 
+                adminLocation.getAddress() != null ? adminLocation.getAddress() : "null");
+        
+        // Try to use lat/long if available (more accurate)
+        boolean useLatLong = adminLocation.getLatitude() != null && adminLocation.getLongitude() != null;
+        double adminLat = useLatLong ? adminLocation.getLatitude() : 0.0;
+        double adminLon = useLatLong ? adminLocation.getLongitude() : 0.0;
+        logger.info("Admin {} location check (customers) - Use Lat/Long: {}, Lat: {}, Lon: {}", 
+                adminId, useLatLong, adminLat, adminLon);
+        
+        if (!useLatLong && !hasAdminPinCode) {
+            logger.warn("Admin {} has no location coordinates or pin code, returning empty customer list. Address: {}", 
+                    adminId, adminLocation.getAddress() != null ? adminLocation.getAddress() : "null");
+            return new ArrayList<>();
+        }
+        
+        final String finalAdminPinCode = adminPinCode;
+        final boolean finalUseLatLong = useLatLong;
+        final boolean finalHasAdminPinCode = hasAdminPinCode;
         
         return customers.stream()
                 .filter(customer -> {
-                    if (customer.getLocation() == null || customer.getLocation().getLatitude() == null || customer.getLocation().getLongitude() == null) {
+                    if (customer.getLocation() == null) {
                         return false;
                     }
-                    double distance = calculateDistance(
-                            adminLat, adminLon,
-                            customer.getLocation().getLatitude(),
-                            customer.getLocation().getLongitude()
-                    );
-                    // Validate distance calculation
-                    if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
-                        logger.warn("Invalid distance calculated for customer {} (ID: {}) - excluding", 
-                                customer.getName(), customer.getId());
-                        return false;
+                    
+                    // Try lat/long first if available
+                    if (finalUseLatLong && customer.getLocation().getLatitude() != null && 
+                        customer.getLocation().getLongitude() != null) {
+                        double distance = calculateDistance(
+                                adminLat, adminLon,
+                                customer.getLocation().getLatitude(),
+                                customer.getLocation().getLongitude()
+                        );
+                        // Validate distance calculation
+                        if (Double.isNaN(distance) || Double.isInfinite(distance) || distance < 0) {
+                            logger.warn("Invalid distance calculated for customer {} (ID: {}) - excluding", 
+                                    customer.getName(), customer.getId());
+                            return false;
+                        }
+                        // Strict check: customer must be within 20km radius
+                        // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
+                        boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
+                        if (!withinRadius) {
+                            logger.debug("Customer {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
+                                    customer.getName(), customer.getId(),
+                                    String.format("%.2f", distance), ADMIN_RADIUS_KM);
+                            return false;
+                        }
+                        return true;
                     }
-                    // Strict check: customer must be within 20km radius
-                    // Use strict comparison: distance must be <= 20.01km (0.01km tolerance for floating point precision)
-                    boolean withinRadius = distance <= (ADMIN_RADIUS_KM + 0.01);
-                    if (!withinRadius) {
-                        logger.debug("Customer {} (ID: {}) excluded - distance {} km exceeds {} km radius", 
-                                customer.getName(), customer.getId(),
-                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
-                        return false; // Explicitly return false
+                    
+                    // Fallback to pin code matching
+                    if (finalHasAdminPinCode) {
+                        String customerPinCode = extractPinCode(customer.getLocation());
+                        logger.debug("Customer {} (ID: {}) - Pin Code: {}, Address: {}", 
+                                customer.getName(), customer.getId(), 
+                                customerPinCode, 
+                                customer.getLocation().getAddress() != null ? customer.getLocation().getAddress() : "null");
+                        if (customerPinCode != null && customerPinCode.length() == 6) {
+                            boolean withinRadius = isPinCodeWithinRadius(finalAdminPinCode, customerPinCode, ADMIN_RADIUS_KM);
+                            logger.debug("Customer {} (ID: {}) - Admin Pin: {}, Customer Pin: {}, Within Radius: {}", 
+                                    customer.getName(), customer.getId(), 
+                                    finalAdminPinCode, customerPinCode, withinRadius);
+                            return withinRadius;
+                        } else {
+                            logger.debug("Customer {} (ID: {}) excluded - no valid pin code extracted", 
+                                    customer.getName(), customer.getId());
+                        }
                     }
-                    // Double-check: if distance exceeds limit, block it
-                    if (distance > ADMIN_RADIUS_KM) {
-                        logger.warn("Customer {} (ID: {}) distance {} km exceeds {} km but passed filter - BLOCKING!", 
-                                customer.getName(), customer.getId(),
-                                String.format("%.2f", distance), ADMIN_RADIUS_KM);
-                        return false; // Block if somehow exceeded
-                    }
-                    return true;
+                    
+                    logger.debug("Customer {} (ID: {}) excluded - no location data available for filtering", 
+                            customer.getName(), customer.getId());
+                    return false;
                 })
                 .collect(Collectors.toList());
     }
