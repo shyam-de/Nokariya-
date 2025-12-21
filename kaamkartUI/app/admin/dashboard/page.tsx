@@ -1870,6 +1870,7 @@ export default function AdminDashboard() {
                                 state: location.state || prev.state,
                                 city: location.city || prev.city,
                                 address: location.address || prev.address,
+                                addresses: location.addresses,
                               }));
                               setPinAddresses(location.addresses);
                               setShowAddressModal(true);
