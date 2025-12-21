@@ -12,6 +12,12 @@ import { getLocationFromPinCode } from "@/lib/indianLocationValidation";
 import { logger } from "@/lib/logger";
 
 export default function Login() {
+  interface PostOfficeAddress {
+    Name: string;
+    District: string;
+    State: string;
+    Pincode: string;
+  }
   const router = useRouter();
   const { t, language } = useLanguage();
   const [isLogin, setIsLogin] = useState(true);
@@ -22,7 +28,7 @@ export default function Login() {
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [workerTypes, setLaborTypes] = useState<any[]>([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
-  const [pinAddresses, setPinAddresses] = useState<string[]>([]);
+  const [pinAddresses, setPinAddresses] = useState<PostOfficeAddress[]>([]);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -37,6 +43,9 @@ export default function Login() {
     pinCode: "",
     address: "",
   });
+  const formatPostOfficeAddress = (po: PostOfficeAddress): string => {
+    return `${po.Name}, ${po.District}, ${po.District}, ${po.State}, ${po.Pincode}`;
+  };
 
   useEffect(() => {
     // Fetch active labor types
@@ -675,26 +684,10 @@ export default function Login() {
                                 state: location.state || prev.state,
                                 city: location.city || prev.city,
                                 address: location.address || prev.address,
+                                addresses: location.addresses,
                               }));
-                              const buildAddressOptions = (
-                                fullAddress: string
-                              ): string[] => {
-                                if (!fullAddress) return [];
-
-                                const parts = fullAddress
-                                  .split(",")
-                                  .map((p) => p.trim());
-
-                                const options: string[] = [];
-                                for (let i = 1; i <= parts.length; i++) {
-                                  options.push(parts.slice(0, i).join(", "));
-                                }
-                                return options;
-                              };
                               console.log(location, "testing location");
-                              setPinAddresses(
-                                buildAddressOptions(location.address)
-                              );
+                              setPinAddresses(location.addresses);
                               setShowAddressModal(true);
 
                               toast.success("Select your address");
@@ -1015,20 +1008,20 @@ export default function Login() {
               </h3>
 
               <div className="max-h-64 overflow-y-auto space-y-2">
-                {pinAddresses.map((addr, index) => (
+                {pinAddresses.map((po, index) => (
                   <button
                     key={index}
                     type="button"
                     onClick={() => {
                       setFormData((prev) => ({
                         ...prev,
-                        address: addr,
+                        address: formatPostOfficeAddress(po),
                       }));
                       setShowAddressModal(false);
                     }}
                     className="w-full text-left px-4 py-3 border rounded-lg hover:bg-primary-50 hover:border-primary-500 transition"
                   >
-                    {addr}
+                    {formatPostOfficeAddress(po)}
                   </button>
                 ))}
               </div>
