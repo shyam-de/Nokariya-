@@ -234,6 +234,85 @@ export default function AdminDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+const handleUpdateSystemUser = async (
+  newSuperAdmin: boolean,
+  updatedPassword?: string
+) => {
+  if (!editingSystemUser) {
+    toast.error("No system user selected for update");
+    return;
+  }
+
+  setIsUpdatingSystemUser(true);
+  try {
+    const token = SessionStorage.getToken();
+
+    const payload: any = { ...userFormData };
+
+    // Always update superAdmin explicitly
+    payload.superAdmin = newSuperAdmin;
+
+    // Only include password if provided
+    if (updatedPassword && updatedPassword.trim()) {
+      payload.password = updatedPassword;
+    }
+
+    await axios.put(
+      `${API_URL}/admin/system-users/${editingSystemUser.id}`,
+      payload,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    toast.success("System user updated successfully");
+    setEditingSystemUser(null);
+    fetchSystemUsers();
+  } catch (error: any) {
+    logger.error("Error updating system user:", error);
+    toast.error(error.response?.data?.message || "Failed to update system user");
+  } finally {
+    setIsUpdatingSystemUser(false);
+  }
+};
+
+const handleUpdateUserPassword = async () => {
+  if (!editingUserPassword) {
+    toast.error("No user selected for password update");
+    return;
+  }
+
+  if (!newPassword || newPassword.trim().length < 6) {
+    toast.error("Password must be at least 6 characters long");
+    return;
+  }
+
+  setIsUpdatingPassword(true);
+  try {
+    const token = SessionStorage.getToken();
+    await axios.put(
+      `${API_URL}/admin/system-users/${editingUserPassword.id}/password`,
+      { password: newPassword },
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+
+    toast.success("Password updated successfully");
+    setEditingUserPassword(null);
+    setNewPassword("");
+    setShowNewPassword(false);
+
+    // Refresh system users list so UI reflects changes
+    fetchSystemUsers();
+  } catch (error: any) {
+    logger.error("Error updating user password:", error);
+    toast.error(error.response?.data?.message || "Failed to update password");
+  } finally {
+    setIsUpdatingPassword(false);
+  }
+};
+
   const fetchSuccessStories = async () => {
     if (!user || (user.superAdmin !== true && user.superAdmin !== 'true')) return
     setIsLoadingStories(true)
@@ -3978,7 +4057,7 @@ export default function AdminDashboard() {
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => handleUpdateSystemUser(editingSystemUser.superAdmin, newPassword)}
-                disabled={isUpdatingSystemUser || (newPassword && newPassword.length < 6)}
+                disabled={isUpdatingSystemUser || (newPassword !== "" && newPassword.length < 6)}
                 className="flex-1 px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                 lang={language}
               >
@@ -4068,7 +4147,7 @@ export default function AdminDashboard() {
       )}
 
       {/* Chatbot */}
-      <Chatbot user={user} adminStats={adminStats} />
+      {/* <Chatbot user={user} adminStats={adminStats} /> */}
     </div>
   )
 }
