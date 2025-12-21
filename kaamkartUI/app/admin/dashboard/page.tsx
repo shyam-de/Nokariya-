@@ -39,6 +39,13 @@ interface Request {
   confirmedWorkers?: any[];
 }
 
+interface PostOfficeAddress {
+  Name: string;
+  District: string;
+  State: string;
+  Pincode: string;
+}
+
 export default function AdminDashboard() {
   const router = useRouter();
   const { language, t } = useLanguage();
@@ -209,6 +216,11 @@ export default function AdminDashboard() {
     startDate: "",
     endDate: "",
   });
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [pinAddresses, setPinAddresses] = useState<PostOfficeAddress[]>([]);
+  const formatPostOfficeAddress = (po: PostOfficeAddress): string => {
+    return `${po.Name}, ${po.District}, ${po.District}, ${po.State}, ${po.Pincode}`;
+  };
   const [userFormData, setUserFormData] = useState({
     name: "",
     email: "",
@@ -1859,6 +1871,8 @@ export default function AdminDashboard() {
                                 city: location.city || prev.city,
                                 address: location.address || prev.address,
                               }));
+                              setPinAddresses(location.addresses);
+                              setShowAddressModal(true);
                               toast.success(
                                 t("login.pinCodeDetected") ||
                                   "Location detected from Pin Code!",
@@ -1951,6 +1965,45 @@ export default function AdminDashboard() {
                   lang={language}
                 />
               </div>
+
+              {/* ➕ ADDRESS SELECTION MODAL */}
+              {showAddressModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+                  <div className="bg-white w-full max-w-lg rounded-xl shadow-xl p-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      Select Your Address
+                    </h3>
+
+                    <div className="max-h-64 overflow-y-auto space-y-2">
+                      {pinAddresses.map((po, index) => (
+                        <button
+                          key={index}
+                          type="button"
+                          onClick={() => {
+                            setUserFormData((prev: any) => ({
+                              ...prev,
+                              address: formatPostOfficeAddress(po),
+                            }));
+                            setShowAddressModal(false);
+                          }}
+                          className="w-full text-left px-4 py-3 border rounded-lg hover:bg-primary-50 hover:border-primary-500 transition"
+                        >
+                          {formatPostOfficeAddress(po)}
+                        </button>
+                      ))}
+                    </div>
+
+                    <div className="mt-4 flex justify-end">
+                      <button
+                        onClick={() => setShowAddressModal(false)}
+                        className="px-4 py-2 border rounded-lg hover:bg-gray-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {userFormData.role === "worker" && (
                 <div className="p-4 bg-blue-50 rounded-lg border-2 border-blue-200 mt-4">
