@@ -90,7 +90,7 @@ public class AdminController {
                 return ResponseEntity.status(401).body(Map.of("message", "Unauthorized"));
             }
             Long adminId = getUserIdFromAuthentication(authentication);
-            logger.info("✅ APPROVE REQUEST | RequestID: {} | Admin: {} | Timestamp: {}", 
+            logger.info("✅  APPROVE REQUEST | RequestID: {} | Admin: {} | Timestamp: {}",
                     requestId, adminId, System.currentTimeMillis());
             
             Request request = adminService.approveRequest(requestId);
