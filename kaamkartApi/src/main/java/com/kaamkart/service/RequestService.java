@@ -326,8 +326,8 @@ public class RequestService {
                         Map<String, Integer> confirmedByWorkerType = new HashMap<>();
                         if (request.getConfirmedWorkers() != null) {
                             for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
-                                User workerUser = cw.getWorker();
-                                Worker workerProfile = workerRepository.findByUserId(workerUser.getId()).orElse(null);
+                                User workerUser1 = cw.getWorker();
+                                Worker workerProfile = workerRepository.findByUserId(workerUser1.getId()).orElse(null);
                                 if (workerProfile != null && workerProfile.getWorkerTypes() != null) {
                                     for (String workerType : workerProfile.getWorkerTypes()) {
                                         confirmedByWorkerType.put(workerType, confirmedByWorkerType.getOrDefault(workerType, 0) + 1);

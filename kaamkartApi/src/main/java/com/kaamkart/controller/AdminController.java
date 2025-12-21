@@ -1,13 +1,7 @@
 package com.kaamkart.controller;
 
 import com.kaamkart.dto.CreateUserRequest;
-import com.kaamkart.model.Advertisement;
-import com.kaamkart.model.Concern;
-import com.kaamkart.model.ConcernMessage;
-import com.kaamkart.model.Request;
-import com.kaamkart.model.SuccessStory;
-import com.kaamkart.model.User;
-import com.kaamkart.model.WorkerType;
+import com.kaamkart.model.*;
 import com.kaamkart.service.AdminService;
 import com.kaamkart.service.AdvertisementService;
 import com.kaamkart.service.ConcernService;

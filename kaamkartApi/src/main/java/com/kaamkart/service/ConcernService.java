@@ -96,7 +96,7 @@ public class ConcernService {
             String searchLower = search.toLowerCase();
             concerns = concerns.stream()
                     .filter(concern -> 
-                            (concern.getSubject() != null && concern.getSubject().toLowerCase().contains(searchLower)) ||
+                            (concern.getUserMessage() != null && concern.getUserMessage().toLowerCase().contains(searchLower)) ||
                             (concern.getDescription() != null && concern.getDescription().toLowerCase().contains(searchLower)) ||
                             (concern.getRaisedBy() != null && concern.getRaisedBy().getName() != null && 
                              concern.getRaisedBy().getName().toLowerCase().contains(searchLower)) ||
