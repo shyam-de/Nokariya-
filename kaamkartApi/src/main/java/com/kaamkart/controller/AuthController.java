@@ -48,7 +48,7 @@ public class AuthController {
         String email = request.getEmail();
         
         try {
-            logger.info("🔐 LOGIN ATTEMPT | Email: {} | Timestamp: {}", email, System.currentTimeMillis());
+            logger.info("🔐 LOGIN ATTEMPT (Worker/Customer) | Email: {} | Timestamp: {}", email, System.currentTimeMillis());
             logger.debug("Login request received for email: {}", email);
             
             // Get client IP address for automatic location detection
@@ -69,6 +69,39 @@ public class AuthController {
             logger.error("❌ LOGIN FAILED | Email: {} | Error: {} | Duration: {}ms", 
                     email, e.getMessage(), duration, e);
             String errorMessage = e.getMessage() != null ? e.getMessage() : "Login failed";
+            return ResponseEntity.status(401).body(Map.of("message", errorMessage));
+        }
+    }
+
+    @PostMapping("/admin/login")
+    public ResponseEntity<Map<String, Object>> adminLogin(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest httpRequest) {
+        long startTime = System.currentTimeMillis();
+        String email = request.getEmail();
+        
+        try {
+            logger.info("🔐 ADMIN LOGIN ATTEMPT | Email: {} | Timestamp: {}", email, System.currentTimeMillis());
+            logger.debug("Admin login request received for email: {}", email);
+            
+            // Get client IP address for automatic location detection
+            String clientIp = getClientIpAddress(httpRequest);
+            logger.debug("Client IP for admin login: {}", clientIp);
+            
+            Map<String, Object> response = authService.adminLogin(request, clientIp);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            Object userObj = response.get("user");
+            String role = userObj != null && userObj instanceof Map ? 
+                ((Map<?, ?>) userObj).get("role").toString() : "UNKNOWN";
+            
+            logger.info("✅ ADMIN LOGIN SUCCESS | Email: {} | Role: {} | Duration: {}ms", email, role, duration);
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            long duration = System.currentTimeMillis() - startTime;
+            logger.error("❌ ADMIN LOGIN FAILED | Email: {} | Error: {} | Duration: {}ms", 
+                    email, e.getMessage(), duration, e);
+            String errorMessage = e.getMessage() != null ? e.getMessage() : "Admin login failed";
             return ResponseEntity.status(401).body(Map.of("message", errorMessage));
         }
     }

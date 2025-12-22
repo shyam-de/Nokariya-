@@ -56,6 +56,7 @@ apiClient.interceptors.response.use(
       // These endpoints return 401 for invalid credentials, not expired sessions
       const requestUrl = error.config?.url || ''
       const isAuthEndpoint = requestUrl.includes('/auth/login') || 
+                             requestUrl.includes('/auth/admin/login') ||
                              requestUrl.includes('/auth/register') ||
                              requestUrl.includes('/auth/forgot-password') ||
                              requestUrl.includes('/auth/reset-password')

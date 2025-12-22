@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -73,12 +74,58 @@ public class ConcernService {
         return concernRepository.findByRaisedByOrderByCreatedAtDesc(user);
     }
 
-    public List<Concern> getAllConcerns(Long adminId) {
+    public List<Concern> getAllConcerns(Long adminId, String search, String sortBy, String sortOrder, Boolean locationFilter) {
         List<Concern> concerns = concernRepository.findAllByOrderByCreatedAtDesc();
-        // Filter by admin radius if adminId is provided and not a super admin
+        
+        // Apply location filter
+        boolean shouldFilterByLocation = false;
         if (adminId != null && !adminService.isSuperAdmin(adminId)) {
+            // Normal admin: always filter by location
+            shouldFilterByLocation = true;
+        } else if (adminId != null && adminService.isSuperAdmin(adminId) && locationFilter != null && locationFilter) {
+            // Super admin: filter only if locationFilter is explicitly true
+            shouldFilterByLocation = true;
+        }
+        
+        if (shouldFilterByLocation) {
             concerns = adminService.filterConcernsByAdminRadius(concerns, adminId);
         }
+        
+        // Apply search filter
+        if (search != null && !search.trim().isEmpty()) {
+            String searchLower = search.toLowerCase();
+            concerns = concerns.stream()
+                    .filter(concern -> 
+                            (concern.getUserMessage() != null && concern.getUserMessage().toLowerCase().contains(searchLower)) ||
+                            (concern.getDescription() != null && concern.getDescription().toLowerCase().contains(searchLower)) ||
+                            (concern.getRaisedBy() != null && concern.getRaisedBy().getName() != null && 
+                             concern.getRaisedBy().getName().toLowerCase().contains(searchLower)) ||
+                            (concern.getRaisedBy() != null && concern.getRaisedBy().getEmail() != null && 
+                             concern.getRaisedBy().getEmail().toLowerCase().contains(searchLower)) ||
+                            (concern.getStatus() != null && concern.getStatus().name().toLowerCase().contains(searchLower)))
+                    .collect(java.util.stream.Collectors.toList());
+        }
+        
+        // Apply sorting
+        if (sortBy != null && sortOrder != null) {
+            Comparator<Concern> comparator = null;
+            switch (sortBy.toLowerCase()) {
+                case "date":
+                    comparator = Comparator.comparing(Concern::getCreatedAt);
+                    break;
+                case "status":
+                    comparator = Comparator.comparing(c -> c.getStatus().name());
+                    break;
+                default:
+                    comparator = Comparator.comparing(Concern::getCreatedAt);
+            }
+            
+            if (sortOrder.equalsIgnoreCase("desc")) {
+                comparator = comparator.reversed();
+            }
+            concerns = concerns.stream().sorted(comparator).collect(Collectors.toList());
+        }
+        
         return concerns;
     }
 

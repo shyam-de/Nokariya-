@@ -129,5 +129,24 @@ public class RequestController {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
     }
+
+    @PutMapping("/{requestId}/extend-end-date")
+    public ResponseEntity<?> extendEndDate(
+            Authentication authentication,
+            @PathVariable Long requestId,
+            @RequestBody Map<String, Object> requestBody) {
+        try {
+            Long customerId = getUserIdFromAuthentication(authentication);
+            Long workerId = Long.valueOf(requestBody.get("workerId").toString());
+            String newEndDateStr = requestBody.get("newEndDate").toString();
+            java.time.LocalDate newEndDate = java.time.LocalDate.parse(newEndDateStr);
+            
+            Request request = requestService.extendDeployedWorkerEndDate(requestId, workerId, customerId, newEndDate);
+            return ResponseEntity.ok(Map.of("message", "End date extended successfully", "request", request));
+        } catch (Exception e) {
+            logger.error("Error extending end date: {}", e.getMessage(), e);
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
 }
 

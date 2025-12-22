@@ -283,7 +283,7 @@ export const getNearestCities = async (
 }
 
 // Get state, city, and address from pin code (for registration form and customer requests)
-export const getLocationFromPinCode = async (pinCode: string): Promise<{ state: string; city: string; address: string } | null> => {
+export const getLocationFromPinCode = async (pinCode: string): Promise<{ state: string; city: string; address: string, addresses: [] } | null> => {
   if (!pinCode || pinCode.length !== 6) return null
   
   try {
@@ -292,6 +292,7 @@ export const getLocationFromPinCode = async (pinCode: string): Promise<{ state: 
     const data = await response.json()
     
     if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+      const addresses = data[0].PostOffice;
       const postOffice = data[0].PostOffice[0]
       const state = postOffice.State || ''
       const city = postOffice.District || postOffice.Name || ''
@@ -307,7 +308,7 @@ export const getLocationFromPinCode = async (pinCode: string): Promise<{ state: 
       const address = addressParts.join(', ') || `${city}, ${state} ${pinCode}`
       
       if (state && city) {
-        return { state, city, address }
+        return { state, city, address, addresses }
       }
     }
     return null

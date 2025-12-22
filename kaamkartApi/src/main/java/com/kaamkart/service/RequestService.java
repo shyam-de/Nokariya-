@@ -8,6 +8,8 @@ import com.kaamkart.repository.RatingRepository;
 import com.kaamkart.repository.RequestRepository;
 import com.kaamkart.repository.UserRepository;
 import com.kaamkart.repository.WorkerRepository;
+import com.kaamkart.repository.ConfirmedWorkerRepository;
+import com.kaamkart.repository.DeployedWorkerRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,6 +39,15 @@ public class RequestService {
 
     @Autowired
     private RatingRepository ratingRepository;
+
+    @Autowired
+    private PinCodeGeocodingService pinCodeGeocodingService;
+
+    @Autowired
+    private ConfirmedWorkerRepository confirmedWorkerRepository;
+
+    @Autowired
+    private DeployedWorkerRepository deployedWorkerRepository;
 
     private static final double EARTH_RADIUS_KM = 6371.0;
 
@@ -123,35 +134,68 @@ public class RequestService {
                 location.setLongitude(dto.getLocation().getLongitude());
                 location.setAddress(dto.getLocation().getAddress());
             } else {
-                // Priority 2: Use address fields (State, City, Pin Code, Area) if provided
-                // Note: Geocoding is handled by the frontend. If lat/long are not provided,
-                // the address will be stored but location-based matching will be limited.
-                if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()
+                // Priority 2: Try to geocode pin code if provided
+                String pinCode = dto.getLocation().getPinCode();
+                if (pinCode != null && !pinCode.trim().isEmpty() && pinCode.matches("\\d{6}")) {
+                    logger.info("📍 Geocoding pin code for request: {}", pinCode);
+                    Location geocodedLocation = pinCodeGeocodingService.getLocationFromPinCode(pinCode);
+                    if (geocodedLocation != null && geocodedLocation.getLatitude() != null && geocodedLocation.getLongitude() != null) {
+                        location.setLatitude(geocodedLocation.getLatitude());
+                        location.setLongitude(geocodedLocation.getLongitude());
+                        // Use geocoded address if available, otherwise build from components
+                        if (geocodedLocation.getAddress() != null && !geocodedLocation.getAddress().startsWith("Pin Code:")) {
+                            location.setAddress(geocodedLocation.getAddress());
+                        } else {
+                            // Build address string from components
+                            StringBuilder addressBuilder = new StringBuilder();
+                            if (dto.getLocation().getArea() != null && !dto.getLocation().getArea().trim().isEmpty()) {
+                                addressBuilder.append(dto.getLocation().getArea()).append(", ");
+                            }
+                            if (dto.getLocation().getCity() != null && !dto.getLocation().getCity().trim().isEmpty()) {
+                                addressBuilder.append(dto.getLocation().getCity()).append(", ");
+                            }
+                            if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()) {
+                                addressBuilder.append(dto.getLocation().getState()).append(" ");
+                            }
+                            addressBuilder.append(pinCode);
+                            location.setAddress(addressBuilder.toString().trim());
+                        }
+                        logger.info("✅ Geocoded request pin code {}: lat={}, lon={}, address={}", 
+                                pinCode, geocodedLocation.getLatitude(), geocodedLocation.getLongitude(), location.getAddress());
+                    } else {
+                        // Geocoding failed, use address fields
+                        logger.warn("⚠️ Failed to geocode pin code {} for request, using address only", pinCode);
+                        if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()
+                                && dto.getLocation().getCity() != null && !dto.getLocation().getCity().trim().isEmpty()) {
+                            StringBuilder addressBuilder = new StringBuilder();
+                            if (dto.getLocation().getArea() != null && !dto.getLocation().getArea().trim().isEmpty()) {
+                                addressBuilder.append(dto.getLocation().getArea()).append(", ");
+                            }
+                            addressBuilder.append(dto.getLocation().getCity()).append(", ");
+                            addressBuilder.append(dto.getLocation().getState()).append(" ").append(pinCode);
+                            location.setAddress(addressBuilder.toString().trim());
+                        } else if (dto.getLocation().getAddress() != null && !dto.getLocation().getAddress().trim().isEmpty()) {
+                            location.setAddress(dto.getLocation().getAddress());
+                        } else {
+                            location.setAddress("Pin Code: " + pinCode);
+                        }
+                    }
+                } else if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()
                         && dto.getLocation().getCity() != null && !dto.getLocation().getCity().trim().isEmpty()
-                        && dto.getLocation().getPinCode() != null && !dto.getLocation().getPinCode().trim().isEmpty()) {
-                    
-                    // Build address string from components
+                        && pinCode != null && !pinCode.trim().isEmpty()) {
+                    // Build address string from components (pin code format invalid, but we have state/city)
                     StringBuilder addressBuilder = new StringBuilder();
                     if (dto.getLocation().getArea() != null && !dto.getLocation().getArea().trim().isEmpty()) {
                         addressBuilder.append(dto.getLocation().getArea()).append(", ");
                     }
-                    if (dto.getLocation().getCity() != null && !dto.getLocation().getCity().trim().isEmpty()) {
-                        addressBuilder.append(dto.getLocation().getCity()).append(", ");
-                    }
-                    if (dto.getLocation().getState() != null && !dto.getLocation().getState().trim().isEmpty()) {
-                        addressBuilder.append(dto.getLocation().getState()).append(" ");
-                    }
-                    if (dto.getLocation().getPinCode() != null && !dto.getLocation().getPinCode().trim().isEmpty()) {
-                        addressBuilder.append(dto.getLocation().getPinCode());
-                    }
+                    addressBuilder.append(dto.getLocation().getCity()).append(", ");
+                    addressBuilder.append(dto.getLocation().getState()).append(" ").append(pinCode);
                     location.setAddress(addressBuilder.toString().trim());
-                    // Note: lat/long will remain null - location-based matching won't work
-                    logger.warn("Request created without lat/long coordinates. Address: {}", location.getAddress());
+                    logger.warn("Request created without lat/long coordinates (invalid pin code format). Address: {}", location.getAddress());
                 } else {
                     // Fallback: Use provided address string if available
                     if (dto.getLocation().getAddress() != null && !dto.getLocation().getAddress().trim().isEmpty()) {
                         location.setAddress(dto.getLocation().getAddress());
-                        // Note: lat/long will remain null - location-based matching won't work
                         logger.warn("Request created without lat/long coordinates. Address: {}", location.getAddress());
                     } else {
                         throw new RuntimeException("Either current location (latitude/longitude) or address fields (State, City, Pin Code) are required");
@@ -208,10 +252,57 @@ public class RequestService {
         return requests;
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public List<Request> getAvailableRequests(Long workerId) {
         Worker worker = workerRepository.findByUserId(workerId)
                 .orElseThrow(() -> new RuntimeException("Worker profile not found"));
+
+        // Check and update worker availability based on deployment end dates
+        // If worker's deployment end date has passed and request is not completed, make them available
+        User workerUser = worker.getUser();
+        if (workerUser != null) {
+            List<DeployedWorker> deployments = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(workerUser);
+            java.time.LocalDate today = java.time.LocalDate.now();
+            boolean hasActiveDeployment = false;
+            
+            for (DeployedWorker dw : deployments) {
+                Request req = dw.getRequest();
+                if (req != null && req.getEndDate() != null) {
+                    // Check if deployment end date has passed and request is not completed
+                    boolean endDatePassed = req.getEndDate().isBefore(today);
+                    boolean notCompleted = req.getStatus() != Request.RequestStatus.COMPLETED;
+                    
+                    if (endDatePassed && notCompleted) {
+                        // Worker's deployment has ended but request is not completed
+                        // They should be available for new requests
+                        logger.info("Worker {} (ID: {}) deployment end date ({}) has passed for request {} (status: {}). Worker should be available.",
+                                workerUser.getName(), workerId, req.getEndDate(), req.getId(), req.getStatus());
+                    } else if (!endDatePassed && notCompleted) {
+                        // Worker still has active deployment
+                        hasActiveDeployment = true;
+                    }
+                }
+            }
+            
+            // Also check confirmed workers
+            List<ConfirmedWorker> confirmations = confirmedWorkerRepository.findByWorkerOrderByConfirmedAtDesc(workerUser);
+            for (ConfirmedWorker cw : confirmations) {
+                Request req = cw.getRequest();
+                if (req != null && req.getEndDate() != null) {
+                    boolean endDatePassed = req.getEndDate().isBefore(today);
+                    boolean notCompleted = req.getStatus() != Request.RequestStatus.COMPLETED;
+                    
+                    if (!endDatePassed && notCompleted) {
+                        hasActiveDeployment = true;
+                    }
+                }
+            }
+            
+            // Update worker availability if they don't have active deployments
+            // Note: We don't automatically set them to available here, as the availability
+            // is managed by the worker themselves. However, the notification system will
+            // check end dates and allow notifications if end date has passed.
+        }
 
         List<Request.RequestStatus> statuses = Arrays.asList(
                 Request.RequestStatus.ADMIN_APPROVED,
@@ -235,8 +326,8 @@ public class RequestService {
                         Map<String, Integer> confirmedByWorkerType = new HashMap<>();
                         if (request.getConfirmedWorkers() != null) {
                             for (ConfirmedWorker cw : request.getConfirmedWorkers()) {
-                                User workerUser = cw.getWorker();
-                                Worker workerProfile = workerRepository.findByUserId(workerUser.getId()).orElse(null);
+                                User workerUser1 = cw.getWorker();
+                                Worker workerProfile = workerRepository.findByUserId(workerUser1.getId()).orElse(null);
                                 if (workerProfile != null && workerProfile.getWorkerTypes() != null) {
                                     for (String workerType : workerProfile.getWorkerTypes()) {
                                         confirmedByWorkerType.put(workerType, confirmedByWorkerType.getOrDefault(workerType, 0) + 1);
@@ -329,6 +420,106 @@ public class RequestService {
             throw new RuntimeException("Already confirmed this request");
         }
 
+        // Check if worker has any active requests (confirmed or deployed) that overlap with this request's date range
+        java.time.LocalDate newRequestStartDate = request.getStartDate();
+        java.time.LocalDate newRequestEndDate = request.getEndDate();
+        
+        if (newRequestStartDate == null || newRequestEndDate == null) {
+            throw new RuntimeException("Request must have valid start and end dates");
+        }
+
+        // Check confirmed workers
+        List<ConfirmedWorker> workerConfirmations = confirmedWorkerRepository.findByWorkerOrderByConfirmedAtDesc(worker);
+        for (ConfirmedWorker cw : workerConfirmations) {
+            Request existingRequest = cw.getRequest();
+            if (existingRequest == null) continue;
+            
+            // Check if work period is still active (end date hasn't passed)
+            boolean workPeriodActive = existingRequest.getEndDate() != null && 
+                    (existingRequest.getEndDate().isAfter(java.time.LocalDate.now()) || 
+                     existingRequest.getEndDate().isEqual(java.time.LocalDate.now()));
+            
+            // Check if request is not completed
+            boolean notCompleted = existingRequest.getStatus() != Request.RequestStatus.COMPLETED;
+            
+            if (workPeriodActive && notCompleted) {
+                // Check if dates overlap
+                boolean datesOverlap = existingRequest.getStartDate() != null && existingRequest.getEndDate() != null &&
+                        existingRequest.getStartDate().isBefore(newRequestEndDate) && 
+                        existingRequest.getEndDate().isAfter(newRequestStartDate);
+                
+                if (datesOverlap) {
+                    throw new RuntimeException(String.format(
+                        "Cannot accept this request. You already have an active request (ID: %d) from %s to %s that overlaps with this request's dates (%s to %s). " +
+                        "You can only accept a new request if its start date is after your current request's end date.",
+                        existingRequest.getId(),
+                        existingRequest.getStartDate(),
+                        existingRequest.getEndDate(),
+                        newRequestStartDate,
+                        newRequestEndDate
+                    ));
+                }
+                
+                // Check if new request starts before existing request ends
+                if (newRequestStartDate.isBefore(existingRequest.getEndDate())) {
+                    throw new RuntimeException(String.format(
+                        "Cannot accept this request. You have an active request (ID: %d) that ends on %s, but this new request starts on %s. " +
+                        "You can only accept a new request if its start date is after your current request's end date (%s).",
+                        existingRequest.getId(),
+                        existingRequest.getEndDate(),
+                        newRequestStartDate,
+                        existingRequest.getEndDate()
+                    ));
+                }
+            }
+        }
+
+        // Check deployed workers
+        List<DeployedWorker> workerDeployments = deployedWorkerRepository.findByWorkerOrderByDeployedAtDesc(worker);
+        for (DeployedWorker dw : workerDeployments) {
+            Request existingRequest = dw.getRequest();
+            if (existingRequest == null) continue;
+            
+            // Check if work period is still active (end date hasn't passed)
+            boolean workPeriodActive = existingRequest.getEndDate() != null && 
+                    (existingRequest.getEndDate().isAfter(java.time.LocalDate.now()) || 
+                     existingRequest.getEndDate().isEqual(java.time.LocalDate.now()));
+            
+            // Check if request is not completed
+            boolean notCompleted = existingRequest.getStatus() != Request.RequestStatus.COMPLETED;
+            
+            if (workPeriodActive && notCompleted) {
+                // Check if dates overlap
+                boolean datesOverlap = existingRequest.getStartDate() != null && existingRequest.getEndDate() != null &&
+                        existingRequest.getStartDate().isBefore(newRequestEndDate) && 
+                        existingRequest.getEndDate().isAfter(newRequestStartDate);
+                
+                if (datesOverlap) {
+                    throw new RuntimeException(String.format(
+                        "Cannot accept this request. You are currently deployed in request (ID: %d) from %s to %s that overlaps with this request's dates (%s to %s). " +
+                        "You can only accept a new request if its start date is after your current deployment's end date.",
+                        existingRequest.getId(),
+                        existingRequest.getStartDate(),
+                        existingRequest.getEndDate(),
+                        newRequestStartDate,
+                        newRequestEndDate
+                    ));
+                }
+                
+                // Check if new request starts before existing request ends
+                if (newRequestStartDate.isBefore(existingRequest.getEndDate())) {
+                    throw new RuntimeException(String.format(
+                        "Cannot accept this request. You are currently deployed in request (ID: %d) that ends on %s, but this new request starts on %s. " +
+                        "You can only accept a new request if its start date is after your current deployment's end date (%s).",
+                        existingRequest.getId(),
+                        existingRequest.getEndDate(),
+                        newRequestStartDate,
+                        existingRequest.getEndDate()
+                    ));
+                }
+            }
+        }
+
         // Add to confirmed workers
         ConfirmedWorker confirmedWorker = new ConfirmedWorker();
         confirmedWorker.setRequest(request);
@@ -343,8 +534,8 @@ public class RequestService {
         // Save the request first to persist the confirmation
         Request savedRequest = requestRepository.save(request);
         
-        // Note: The request will be automatically filtered out from other workers' available requests
-        // in getAvailableRequests() if all requirements are met (checked per labor type)
+        logger.info("✅ Worker {} (ID: {}) confirmed request {} (dates: {} to {})", 
+                worker.getName(), workerId, requestId, newRequestStartDate, newRequestEndDate);
 
         return savedRequest;
     }
@@ -381,6 +572,48 @@ public class RequestService {
         return savedRequest;
     }
 
+    @Transactional
+    public Request extendDeployedWorkerEndDate(Long requestId, Long workerId, Long customerId, java.time.LocalDate newEndDate) {
+        Request request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        // Verify customer owns this request
+        if (!request.getCustomer().getId().equals(customerId)) {
+            throw new RuntimeException("Not authorized to extend end date for this request");
+        }
+
+        // Verify worker is deployed in this request
+        boolean isDeployed = request.getDeployedWorkers().stream()
+                .anyMatch(dw -> dw.getWorker().getId().equals(workerId));
+
+        if (!isDeployed) {
+            throw new RuntimeException("Worker is not deployed in this request");
+        }
+
+        // Validate new end date is after current end date
+        if (newEndDate == null || request.getEndDate() == null) {
+            throw new RuntimeException("Invalid end date");
+        }
+
+        if (newEndDate.isBefore(request.getEndDate()) || newEndDate.isEqual(request.getEndDate())) {
+            throw new RuntimeException("New end date must be after the current end date");
+        }
+
+        // Update the request end date
+        request.setEndDate(newEndDate);
+        Request savedRequest = requestRepository.save(request);
+
+        logger.info("✅ Customer {} (ID: {}) extended end date for worker {} (ID: {}) in request {} to {}", 
+                request.getCustomer().getName(), customerId, 
+                request.getDeployedWorkers().stream()
+                        .filter(dw -> dw.getWorker().getId().equals(workerId))
+                        .findFirst()
+                        .map(dw -> dw.getWorker().getName())
+                        .orElse("Unknown"),
+                workerId, requestId, newEndDate);
+
+        return savedRequest;
+    }
 
     private double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
         double dLat = Math.toRadians(lat2 - lat1);

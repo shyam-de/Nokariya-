@@ -118,48 +118,13 @@ public class AuthService {
                 throw new RuntimeException("Password is required");
             }
 
-            // First try to find in SystemUser table (for admins)
+            // Check if email exists in SystemUser table (admin) - reject admin login attempts
             Optional<SystemUser> systemUserOpt = systemUserRepository.findByEmail(request.getEmail().trim().toLowerCase());
             if (systemUserOpt.isPresent()) {
-                SystemUser systemUser = systemUserOpt.get();
-                
-                if (!passwordEncoder.matches(request.getPassword(), systemUser.getPassword())) {
-                    throw new RuntimeException("Invalid credentials");
-                }
-
-                // Check if system user is blocked
-                if (systemUser.getBlocked() != null && systemUser.getBlocked()) {
-                    throw new RuntimeException("Your account has been blocked. Please contact administrator.");
-                }
-
-                // Automatically detect and update location from IP address
-                if (clientIp != null && !clientIp.isEmpty()) {
-                    Location detectedLocation = ipGeolocationService.getLocationFromIp(clientIp);
-                    if (detectedLocation != null && detectedLocation.getLatitude() != null 
-                            && detectedLocation.getLongitude() != null) {
-                        systemUser.setLocation(detectedLocation);
-                        systemUserRepository.save(systemUser);
-                        logger.info("📍 Admin location auto-detected during login | Email: {} | IP: {} | Lat: {} | Lon: {} | Address: {}", 
-                                systemUser.getEmail(), clientIp, detectedLocation.getLatitude(), 
-                                detectedLocation.getLongitude(), detectedLocation.getAddress());
-                    } else {
-                        logger.debug("Could not detect location from IP: {} for admin: {}", clientIp, systemUser.getEmail());
-                    }
-                }
-
-                // Generate token with negative ID to distinguish from regular users
-                // Use -id for system users, prefix with "SYSTEM_" for role
-                String token = jwtUtil.generateToken(-systemUser.getId(), "SYSTEM_ADMIN");
-
-                Map<String, Object> response = new HashMap<>();
-                response.put("token", token);
-                Map<String, Object> userData = buildSystemUserData(systemUser);
-                response.put("user", userData);
-
-                return response;
+                throw new RuntimeException("Please use the admin login page to access your account.");
             }
 
-            // If not found in SystemUser, check regular User table
+            // Only check regular User table (for workers and customers)
             User user = userRepository.findByEmail(request.getEmail().trim().toLowerCase())
                     .orElseThrow(() -> new RuntimeException("Invalid credentials"));
 
@@ -201,6 +166,96 @@ public class AuthService {
         } catch (Exception e) {
             logger.error("Unexpected error during login: {}", e.getMessage(), e);
             throw new RuntimeException("Login failed: " + e.getMessage(), e);
+        }
+    }
+
+    public Map<String, Object> adminLogin(LoginRequest request, String clientIp) {
+        try {
+            if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+                throw new RuntimeException("Email is required");
+            }
+            if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+                throw new RuntimeException("Password is required");
+            }
+
+            String emailLower = request.getEmail().trim().toLowerCase();
+            logger.info("🔐 ADMIN LOGIN ATTEMPT | Email: {} (normalized: {})", request.getEmail(), emailLower);
+            
+            // Only check SystemUser table (for admins)
+            // Try case-insensitive search first, then exact match
+            Optional<SystemUser> systemUserOpt = systemUserRepository.findByEmailIgnoreCase(emailLower);
+            
+            if (systemUserOpt.isEmpty()) {
+                // Fallback to exact match (for backward compatibility)
+                systemUserOpt = systemUserRepository.findByEmail(emailLower);
+            }
+            
+            if (systemUserOpt.isEmpty()) {
+                // Try with original case (for admins created before the fix)
+                systemUserOpt = systemUserRepository.findByEmailIgnoreCase(request.getEmail().trim());
+                if (systemUserOpt.isEmpty()) {
+                    logger.error("❌ ADMIN LOGIN FAILED | Email not found in SystemUser table: {} (searched as: {})", 
+                            request.getEmail(), emailLower);
+                    throw new RuntimeException("Invalid credentials");
+                } else {
+                    logger.warn("⚠️ ADMIN LOGIN | Found admin with different case email. Updating to lowercase: {}", request.getEmail());
+                    // Update email to lowercase for future logins
+                    SystemUser foundUser = systemUserOpt.get();
+                    foundUser.setEmail(emailLower);
+                    systemUserRepository.save(foundUser);
+                    logger.info("✅ Updated admin email to lowercase: {}", emailLower);
+                }
+            }
+            
+            SystemUser systemUser = systemUserOpt.get();
+            logger.info("✅ ADMIN FOUND | ID: {}, Name: {}, Email: {}, SuperAdmin: {}, Blocked: {}", 
+                    systemUser.getId(), systemUser.getName(), systemUser.getEmail(), 
+                    systemUser.getSuperAdmin(), systemUser.getBlocked());
+            
+            boolean passwordMatches = passwordEncoder.matches(request.getPassword(), systemUser.getPassword());
+            logger.info("🔑 PASSWORD CHECK | Matches: {}", passwordMatches);
+            
+            if (!passwordMatches) {
+                logger.error("❌ ADMIN LOGIN FAILED | Password mismatch for email: {}", emailLower);
+                throw new RuntimeException("Invalid credentials");
+            }
+
+            // Check if system user is blocked
+            if (systemUser.getBlocked() != null && systemUser.getBlocked()) {
+                throw new RuntimeException("Your account has been blocked. Please contact administrator.");
+            }
+
+            // Automatically detect and update location from IP address
+            if (clientIp != null && !clientIp.isEmpty()) {
+                Location detectedLocation = ipGeolocationService.getLocationFromIp(clientIp);
+                if (detectedLocation != null && detectedLocation.getLatitude() != null 
+                        && detectedLocation.getLongitude() != null) {
+                    systemUser.setLocation(detectedLocation);
+                    systemUserRepository.save(systemUser);
+                    logger.info("📍 Admin location auto-detected during login | Email: {} | IP: {} | Lat: {} | Lon: {} | Address: {}", 
+                            systemUser.getEmail(), clientIp, detectedLocation.getLatitude(), 
+                            detectedLocation.getLongitude(), detectedLocation.getAddress());
+                } else {
+                    logger.debug("Could not detect location from IP: {} for admin: {}", clientIp, systemUser.getEmail());
+                }
+            }
+
+            // Generate token with negative ID to distinguish from regular users
+            // Use -id for system users, prefix with "SYSTEM_" for role
+            String token = jwtUtil.generateToken(-systemUser.getId(), "SYSTEM_ADMIN");
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("token", token);
+            Map<String, Object> userData = buildSystemUserData(systemUser);
+            response.put("user", userData);
+
+            return response;
+        } catch (RuntimeException e) {
+            // Re-throw runtime exceptions as-is
+            throw e;
+        } catch (Exception e) {
+            logger.error("Unexpected error during admin login: {}", e.getMessage(), e);
+            throw new RuntimeException("Admin login failed: " + e.getMessage(), e);
         }
     }
 

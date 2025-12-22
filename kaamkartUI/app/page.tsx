@@ -975,6 +975,7 @@ export default function Home() {
                 <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('home.findWorkers') || 'Find Workers'}</Link></li>
                 <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('home.joinAsWorker') || 'Join as Worker'}</Link></li>
                 <li><Link href="/login" className="hover:text-white transition-colors" lang={language}>{t('common.login') || 'Login'}</Link></li>
+                <li><Link href="/admin/login" className="hover:text-white transition-colors" lang={language}>{t('home.adminLogin') || 'Admin Login'}</Link></li>
               </ul>
             </div>
             <div>
