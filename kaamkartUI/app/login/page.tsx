@@ -42,6 +42,8 @@ export default function Login() {
     city: "",
     pinCode: "",
     address: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
   const formatPostOfficeAddress = (po: PostOfficeAddress): string => {
     return `${po.Name}, ${po.District}, ${po.District}, ${po.State}, ${po.Pincode}`;
@@ -206,6 +208,8 @@ export default function Login() {
           role: formData.role.toUpperCase(),
           workerTypes: formData.workerTypes.map((type) => type.toUpperCase()),
           location: {
+            latitude: formData.latitude,
+            longitude: formData.longitude,
             state: formData.state.trim(),
             city: formData.city.trim(),
             pinCode: formData.pinCode.trim(),
@@ -671,12 +675,36 @@ export default function Login() {
                       if (value.length <= 6) {
                         setFormData({ ...formData, pinCode: value });
 
+                        const getUserCoordinates = (): Promise<{
+                          latitude: number;
+                          longitude: number;
+                        }> => {
+                          return new Promise((resolve, reject) => {
+                            if (!navigator.geolocation) {
+                              reject("Geolocation not supported");
+                              return;
+                            }
+
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                resolve({
+                                  latitude: position.coords.latitude,
+                                  longitude: position.coords.longitude,
+                                });
+                              },
+                              (error) => reject(error)
+                            );
+                          });
+                        };
+
                         // Auto-fill state, city, and address when pin code is complete
                         if (value.length === 6) {
                           try {
-                            const location = await getLocationFromPinCode(
-                              value
-                            );
+                            const [location, coords] = await Promise.all([
+                              getLocationFromPinCode(value),
+                              getUserCoordinates().catch(() => null), // optional
+                            ]);
+
                             if (location) {
                               setFormData((prev) => ({
                                 ...prev,
@@ -685,8 +713,20 @@ export default function Login() {
                                 city: location.city || prev.city,
                                 address: location.address || prev.address,
                                 addresses: location.addresses,
+                                latitude:
+                                  coords?.latitude != null
+                                    ? Number(coords.latitude.toFixed(2))
+                                    : prev.latitude,
+                                longitude:
+                                  coords?.longitude != null
+                                    ? Number(coords.longitude.toFixed(2))
+                                    : prev.longitude,
                               }));
-                              console.log(location, "testing location");
+                              console.log(
+                                location,
+                                formData,
+                                "testing location"
+                              );
                               setPinAddresses(location.addresses);
                               setShowAddressModal(true);
 
@@ -986,6 +1026,8 @@ export default function Login() {
                       city: "",
                       pinCode: "",
                       address: "",
+                      latitude: null,
+                      longitude: null,
                     });
                   }
                 }}
