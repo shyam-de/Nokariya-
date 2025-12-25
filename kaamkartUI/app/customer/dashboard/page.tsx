@@ -1507,13 +1507,13 @@ export default function CustomerDashboard() {
 
                 {/* Section 4: Location */}
                 <div>
-                  <h4
+                  {/* <h4
                     className="text-lg font-semibold text-gray-800 mb-4 flex items-center gap-2"
                     lang={language}
-                  >
-                    <span>📍</span> {t("customer.location")}{" "}
+                  > */}
+                  {/* <span>📍</span> {t("customer.location")}{" "}
                     <span className="text-red-500">*</span>
-                  </h4>
+                  </h4> */}
 
                   {/* Current Location Toggle Button */}
                   {/* <div className="mb-4">
@@ -1542,6 +1542,7 @@ export default function CustomerDashboard() {
                   <div className="space-y-4">
                     {/* Only show location details if current location is NOT detected */}
                     {formData.location.latitude === 0 ||
+                    formData.location.latitude === null ||
                     formData.location.longitude === 0 ? (
                       <div>
                         <p
