@@ -715,11 +715,11 @@ export default function Login() {
                                 addresses: location.addresses,
                                 latitude:
                                   coords?.latitude != null
-                                    ? Number(coords.latitude.toFixed(2))
+                                    ? Number(coords.latitude.toFixed(4))
                                     : prev.latitude,
                                 longitude:
                                   coords?.longitude != null
-                                    ? Number(coords.longitude.toFixed(2))
+                                    ? Number(coords.longitude.toFixed(4))
                                     : prev.longitude,
                               }));
                               console.log(

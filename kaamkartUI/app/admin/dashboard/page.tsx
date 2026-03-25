@@ -234,6 +234,8 @@ export default function AdminDashboard() {
     state: "",
     city: "",
     address: "",
+    latitude: null as number | null,
+    longitude: null as number | null,
   });
 
   // Auto-logout after 30 minutes of inactivity
@@ -1308,6 +1310,8 @@ export default function AdminDashboard() {
           pinCode: userFormData.pinCode,
           state: userFormData.state,
           city: userFormData.city,
+          latitude: userFormData.latitude,
+          longitude: userFormData.longitude,
           address:
             userFormData.address ||
             (userFormData.city && userFormData.state
@@ -1338,6 +1342,8 @@ export default function AdminDashboard() {
         state: "",
         city: "",
         address: "",
+        latitude: null,
+        longitude: null,
       });
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to create user");
@@ -1856,13 +1862,36 @@ export default function AdminDashboard() {
                       const value = e.target.value.replace(/\D/g, ""); // Only digits
                       if (value.length <= 6) {
                         setUserFormData({ ...userFormData, pinCode: value });
+                        const getUserCoordinates = (): Promise<{
+                          latitude: number;
+                          longitude: number;
+                        }> => {
+                          return new Promise((resolve, reject) => {
+                            if (!navigator.geolocation) {
+                              reject("Geolocation not supported");
+                              return;
+                            }
+
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                resolve({
+                                  latitude: position.coords.latitude,
+                                  longitude: position.coords.longitude,
+                                });
+                              },
+                              (error) => reject(error)
+                            );
+                          });
+                        };
 
                         // Auto-fill state, city, and address when pin code is complete
                         if (value.length === 6) {
                           try {
-                            const location = await getLocationFromPinCode(
-                              value
-                            );
+                            const [location, coords] = await Promise.all([
+                              getLocationFromPinCode(value),
+                              getUserCoordinates().catch(() => null), // optional
+                            ]);
+
                             if (location) {
                               setUserFormData((prev) => ({
                                 ...prev,
@@ -1871,19 +1900,34 @@ export default function AdminDashboard() {
                                 city: location.city || prev.city,
                                 address: location.address || prev.address,
                                 addresses: location.addresses,
+                                latitude:
+                                  coords?.latitude != null
+                                    ? Number(coords.latitude.toFixed(4))
+                                    : prev.latitude,
+                                longitude:
+                                  coords?.longitude != null
+                                    ? Number(coords.longitude.toFixed(4))
+                                    : prev.longitude,
                               }));
+                              console.log(
+                                location,
+                                userFormData,
+                                "testing location"
+                              );
                               setPinAddresses(location.addresses);
                               setShowAddressModal(true);
+
+                              toast.success("Select your address");
                               toast.success(
                                 t("login.pinCodeDetected") ||
                                   "Location detected from Pin Code!",
-                                { id: "admin-pin-code-detected" }
+                                { id: "login-pin-code-detected" }
                               );
                             } else {
                               toast.error(
                                 t("login.pinCodeNotFound") ||
                                   "Pin Code not found. Please enter a valid 6-digit pin code.",
-                                { id: "admin-pin-code-not-found" }
+                                { id: "login-pin-code-not-found" }
                               );
                             }
                           } catch (error) {
@@ -1894,7 +1938,7 @@ export default function AdminDashboard() {
                             toast.error(
                               t("login.pinCodeError") ||
                                 "Error detecting location from Pin Code. Please try again.",
-                              { id: "admin-pin-code-error" }
+                              { id: "login-pin-code-error" }
                             );
                           }
                         }
@@ -2096,6 +2140,8 @@ export default function AdminDashboard() {
                       state: "",
                       city: "",
                       address: "",
+                      latitude: null,
+                      longitude: null,
                     });
                   }}
                   className="flex-1 sm:flex-none px-6 py-3 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition font-semibold"
